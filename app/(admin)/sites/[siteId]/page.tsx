@@ -2,10 +2,9 @@ import { notFound } from "next/navigation";
 
 import { BuildingFormDialog } from "@/components/admin/BuildingFormDialog";
 import { FloorFormDialog } from "@/components/admin/FloorFormDialog";
-import { FloorReorderButtons } from "@/components/admin/FloorReorderButtons";
+import { FloorList } from "@/components/admin/FloorList";
 import { SiteFormDialog } from "@/components/admin/SiteFormDialog";
 import { VehicleFormDialog } from "@/components/admin/VehicleFormDialog";
-import { ZoneFormDialog } from "@/components/admin/ZoneFormDialog";
 import { createClient } from "@/lib/supabase/server";
 import type { Floor, Zone } from "@/types/domain";
 
@@ -88,38 +87,13 @@ export default async function SiteDetailPage({
                 nextOrderIndex={(floorsByBuilding[building.id] ?? []).length}
               />
             </div>
-            <div className="mt-3 flex flex-col gap-2 pl-4">
-              {(floorsByBuilding[building.id] ?? []).map((floor, floorIndex, buildingFloors) => (
-                <div key={floor.id} className="border-l pl-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <FloorReorderButtons
-                        floors={buildingFloors.map((f) => ({ id: f.id, order_index: f.order_index }))}
-                        index={floorIndex}
-                      />
-                      <span className="text-sm font-medium">
-                        {floor.name} <span className="text-muted-foreground">[{floor.floor_code}]</span>
-                      </span>
-                      <FloorFormDialog buildingId={building.id} floor={floor} />
-                    </div>
-                    <ZoneFormDialog floorId={floor.id} />
-                  </div>
-                  {(zonesByFloor[floor.id] ?? []).length > 0 && (
-                    <ul className="text-muted-foreground mt-1 flex flex-wrap gap-2 text-xs">
-                      {zonesByFloor[floor.id].map((zone) => (
-                        <li key={zone.id} className="bg-muted flex items-center gap-1 rounded px-2 py-1">
-                          {zone.name}
-                          <ZoneFormDialog floorId={floor.id} zone={zone} />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
-              {(floorsByBuilding[building.id] ?? []).length === 0 && (
-                <p className="text-muted-foreground text-xs">등록된 층이 없습니다.</p>
-              )}
-            </div>
+            {/* key: 층 추가/삭제/외부 갱신 시 리마운트되어 로컬 순서 상태를 서버 상태와 다시 맞춘다 */}
+            <FloorList
+              key={(floorsByBuilding[building.id] ?? []).map((f) => f.id).join("|")}
+              buildingId={building.id}
+              floors={floorsByBuilding[building.id] ?? []}
+              zonesByFloor={zonesByFloor}
+            />
           </div>
         ))}
         {(buildings ?? []).length === 0 && (
