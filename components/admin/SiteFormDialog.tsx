@@ -19,6 +19,7 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 import { siteSchema, type SiteFormValues } from "@/lib/validations/site.schema";
 import type { Site } from "@/types/domain";
 
@@ -53,7 +54,7 @@ export function SiteFormDialog({ site }: { site?: Site }) {
     setSubmitting(false);
 
     if (error) {
-      toast.error("저장에 실패했습니다", { description: error.message });
+      toast.error("저장에 실패했습니다", { description: friendlyErrorMessage(error) });
       return;
     }
 

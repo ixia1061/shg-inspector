@@ -38,7 +38,9 @@ export default async function ExtinguishersPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">소화기 관리</h1>
-        <Button render={<Link href="/extinguishers/new" />}>새 소화기 등록</Button>
+        <Button nativeButton={false} render={<Link href="/extinguishers/new" />}>
+          새 소화기 등록
+        </Button>
       </div>
 
       <ExtinguisherFilters sites={sites ?? []} />

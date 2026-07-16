@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 import {
   extinguisherSchema,
   type ExtinguisherFormValues,
@@ -102,6 +103,37 @@ export function ExtinguisherForm({
     [vehicles, siteId]
   );
 
+  // Base UI Select는 items를 명시적으로 줘야 트리거에 라벨을 보여준다(안 주면 원시 value가 보임).
+  const siteItems = useMemo(
+    () => sites.map((s) => ({ value: s.id, label: `${s.org_code} — ${s.name}` })),
+    [sites]
+  );
+  const buildingItems = useMemo(
+    () =>
+      filteredBuildings.map((b) => ({
+        value: b.id,
+        label: `${b.building_no}동${b.name ? ` (${b.name})` : ""}`,
+      })),
+    [filteredBuildings]
+  );
+  const floorItems = useMemo(
+    () => filteredFloors.map((f) => ({ value: f.id, label: `${f.name} [${f.floor_code}]` })),
+    [filteredFloors]
+  );
+  const zoneItems = useMemo(
+    () => filteredZones.map((z) => ({ value: z.id, label: z.name })),
+    [filteredZones]
+  );
+  const vehicleItems = useMemo(
+    () =>
+      filteredVehicles.map((v) => ({
+        value: v.id,
+        label: `차량 ${v.vehicle_no}호${v.name ? ` (${v.name})` : ""}`,
+      })),
+    [filteredVehicles]
+  );
+  const typeItems = useMemo(() => types.map((t) => ({ value: t.id, label: t.name })), [types]);
+
   async function onSubmit(values: ExtinguisherFormValues) {
     setSubmitting(true);
     const supabase = createClient();
@@ -143,7 +175,7 @@ export function ExtinguisherForm({
     setSubmitting(false);
 
     if (error) {
-      toast.error("저장에 실패했습니다", { description: error.message });
+      toast.error("저장에 실패했습니다", { description: friendlyErrorMessage(error) });
       return;
     }
 
@@ -179,6 +211,7 @@ export function ExtinguisherForm({
         <Field>
           <FieldLabel>사업장</FieldLabel>
           <Select
+            items={siteItems}
             value={siteId}
             onValueChange={(v) => {
               if (!v) return;
@@ -207,6 +240,7 @@ export function ExtinguisherForm({
             <Field>
               <FieldLabel>건물</FieldLabel>
               <Select
+                items={buildingItems}
                 value={buildingId}
                 onValueChange={(v) => {
                   if (!v) return;
@@ -232,6 +266,7 @@ export function ExtinguisherForm({
             <Field data-invalid={!!errors.floor_id}>
               <FieldLabel>층</FieldLabel>
               <Select
+                items={floorItems}
                 value={watch("floor_id") ?? ""}
                 onValueChange={(v) => {
                   if (!v) return;
@@ -257,6 +292,7 @@ export function ExtinguisherForm({
             <Field>
               <FieldLabel>구역 (선택)</FieldLabel>
               <Select
+                items={zoneItems}
                 value={watch("zone_id") ?? ""}
                 onValueChange={(v) => setValue("zone_id", v || undefined)}
                 disabled={!floorId}
@@ -278,6 +314,7 @@ export function ExtinguisherForm({
           <Field data-invalid={!!errors.vehicle_id}>
             <FieldLabel>차량</FieldLabel>
             <Select
+              items={vehicleItems}
               value={watch("vehicle_id") ?? ""}
               onValueChange={(v) => v && setValue("vehicle_id", v)}
               disabled={!siteId}
@@ -300,6 +337,7 @@ export function ExtinguisherForm({
         <Field data-invalid={!!errors.extinguisher_type_id}>
           <FieldLabel>소화기 종류</FieldLabel>
           <Select
+            items={typeItems}
             value={watch("extinguisher_type_id")}
             onValueChange={(v) => {
               if (!v) return;

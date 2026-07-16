@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Input } from "@/components/ui/input";
@@ -23,6 +25,14 @@ const STATUS_OPTIONS = [
 export function ExtinguisherFilters({ sites }: { sites: Site[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const siteItems = useMemo(
+    () => [
+      { value: "all", label: "전체 사업장" },
+      ...sites.map((s) => ({ value: s.id, label: s.name })),
+    ],
+    [sites]
+  );
 
   function updateParam(key: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -48,6 +58,7 @@ export function ExtinguisherFilters({ sites }: { sites: Site[] }) {
         }}
       />
       <Select
+        items={siteItems}
         defaultValue={searchParams.get("site_id") ?? "all"}
         onValueChange={(v) => updateParam("site_id", v)}
       >
@@ -64,6 +75,7 @@ export function ExtinguisherFilters({ sites }: { sites: Site[] }) {
         </SelectContent>
       </Select>
       <Select
+        items={STATUS_OPTIONS}
         defaultValue={searchParams.get("status") ?? "all"}
         onValueChange={(v) => updateParam("status", v)}
       >

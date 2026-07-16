@@ -24,7 +24,12 @@ export default async function InspectCompletePage({
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">수고하셨습니다</p>
       </div>
-      <Button size="lg" className="h-14 w-full max-w-xs text-lg" render={<Link href="/scan" />}>
+      <Button
+        size="lg"
+        className="h-14 w-full max-w-xs text-lg"
+        nativeButton={false}
+        render={<Link href="/scan" />}
+      >
         다음 소화기 스캔
       </Button>
     </div>

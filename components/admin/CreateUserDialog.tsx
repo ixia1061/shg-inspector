@@ -30,6 +30,11 @@ import {
 import { createUserSchema, type CreateUserFormValues } from "@/lib/validations/user.schema";
 import type { Site } from "@/types/domain";
 
+const ROLE_ITEMS = [
+  { value: "inspector", label: "점검자" },
+  { value: "admin", label: "관리자" },
+];
+
 export function CreateUserDialog({ sites }: { sites: Site[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -95,7 +100,11 @@ export function CreateUserDialog({ sites }: { sites: Site[] }) {
             </Field>
             <Field>
               <FieldLabel>역할</FieldLabel>
-              <Select value={role} onValueChange={(v) => setValue("role", v as "admin" | "inspector")}>
+              <Select
+                items={ROLE_ITEMS}
+                value={role}
+                onValueChange={(v) => setValue("role", v as "admin" | "inspector")}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>

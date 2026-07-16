@@ -19,6 +19,7 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 import { buildingSchema, type BuildingFormValues } from "@/lib/validations/building.schema";
 
 export function BuildingFormDialog({
@@ -49,7 +50,7 @@ export function BuildingFormDialog({
     setSubmitting(false);
 
     if (error) {
-      toast.error("저장에 실패했습니다", { description: error.message });
+      toast.error("저장에 실패했습니다", { description: friendlyErrorMessage(error) });
       return;
     }
 

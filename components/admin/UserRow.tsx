@@ -16,6 +16,11 @@ import {
 import { TableCell, TableRow } from "@/components/ui/table";
 import type { UserRole } from "@/types/domain";
 
+const ROLE_ITEMS = [
+  { value: "inspector", label: "점검자" },
+  { value: "admin", label: "관리자" },
+];
+
 export function UserRow({
   id,
   name,
@@ -66,7 +71,7 @@ export function UserRow({
     <TableRow>
       <TableCell className="font-medium">{name}</TableCell>
       <TableCell>
-        <Select value={role} onValueChange={handleRoleChange} disabled={isPending}>
+        <Select items={ROLE_ITEMS} value={role} onValueChange={handleRoleChange} disabled={isPending}>
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>

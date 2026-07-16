@@ -87,7 +87,11 @@ export default async function ExtinguisherDetailPage({
         </div>
         <div className="flex items-center gap-2">
           <LifecycleStatusBadge status={overview.lifecycle_status} />
-          <Button variant="outline" render={<Link href={`/extinguishers/${id}/label`} />}>
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href={`/extinguishers/${id}/label`} />}
+          >
             QR/라벨
           </Button>
         </div>
