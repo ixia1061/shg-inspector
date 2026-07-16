@@ -60,12 +60,25 @@ export default async function ExtinguisherDetailPage({
 
   const inspectionIds = (inspections ?? []).map((i) => i.id);
   const { data: photos } = inspectionIds.length
-    ? await supabase.from("inspection_photos").select("inspection_id").in("inspection_id", inspectionIds)
+    ? await supabase
+        .from("inspection_photos")
+        .select("inspection_id, storage_path")
+        .in("inspection_id", inspectionIds)
     : { data: [] };
 
+  // 비공개 버킷이므로 서명 URL(1시간 유효)을 만들어 썸네일/원본을 보여준다.
+  const photoPaths = (photos ?? []).map((p) => p.storage_path);
+  const { data: signedUrls } = photoPaths.length
+    ? await supabase.storage.from("inspection-photos").createSignedUrls(photoPaths, 3600)
+    : { data: [] };
+  const signedUrlByPath = new Map(
+    (signedUrls ?? []).filter((s) => s.signedUrl).map((s) => [s.path, s.signedUrl])
+  );
+
   const inspectorNameById = new Map((inspectors ?? []).map((p) => [p.id, p.name]));
-  const photoCountByInspection = (photos ?? []).reduce<Record<string, number>>((acc, p) => {
-    acc[p.inspection_id] = (acc[p.inspection_id] ?? 0) + 1;
+  const photoUrlsByInspection = (photos ?? []).reduce<Record<string, string[]>>((acc, p) => {
+    const url = signedUrlByPath.get(p.storage_path);
+    if (url) (acc[p.inspection_id] ??= []).push(url);
     return acc;
   }, {});
 
@@ -75,7 +88,7 @@ export default async function ExtinguisherDetailPage({
     overall_result: i.overall_result,
     memo: i.memo,
     inspector_name: inspectorNameById.get(i.inspector_id) ?? "알 수 없음",
-    photo_count: photoCountByInspection[i.id] ?? 0,
+    photo_urls: photoUrlsByInspection[i.id] ?? [],
   }));
 
   return (
