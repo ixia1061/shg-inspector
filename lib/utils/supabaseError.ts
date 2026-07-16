@@ -21,5 +21,9 @@ export function friendlyErrorMessage(error: {
     }
     return "이미 사용 중인 값입니다. 다른 값을 입력하세요.";
   }
+  if (error.code === "23503") {
+    // extinguishers.floor_id / vehicle_id는 on delete restrict — 소화기가 남아있으면 삭제 불가
+    return "이 항목에 소속된 소화기가 있어 삭제할 수 없습니다. 소화기를 먼저 이동하거나 삭제하세요.";
+  }
   return error.message;
 }

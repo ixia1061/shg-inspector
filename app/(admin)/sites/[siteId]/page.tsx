@@ -70,25 +70,32 @@ export default async function SiteDetailPage({
         {(buildings ?? []).map((building) => (
           <div key={building.id} className="rounded-lg border p-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">
-                {building.building_no}동{building.name ? ` (${building.name})` : ""}
-              </h3>
+              <div className="flex items-center gap-1">
+                <h3 className="font-semibold">
+                  {building.building_no}동{building.name ? ` (${building.name})` : ""}
+                </h3>
+                <BuildingFormDialog siteId={site.id} building={building} />
+              </div>
               <FloorFormDialog buildingId={building.id} />
             </div>
             <div className="mt-3 flex flex-col gap-2 pl-4">
               {(floorsByBuilding[building.id] ?? []).map((floor) => (
                 <div key={floor.id} className="border-l pl-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      {floor.name} <span className="text-muted-foreground">[{floor.floor_code}]</span>
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-medium">
+                        {floor.name} <span className="text-muted-foreground">[{floor.floor_code}]</span>
+                      </span>
+                      <FloorFormDialog buildingId={building.id} floor={floor} />
+                    </div>
                     <ZoneFormDialog floorId={floor.id} />
                   </div>
                   {(zonesByFloor[floor.id] ?? []).length > 0 && (
                     <ul className="text-muted-foreground mt-1 flex flex-wrap gap-2 text-xs">
                       {zonesByFloor[floor.id].map((zone) => (
-                        <li key={zone.id} className="bg-muted rounded px-2 py-1">
+                        <li key={zone.id} className="bg-muted flex items-center gap-1 rounded px-2 py-1">
                           {zone.name}
+                          <ZoneFormDialog floorId={floor.id} zone={zone} />
                         </li>
                       ))}
                     </ul>
@@ -111,8 +118,9 @@ export default async function SiteDetailPage({
         {(vehicles ?? []).length ? (
           <ul className="flex flex-wrap gap-2">
             {(vehicles ?? []).map((vehicle) => (
-              <li key={vehicle.id} className="bg-muted rounded px-3 py-2 text-sm">
+              <li key={vehicle.id} className="bg-muted flex items-center gap-1 rounded px-3 py-2 text-sm">
                 차량 {vehicle.vehicle_no}호{vehicle.name ? ` (${vehicle.name})` : ""}
+                <VehicleFormDialog siteId={site.id} vehicle={vehicle} />
               </li>
             ))}
           </ul>

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -21,17 +21,21 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 import { vehicleSchema, type VehicleFormValues } from "@/lib/validations/vehicle.schema";
+import type { Vehicle } from "@/types/domain";
 
 export function VehicleFormDialog({
   siteId,
+  vehicle,
   nextVehicleNo = 1,
 }: {
   siteId: string;
+  vehicle?: Vehicle;
   nextVehicleNo?: number;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const isEdit = !!vehicle;
 
   const {
     register,
@@ -40,13 +44,19 @@ export function VehicleFormDialog({
     formState: { errors },
   } = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
-    defaultValues: { site_id: siteId, vehicle_no: nextVehicleNo, name: "" },
+    defaultValues: {
+      site_id: siteId,
+      vehicle_no: vehicle?.vehicle_no ?? nextVehicleNo,
+      name: vehicle?.name ?? "",
+    },
   });
 
   async function onSubmit(values: VehicleFormValues) {
     setSubmitting(true);
     const supabase = createClient();
-    const { error } = await supabase.from("vehicles").insert(values);
+    const { error } = isEdit
+      ? await supabase.from("vehicles").update(values).eq("id", vehicle.id)
+      : await supabase.from("vehicles").insert(values);
     setSubmitting(false);
 
     if (error) {
@@ -54,20 +64,45 @@ export function VehicleFormDialog({
       return;
     }
 
-    toast.success("차량을 등록했습니다");
+    toast.success(isEdit ? "차량 정보를 수정했습니다" : "차량을 등록했습니다");
     setOpen(false);
-    reset({ site_id: siteId, vehicle_no: nextVehicleNo + 1, name: "" });
+    if (!isEdit) reset({ site_id: siteId, vehicle_no: nextVehicleNo + 1, name: "" });
+    router.refresh();
+  }
+
+  async function handleDelete() {
+    if (!vehicle) return;
+    if (!confirm("이 차량을 삭제하시겠습니까?")) return;
+
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("vehicles").delete().eq("id", vehicle.id);
+    setSubmitting(false);
+
+    if (error) {
+      toast.error("삭제에 실패했습니다", { description: friendlyErrorMessage(error) });
+      return;
+    }
+
+    toast.success("차량을 삭제했습니다");
+    setOpen(false);
     router.refresh();
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>
-        <Plus className="size-4" /> 차량 추가
-      </DialogTrigger>
+      {isEdit ? (
+        <DialogTrigger render={<Button variant="ghost" size="icon-xs" aria-label="차량 수정" />}>
+          <Pencil className="size-3" />
+        </DialogTrigger>
+      ) : (
+        <DialogTrigger render={<Button variant="outline" size="sm" />}>
+          <Plus className="size-4" /> 차량 추가
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>차량 등록</DialogTitle>
+          <DialogTitle>{isEdit ? "차량 수정" : "차량 등록"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
@@ -79,6 +114,12 @@ export function VehicleFormDialog({
                 {...register("vehicle_no", { valueAsNumber: true })}
               />
               <FieldError errors={errors.vehicle_no ? [errors.vehicle_no] : undefined} />
+              {isEdit && (
+                <p className="text-muted-foreground text-xs">
+                  차량 번호를 바꾸면 소속 소화기의 관리번호가 자동으로 갱신됩니다. 이미 부착된 QR
+                  라벨은 계속 사용할 수 있습니다.
+                </p>
+              )}
             </Field>
             <Field>
               <FieldLabel htmlFor="vehicle-name">차량명 (선택, 표시용)</FieldLabel>
@@ -86,6 +127,17 @@ export function VehicleFormDialog({
             </Field>
           </FieldGroup>
           <DialogFooter className="mt-4">
+            {isEdit && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={submitting}
+                onClick={handleDelete}
+                className="sm:mr-auto"
+              >
+                삭제
+              </Button>
+            )}
             <Button type="submit" disabled={submitting}>
               {submitting ? "저장 중..." : "저장"}
             </Button>

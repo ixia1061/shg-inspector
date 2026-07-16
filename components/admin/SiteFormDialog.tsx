@@ -64,6 +64,26 @@ export function SiteFormDialog({ site }: { site?: Site }) {
     router.refresh();
   }
 
+  async function handleDelete() {
+    if (!site) return;
+    if (!confirm("이 사업장을 삭제하시겠습니까?\n소속된 건물/층/구역/차량도 함께 삭제됩니다.")) return;
+
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("sites").delete().eq("id", site.id);
+    setSubmitting(false);
+
+    if (error) {
+      toast.error("삭제에 실패했습니다", { description: friendlyErrorMessage(error) });
+      return;
+    }
+
+    toast.success("사업장을 삭제했습니다");
+    setOpen(false);
+    router.push("/sites");
+    router.refresh();
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {isEdit ? (
@@ -83,6 +103,12 @@ export function SiteFormDialog({ site }: { site?: Site }) {
               <FieldLabel htmlFor="org_code">관리기관 코드</FieldLabel>
               <Input id="org_code" placeholder="예: 공사, 남부" {...register("org_code")} />
               <FieldError errors={errors.org_code ? [errors.org_code] : undefined} />
+              {isEdit && (
+                <p className="text-muted-foreground text-xs">
+                  코드를 바꾸면 소속 소화기의 관리번호가 자동으로 갱신됩니다. 이미 부착된 QR
+                  라벨은 계속 사용할 수 있습니다.
+                </p>
+              )}
             </Field>
             <Field data-invalid={!!errors.name}>
               <FieldLabel htmlFor="name">사업장명</FieldLabel>
@@ -103,6 +129,17 @@ export function SiteFormDialog({ site }: { site?: Site }) {
             </Field>
           </FieldGroup>
           <DialogFooter className="mt-4">
+            {isEdit && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={submitting}
+                onClick={handleDelete}
+                className="sm:mr-auto"
+              >
+                삭제
+              </Button>
+            )}
             <Button type="submit" disabled={submitting}>
               {submitting ? "저장 중..." : "저장"}
             </Button>
