@@ -1,3 +1,4 @@
+import { trimExtinguisherPhotosAction } from "@/app/actions/photoActions";
 import { createClient } from "@/lib/supabase/client";
 import {
   listPendingInspections,
@@ -71,6 +72,11 @@ async function submitOne(
   });
 
   if (error) throw error;
+
+  // 소화기당 최신 5장만 유지 — 실패해도 동기화 성공에는 영향 없음
+  if (photoPaths.length > 0) {
+    void trimExtinguisherPhotosAction(item.extinguisher_id).catch(() => {});
+  }
 }
 
 /** online 이벤트가 발생할 때마다 자동으로 Outbox를 flush하도록 등록한다. */

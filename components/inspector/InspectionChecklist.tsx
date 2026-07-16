@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LIFECYCLE_STATUS_LABEL } from "@/lib/utils/lifecycle";
 import { formatLocationPath } from "@/lib/utils/location";
 import { watermarkImage } from "@/lib/utils/watermark";
+import { trimExtinguisherPhotosAction } from "@/app/actions/photoActions";
 import { enqueueInspection } from "@/lib/offline/outbox";
 import { flushOutbox } from "@/lib/offline/syncEngine";
 import { createClient } from "@/lib/supabase/client";
@@ -40,6 +41,9 @@ const CHECK_ITEMS: { key: keyof Omit<ChecklistValues, "memo">; label: string }[]
   { key: "appearance_ok", label: "외관 정상" },
   { key: "installation_ok", label: "설치상태 정상" },
 ];
+
+/** 점검 1회당 첨부 가능한 사진 수 (전·후 사진 등) */
+const MAX_INSPECTION_PHOTOS = 5;
 
 export function InspectionChecklist({ extinguisher }: { extinguisher: ExtinguisherOverview }) {
   const router = useRouter();
@@ -68,6 +72,12 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
 
   async function handlePhotosSelected(files: File[]) {
     if (!files.length) return;
+    if (files.length > MAX_INSPECTION_PHOTOS) {
+      toast.warning(`사진은 최대 ${MAX_INSPECTION_PHOTOS}장까지 첨부할 수 있습니다`, {
+        description: `앞의 ${MAX_INSPECTION_PHOTOS}장만 사용됩니다.`,
+      });
+      files = files.slice(0, MAX_INSPECTION_PHOTOS);
+    }
     setProcessingPhotos(true);
     try {
       // 사진 하단에 관리번호 워터마크를 새긴다
@@ -135,6 +145,11 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
           },
         });
         if (error) throw error;
+
+        // 소화기당 최신 5장만 유지 (서버 용량 관리) — 실패해도 점검 저장에는 영향 없음
+        if (photoPaths.length > 0) {
+          void trimExtinguisherPhotosAction(extinguisher.id).catch(() => {});
+        }
       } else {
         await enqueueInspection({
           extinguisher_id: extinguisher.id,
