@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { BuildingFormDialog } from "@/components/admin/BuildingFormDialog";
 import { FloorFormDialog } from "@/components/admin/FloorFormDialog";
+import { FloorReorderButtons } from "@/components/admin/FloorReorderButtons";
 import { SiteFormDialog } from "@/components/admin/SiteFormDialog";
 import { VehicleFormDialog } from "@/components/admin/VehicleFormDialog";
 import { ZoneFormDialog } from "@/components/admin/ZoneFormDialog";
@@ -33,8 +34,14 @@ export default async function SiteDetailPage({
 
   const buildingIds = (buildings ?? []).map((b) => b.id);
 
+  // order_index가 같은 층(과거 수동 입력)의 순서가 렌더링마다 바뀌지 않도록 created_at을 2차 정렬로 둔다.
   const { data: floors } = buildingIds.length
-    ? await supabase.from("floors").select("*").in("building_id", buildingIds).order("order_index")
+    ? await supabase
+        .from("floors")
+        .select("*")
+        .in("building_id", buildingIds)
+        .order("order_index")
+        .order("created_at")
     : { data: [] as Floor[] };
 
   const floorIds = (floors ?? []).map((f) => f.id);
@@ -76,13 +83,20 @@ export default async function SiteDetailPage({
                 </h3>
                 <BuildingFormDialog siteId={site.id} building={building} />
               </div>
-              <FloorFormDialog buildingId={building.id} />
+              <FloorFormDialog
+                buildingId={building.id}
+                nextOrderIndex={(floorsByBuilding[building.id] ?? []).length}
+              />
             </div>
             <div className="mt-3 flex flex-col gap-2 pl-4">
-              {(floorsByBuilding[building.id] ?? []).map((floor) => (
+              {(floorsByBuilding[building.id] ?? []).map((floor, floorIndex, buildingFloors) => (
                 <div key={floor.id} className="border-l pl-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
+                      <FloorReorderButtons
+                        floors={buildingFloors.map((f) => ({ id: f.id, order_index: f.order_index }))}
+                        index={floorIndex}
+                      />
                       <span className="text-sm font-medium">
                         {floor.name} <span className="text-muted-foreground">[{floor.floor_code}]</span>
                       </span>

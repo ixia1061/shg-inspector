@@ -23,7 +23,16 @@ import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 import { floorSchema, type FloorFormValues } from "@/lib/validations/building.schema";
 import type { Floor } from "@/types/domain";
 
-export function FloorFormDialog({ buildingId, floor }: { buildingId: string; floor?: Floor }) {
+export function FloorFormDialog({
+  buildingId,
+  floor,
+  nextOrderIndex = 0,
+}: {
+  buildingId: string;
+  floor?: Floor;
+  /** 새 층 생성 시 자동으로 맨 아래에 배치하기 위한 순서값 (현재 층 개수) */
+  nextOrderIndex?: number;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -40,16 +49,16 @@ export function FloorFormDialog({ buildingId, floor }: { buildingId: string; flo
       building_id: buildingId,
       floor_code: floor?.floor_code ?? "",
       name: floor?.name ?? "",
-      order_index: floor?.order_index ?? 0,
     },
   });
 
   async function onSubmit(values: FloorFormValues) {
     setSubmitting(true);
     const supabase = createClient();
+    // 새 층은 맨 아래에 추가한다. 순서 조정은 목록의 ▲▼ 버튼으로 한다.
     const { error } = isEdit
       ? await supabase.from("floors").update(values).eq("id", floor.id)
-      : await supabase.from("floors").insert(values);
+      : await supabase.from("floors").insert({ ...values, order_index: nextOrderIndex });
     setSubmitting(false);
 
     if (error) {
@@ -59,7 +68,7 @@ export function FloorFormDialog({ buildingId, floor }: { buildingId: string; flo
 
     toast.success(isEdit ? "층 정보를 수정했습니다" : "층을 등록했습니다");
     setOpen(false);
-    if (!isEdit) reset({ building_id: buildingId, floor_code: "", name: "", order_index: 0 });
+    if (!isEdit) reset({ building_id: buildingId, floor_code: "", name: "" });
     router.refresh();
   }
 
@@ -114,14 +123,6 @@ export function FloorFormDialog({ buildingId, floor }: { buildingId: string; flo
               <FieldLabel htmlFor="floor-name">층 이름 (표시용, 예: 지하1층, 3층, 옥상)</FieldLabel>
               <Input id="floor-name" {...register("name")} />
               <FieldError errors={errors.name ? [errors.name] : undefined} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="floor-order">정렬 순서</FieldLabel>
-              <Input
-                id="floor-order"
-                type="number"
-                {...register("order_index", { valueAsNumber: true })}
-              />
             </Field>
           </FieldGroup>
           <DialogFooter className="mt-4">

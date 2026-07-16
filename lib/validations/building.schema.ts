@@ -9,6 +9,7 @@ export const buildingSchema = z.object({
 
 export type BuildingFormValues = z.infer<typeof buildingSchema>;
 
+// 정렬 순서(order_index)는 폼 입력이 아니라 목록의 ▲▼ 버튼으로 관리한다.
 export const floorSchema = z.object({
   building_id: z.string().uuid("건물을 선택하세요"),
   floor_code: z
@@ -16,7 +17,6 @@ export const floorSchema = z.object({
     .min(1, "층 코드를 입력하세요 (예: 0=지하, 1=1층, R=옥상)")
     .refine((v) => !v.includes("-"), "관리번호 구분자(-)는 포함할 수 없습니다"),
   name: z.string().min(1, "층 이름을 입력하세요 (예: 3층, 지하1층, 옥상)"),
-  order_index: z.number().int(),
 });
 
 export type FloorFormValues = z.infer<typeof floorSchema>;
