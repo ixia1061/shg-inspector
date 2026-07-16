@@ -10,20 +10,24 @@ type LocationFields = Pick<
   | "zone_name"
   | "vehicle_name"
   | "vehicle_no"
+  | "vehicle_plate_no"
 >;
 
-/** 건물/차량 위치 유형에 따라 사람이 읽는 위치 경로 문자열을 만든다. */
+/** 건물/차량 위치 유형에 따라 사람이 읽는 위치 경로 문자열을 만든다. 차량도 건물 소속이다. */
 export function formatLocationPath(row: LocationFields): string {
-  if (row.location_type === "VEHICLE") {
-    const vehicleLabel = row.vehicle_name
-      ? `차량 ${row.vehicle_no}호 (${row.vehicle_name})`
-      : `차량 ${row.vehicle_no}호`;
-    return [row.site_name, vehicleLabel].filter(Boolean).join(" > ");
-  }
+  const buildingLabel =
+    row.building_no != null
+      ? row.building_name
+        ? `${row.building_no}동 (${row.building_name})`
+        : `${row.building_no}동`
+      : null;
 
-  const buildingLabel = row.building_name
-    ? `${row.building_no}동 (${row.building_name})`
-    : `${row.building_no}동`;
+  if (row.location_type === "VEHICLE") {
+    const plate = row.vehicle_plate_no ? ` [${row.vehicle_plate_no}]` : "";
+    const name = row.vehicle_name ? ` (${row.vehicle_name})` : "";
+    const vehicleLabel = `차량 ${row.vehicle_no}호${plate}${name}`;
+    return [row.site_name, buildingLabel, vehicleLabel].filter(Boolean).join(" > ");
+  }
 
   return [row.site_name, buildingLabel, row.floor_name, row.zone_name].filter(Boolean).join(" > ");
 }

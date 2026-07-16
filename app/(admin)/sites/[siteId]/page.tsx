@@ -1,3 +1,4 @@
+import { Car } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { BuildingFormDialog } from "@/components/admin/BuildingFormDialog";
@@ -6,7 +7,7 @@ import { FloorList } from "@/components/admin/FloorList";
 import { SiteFormDialog } from "@/components/admin/SiteFormDialog";
 import { VehicleFormDialog } from "@/components/admin/VehicleFormDialog";
 import { createClient } from "@/lib/supabase/server";
-import type { Floor, Zone } from "@/types/domain";
+import type { Floor, Vehicle, Zone } from "@/types/domain";
 
 export default async function SiteDetailPage({
   params,
@@ -25,12 +26,6 @@ export default async function SiteDetailPage({
     .eq("site_id", siteId)
     .order("building_no");
 
-  const { data: vehicles } = await supabase
-    .from("vehicles")
-    .select("*")
-    .eq("site_id", siteId)
-    .order("vehicle_no");
-
   const buildingIds = (buildings ?? []).map((b) => b.id);
 
   // order_index가 같은 층(과거 수동 입력)의 순서가 렌더링마다 바뀌지 않도록 created_at을 2차 정렬로 둔다.
@@ -43,6 +38,11 @@ export default async function SiteDetailPage({
         .order("created_at")
     : { data: [] as Floor[] };
 
+  // 차량은 건물 소속
+  const { data: vehicles } = buildingIds.length
+    ? await supabase.from("vehicles").select("*").in("building_id", buildingIds).order("vehicle_no")
+    : { data: [] as Vehicle[] };
+
   const floorIds = (floors ?? []).map((f) => f.id);
 
   const { data: zones } = floorIds.length
@@ -50,10 +50,10 @@ export default async function SiteDetailPage({
     : { data: [] as Zone[] };
 
   const floorsByBuilding = groupBy(floors ?? [], "building_id");
+  const vehiclesByBuilding = groupBy(vehicles ?? [], "building_id");
   const zonesByFloor = groupBy(zones ?? [], "floor_id");
 
   const nextBuildingNo = (buildings ?? []).reduce((max, b) => Math.max(max, b.building_no), 0) + 1;
-  const nextVehicleNo = (vehicles ?? []).reduce((max, v) => Math.max(max, v.vehicle_no), 0) + 1;
 
   return (
     <div className="flex flex-col gap-6">
@@ -67,53 +67,65 @@ export default async function SiteDetailPage({
         <div className="flex gap-2">
           <SiteFormDialog site={site} />
           <BuildingFormDialog siteId={site.id} nextBuildingNo={nextBuildingNo} />
-          <VehicleFormDialog siteId={site.id} nextVehicleNo={nextVehicleNo} />
         </div>
       </div>
 
       <div className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold">건물</h2>
-        {(buildings ?? []).map((building) => (
-          <div key={building.id} className="rounded-lg border p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <h3 className="font-semibold">
-                  {building.building_no}동{building.name ? ` (${building.name})` : ""}
-                </h3>
-                <BuildingFormDialog siteId={site.id} building={building} />
+        {(buildings ?? []).map((building) => {
+          const buildingVehicles = vehiclesByBuilding[building.id] ?? [];
+          const nextVehicleNo =
+            buildingVehicles.reduce((max, v) => Math.max(max, v.vehicle_no), 0) + 1;
+
+          return (
+            <div key={building.id} className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <h3 className="font-semibold">
+                    {building.building_no}동{building.name ? ` (${building.name})` : ""}
+                  </h3>
+                  <BuildingFormDialog siteId={site.id} building={building} />
+                </div>
+                <div className="flex items-center gap-1">
+                  <VehicleFormDialog buildingId={building.id} nextVehicleNo={nextVehicleNo} />
+                  <FloorFormDialog
+                    buildingId={building.id}
+                    nextOrderIndex={(floorsByBuilding[building.id] ?? []).length}
+                  />
+                </div>
               </div>
-              <FloorFormDialog
+
+              {/* key: 층 추가/삭제/외부 갱신 시 리마운트되어 로컬 순서 상태를 서버 상태와 다시 맞춘다 */}
+              <FloorList
+                key={(floorsByBuilding[building.id] ?? []).map((f) => f.id).join("|")}
                 buildingId={building.id}
-                nextOrderIndex={(floorsByBuilding[building.id] ?? []).length}
+                floors={floorsByBuilding[building.id] ?? []}
+                zonesByFloor={zonesByFloor}
               />
+
+              {buildingVehicles.length > 0 && (
+                <div className="mt-3 border-t pt-3 pl-4">
+                  <ul className="flex flex-wrap gap-2">
+                    {buildingVehicles.map((vehicle) => (
+                      <li
+                        key={vehicle.id}
+                        className="bg-muted flex items-center gap-1 rounded px-3 py-2 text-sm"
+                      >
+                        <Car className="text-muted-foreground size-3.5" />
+                        차량 {vehicle.vehicle_no}호
+                        {vehicle.plate_no ? ` [${vehicle.plate_no}]` : ""}
+                        {vehicle.name ? ` (${vehicle.name})` : ""}
+                        <VehicleFormDialog buildingId={building.id} vehicle={vehicle} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-            {/* key: 층 추가/삭제/외부 갱신 시 리마운트되어 로컬 순서 상태를 서버 상태와 다시 맞춘다 */}
-            <FloorList
-              key={(floorsByBuilding[building.id] ?? []).map((f) => f.id).join("|")}
-              buildingId={building.id}
-              floors={floorsByBuilding[building.id] ?? []}
-              zonesByFloor={zonesByFloor}
-            />
-          </div>
-        ))}
+          );
+        })}
         {(buildings ?? []).length === 0 && (
           <p className="text-muted-foreground text-sm">등록된 건물이 없습니다.</p>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">차량</h2>
-        {(vehicles ?? []).length ? (
-          <ul className="flex flex-wrap gap-2">
-            {(vehicles ?? []).map((vehicle) => (
-              <li key={vehicle.id} className="bg-muted flex items-center gap-1 rounded px-3 py-2 text-sm">
-                차량 {vehicle.vehicle_no}호{vehicle.name ? ` (${vehicle.name})` : ""}
-                <VehicleFormDialog siteId={site.id} vehicle={vehicle} />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-muted-foreground text-sm">등록된 차량이 없습니다.</p>
         )}
       </div>
     </div>

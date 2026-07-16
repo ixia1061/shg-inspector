@@ -24,11 +24,11 @@ import { vehicleSchema, type VehicleFormValues } from "@/lib/validations/vehicle
 import type { Vehicle } from "@/types/domain";
 
 export function VehicleFormDialog({
-  siteId,
+  buildingId,
   vehicle,
   nextVehicleNo = 1,
 }: {
-  siteId: string;
+  buildingId: string;
   vehicle?: Vehicle;
   nextVehicleNo?: number;
 }) {
@@ -45,8 +45,9 @@ export function VehicleFormDialog({
   } = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
-      site_id: siteId,
+      building_id: buildingId,
       vehicle_no: vehicle?.vehicle_no ?? nextVehicleNo,
+      plate_no: vehicle?.plate_no ?? "",
       name: vehicle?.name ?? "",
     },
   });
@@ -66,7 +67,7 @@ export function VehicleFormDialog({
 
     toast.success(isEdit ? "차량 정보를 수정했습니다" : "차량을 등록했습니다");
     setOpen(false);
-    if (!isEdit) reset({ site_id: siteId, vehicle_no: nextVehicleNo + 1, name: "" });
+    if (!isEdit) reset({ building_id: buildingId, vehicle_no: nextVehicleNo + 1, plate_no: "", name: "" });
     router.refresh();
   }
 
@@ -96,7 +97,7 @@ export function VehicleFormDialog({
           <Pencil className="size-3" />
         </DialogTrigger>
       ) : (
-        <DialogTrigger render={<Button variant="outline" size="sm" />}>
+        <DialogTrigger render={<Button variant="ghost" size="sm" />}>
           <Plus className="size-4" /> 차량 추가
         </DialogTrigger>
       )}
@@ -107,23 +108,21 @@ export function VehicleFormDialog({
         <form onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
             <Field data-invalid={!!errors.vehicle_no}>
-              <FieldLabel htmlFor="vehicle-no">차량 번호 (관리번호에 사용)</FieldLabel>
+              <FieldLabel htmlFor="vehicle-no">차량 번호 (건물 내 호수)</FieldLabel>
               <Input
                 id="vehicle-no"
                 type="number"
                 {...register("vehicle_no", { valueAsNumber: true })}
               />
               <FieldError errors={errors.vehicle_no ? [errors.vehicle_no] : undefined} />
-              {isEdit && (
-                <p className="text-muted-foreground text-xs">
-                  차량 번호를 바꾸면 소속 소화기의 관리번호가 자동으로 갱신됩니다. 이미 부착된 QR
-                  라벨은 계속 사용할 수 있습니다.
-                </p>
-              )}
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="vehicle-plate">차량 번호판</FieldLabel>
+              <Input id="vehicle-plate" placeholder="예: 12가 3456" {...register("plate_no")} />
             </Field>
             <Field>
               <FieldLabel htmlFor="vehicle-name">차량명 (선택, 표시용)</FieldLabel>
-              <Input id="vehicle-name" placeholder="예: 순찰차 1호" {...register("name")} />
+              <Input id="vehicle-name" placeholder="예: 소방차 1호" {...register("name")} />
             </Field>
           </FieldGroup>
           <DialogFooter className="mt-4">

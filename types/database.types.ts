@@ -113,16 +113,18 @@ export interface Database {
       vehicles: {
         Row: {
           id: string;
-          site_id: string;
+          building_id: string;
           vehicle_no: number;
           name: string | null;
+          plate_no: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
-          site_id: string;
+          building_id: string;
           vehicle_no: number;
           name?: string | null;
+          plate_no?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;
         Relationships: [];
@@ -267,6 +269,7 @@ export interface Database {
           vehicle_id: string | null;
           vehicle_name: string | null;
           vehicle_no: number | null;
+          vehicle_plate_no: string | null;
           last_inspected_at: string | null;
           last_inspection_result: InspectionResult | null;
           last_inspector_id: string | null;

@@ -19,7 +19,8 @@ interface PivotRow {
   total: number;
 }
 
-/** 건물(또는 차량) 단위 행으로 묶고, 종류별 열 개수를 집계한 피벗 데이터를 만든다. */
+/** 건물 단위 행으로 묶고, 종류별 열 개수를 집계한 피벗 데이터를 만든다.
+ *  차량 소화기도 소속 건물의 수량에 포함된다. */
 function buildPivot(rows: ExtinguisherOverview[]) {
   const typeNames = [...new Set(rows.map((r) => r.extinguisher_type_name))].sort((a, b) =>
     a.localeCompare(b, "ko")
@@ -28,12 +29,8 @@ function buildPivot(rows: ExtinguisherOverview[]) {
   const rowMap = new Map<string, PivotRow>();
 
   for (const r of rows) {
-    const key =
-      r.location_type === "BUILDING" ? `b:${r.building_id}` : `v:${r.vehicle_id}`;
-    const label =
-      r.location_type === "BUILDING"
-        ? `${r.site_name} ${r.building_no}동${r.building_name ? ` (${r.building_name})` : ""}`
-        : `${r.site_name} 차량 ${r.vehicle_no}호${r.vehicle_name ? ` (${r.vehicle_name})` : ""}`;
+    const key = `b:${r.building_id}`;
+    const label = `${r.site_name} ${r.building_no}동${r.building_name ? ` (${r.building_name})` : ""}`;
 
     let row = rowMap.get(key);
     if (!row) {
@@ -67,9 +64,8 @@ export default async function InventoryPage() {
   const rows = extinguishers ?? [];
   const { typeNames, pivotRows, totalsByType, grandTotal } = buildPivot(rows);
 
-  const buildingCount = new Set(
-    rows.filter((r) => r.location_type === "BUILDING").map((r) => r.building_id)
-  ).size;
+  // 차량 소화기도 건물 소속이므로 건물 수는 전체 기준으로 센다
+  const buildingCount = new Set(rows.map((r) => r.building_id)).size;
   const vehicleCount = new Set(
     rows.filter((r) => r.location_type === "VEHICLE").map((r) => r.vehicle_id)
   ).size;
@@ -86,7 +82,8 @@ export default async function InventoryPage() {
       <div>
         <h1 className="text-2xl font-bold">수량 현황</h1>
         <p className="text-muted-foreground text-sm">
-          사용 중(active)인 소화기의 건물·차량별 / 종류별 수량입니다.
+          사용 중(active)인 소화기의 건물별 / 종류별 수량입니다. 차량 소화기는 소속 건물 수량에
+          포함됩니다.
         </p>
       </div>
 
@@ -106,7 +103,7 @@ export default async function InventoryPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>건물·차량별 × 종류별 수량</CardTitle>
+          <CardTitle>건물별 × 종류별 수량 (차량 포함)</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>

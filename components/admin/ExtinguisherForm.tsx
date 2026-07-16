@@ -59,12 +59,14 @@ export function ExtinguisherForm({
   const isEdit = !!extinguisher;
 
   const initialFloor = floors.find((f) => f.id === extinguisher?.floor_id);
-  const initialBuilding = buildings.find((b) => b.id === initialFloor?.building_id);
   const initialVehicle = vehicles.find((v) => v.id === extinguisher?.vehicle_id);
-  const initialSiteId = initialBuilding?.site_id ?? initialVehicle?.site_id ?? "";
+  // 차량도 건물 소속이므로 건물 경로는 층/차량 어느 쪽에서든 찾는다
+  const initialBuildingId = initialFloor?.building_id ?? initialVehicle?.building_id ?? "";
+  const initialBuilding = buildings.find((b) => b.id === initialBuildingId);
+  const initialSiteId = initialBuilding?.site_id ?? "";
 
   const [siteId, setSiteId] = useState(initialSiteId);
-  const [buildingId, setBuildingId] = useState(initialFloor?.building_id ?? "");
+  const [buildingId, setBuildingId] = useState(initialBuildingId);
   // 폼이 열린 상태에서 종류를 새로 추가하면 server props가 갱신되기 전에도 바로 목록에 반영한다.
   const [localTypes, setLocalTypes] = useState(types);
 
@@ -102,8 +104,8 @@ export function ExtinguisherForm({
   );
   const filteredZones = useMemo(() => zones.filter((z) => z.floor_id === floorId), [zones, floorId]);
   const filteredVehicles = useMemo(
-    () => vehicles.filter((v) => v.site_id === siteId),
-    [vehicles, siteId]
+    () => vehicles.filter((v) => v.building_id === buildingId),
+    [vehicles, buildingId]
   );
 
   // Base UI Select는 items를 명시적으로 줘야 트리거에 라벨을 보여준다(안 주면 원시 value가 보임).
@@ -131,7 +133,7 @@ export function ExtinguisherForm({
     () =>
       filteredVehicles.map((v) => ({
         value: v.id,
-        label: `차량 ${v.vehicle_no}호${v.name ? ` (${v.name})` : ""}`,
+        label: `차량 ${v.vehicle_no}호${v.plate_no ? ` [${v.plate_no}]` : ""}${v.name ? ` (${v.name})` : ""}`,
       })),
     [filteredVehicles]
   );
@@ -241,34 +243,35 @@ export function ExtinguisherForm({
           </Select>
         </Field>
 
+        <Field>
+          <FieldLabel>건물</FieldLabel>
+          <Select
+            items={buildingItems}
+            value={buildingId}
+            onValueChange={(v) => {
+              if (!v) return;
+              setBuildingId(v);
+              setValue("floor_id", undefined);
+              setValue("zone_id", undefined);
+              setValue("vehicle_id", undefined);
+            }}
+            disabled={!siteId}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="건물 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredBuildings.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.building_no}동{b.name ? ` (${b.name})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+
         {locationType === "BUILDING" ? (
           <>
-            <Field>
-              <FieldLabel>건물</FieldLabel>
-              <Select
-                items={buildingItems}
-                value={buildingId}
-                onValueChange={(v) => {
-                  if (!v) return;
-                  setBuildingId(v);
-                  setValue("floor_id", undefined);
-                  setValue("zone_id", undefined);
-                }}
-                disabled={!siteId}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="건물 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredBuildings.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.building_no}동{b.name ? ` (${b.name})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
             <Field data-invalid={!!errors.floor_id}>
               <FieldLabel>층</FieldLabel>
               <Select
@@ -323,7 +326,7 @@ export function ExtinguisherForm({
               items={vehicleItems}
               value={watch("vehicle_id") ?? ""}
               onValueChange={(v) => v && setValue("vehicle_id", v)}
-              disabled={!siteId}
+              disabled={!buildingId}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="차량 선택" />
@@ -331,7 +334,8 @@ export function ExtinguisherForm({
               <SelectContent>
                 {filteredVehicles.map((v) => (
                   <SelectItem key={v.id} value={v.id}>
-                    차량 {v.vehicle_no}호{v.name ? ` (${v.name})` : ""}
+                    차량 {v.vehicle_no}호{v.plate_no ? ` [${v.plate_no}]` : ""}
+                    {v.name ? ` (${v.name})` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
