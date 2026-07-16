@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { ExtinguisherTypeFormDialog } from "@/components/admin/ExtinguisherTypeFormDialog";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,8 @@ export function ExtinguisherForm({
 
   const [siteId, setSiteId] = useState(initialSiteId);
   const [buildingId, setBuildingId] = useState(initialFloor?.building_id ?? "");
+  // 폼이 열린 상태에서 종류를 새로 추가하면 server props가 갱신되기 전에도 바로 목록에 반영한다.
+  const [localTypes, setLocalTypes] = useState(types);
 
   const {
     register,
@@ -132,7 +135,10 @@ export function ExtinguisherForm({
       })),
     [filteredVehicles]
   );
-  const typeItems = useMemo(() => types.map((t) => ({ value: t.id, label: t.name })), [types]);
+  const typeItems = useMemo(
+    () => localTypes.map((t) => ({ value: t.id, label: t.name })),
+    [localTypes]
+  );
 
   async function onSubmit(values: ExtinguisherFormValues) {
     setSubmitting(true);
@@ -335,14 +341,23 @@ export function ExtinguisherForm({
         )}
 
         <Field data-invalid={!!errors.extinguisher_type_id}>
-          <FieldLabel>소화기 종류</FieldLabel>
+          <div className="flex items-center justify-between">
+            <FieldLabel>소화기 종류</FieldLabel>
+            <ExtinguisherTypeFormDialog
+              onCreated={(newType) => {
+                setLocalTypes((prev) => [...prev, newType]);
+                setValue("extinguisher_type_id", newType.id);
+                if (!isEdit) setValue("useful_life_years", newType.default_useful_life_years);
+              }}
+            />
+          </div>
           <Select
             items={typeItems}
             value={watch("extinguisher_type_id")}
             onValueChange={(v) => {
               if (!v) return;
               setValue("extinguisher_type_id", v);
-              const type = types.find((t) => t.id === v);
+              const type = localTypes.find((t) => t.id === v);
               if (type && !isEdit) setValue("useful_life_years", type.default_useful_life_years);
             }}
           >
@@ -350,7 +365,7 @@ export function ExtinguisherForm({
               <SelectValue placeholder="종류 선택" />
             </SelectTrigger>
             <SelectContent>
-              {types.map((t) => (
+              {localTypes.map((t) => (
                 <SelectItem key={t.id} value={t.id}>
                   {t.name}
                 </SelectItem>
