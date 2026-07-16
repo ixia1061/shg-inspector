@@ -1,6 +1,8 @@
+import { QrCode } from "lucide-react";
 import Link from "next/link";
 
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatLocationPath } from "@/lib/utils/location";
@@ -74,7 +76,12 @@ export default async function InspectorStatusPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
-      <h1 className="text-xl font-bold">점검 현황</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">점검 현황</h1>
+        <Button nativeButton={false} render={<Link href="/scan" />}>
+          <QrCode className="size-4" /> QR 스캔
+        </Button>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         {summaryCards.map(({ label, value, tone }) => (

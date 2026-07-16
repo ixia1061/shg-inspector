@@ -1,4 +1,4 @@
-import { ClipboardList, UserRound } from "lucide-react";
+import { ClipboardList, QrCode, UserRound } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -25,6 +25,14 @@ export default async function InspectorLayout({
       <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
         <span className="text-base font-bold">소화기 점검</span>
         <div className="flex items-center gap-1">
+          <Link
+            href="/scan"
+            className="text-muted-foreground flex items-center gap-1 p-2 text-sm"
+            aria-label="QR 스캔"
+          >
+            <QrCode className="size-5" />
+            스캔
+          </Link>
           <Link
             href="/status"
             className="text-muted-foreground flex items-center gap-1 p-2 text-sm"
