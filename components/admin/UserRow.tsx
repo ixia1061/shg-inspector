@@ -4,7 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { toggleUserActiveAction, updateUserRoleAction } from "@/app/(admin)/users/actions";
+import {
+  deleteUserAction,
+  toggleUserActiveAction,
+  updateUserRoleAction,
+} from "@/app/(admin)/users/actions";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -67,6 +71,21 @@ export function UserRow({
     });
   }
 
+  function handleDelete() {
+    if (!confirm(`"${name}" 사용자를 삭제하시겠습니까?\n삭제하면 로그인할 수 없게 됩니다.`)) return;
+    startTransition(async () => {
+      try {
+        await deleteUserAction(id);
+        toast.success("사용자를 삭제했습니다");
+        router.refresh();
+      } catch (err) {
+        toast.error("삭제에 실패했습니다", {
+          description: err instanceof Error ? err.message : String(err),
+        });
+      }
+    });
+  }
+
   return (
     <TableRow>
       <TableCell className="font-medium">{name}</TableCell>
@@ -85,9 +104,14 @@ export function UserRow({
         {siteNames.length ? siteNames.join(", ") : "-"}
       </TableCell>
       <TableCell>
-        <Button variant="outline" size="sm" onClick={handleToggleActive} disabled={isPending}>
-          {active ? "활성" : "비활성"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleToggleActive} disabled={isPending}>
+            {active ? "활성" : "비활성"}
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isPending}>
+            삭제
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );

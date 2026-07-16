@@ -15,6 +15,8 @@ async function assertAdmin() {
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") throw new Error("관리자만 사용할 수 있습니다");
+
+  return user;
 }
 
 export async function createUserAction(input: {
@@ -61,5 +63,35 @@ export async function toggleUserActiveAction(userId: string, isActive: boolean) 
   await assertAdmin();
   const admin = createAdminClient();
   await admin.from("profiles").update({ is_active: isActive }).eq("id", userId);
+  revalidatePath("/users");
+}
+
+export async function deleteUserAction(userId: string) {
+  const currentUser = await assertAdmin();
+
+  if (currentUser.id === userId) {
+    throw new Error("본인 계정은 삭제할 수 없습니다");
+  }
+
+  const admin = createAdminClient();
+
+  // 점검 이력이 있는 사용자는 감사 기록 보존을 위해 삭제 대신 비활성 처리를 유도한다.
+  // (inspections.inspector_id가 on delete restrict라 DB에서도 막히지만, 먼저 친절하게 안내)
+  const { count } = await admin
+    .from("inspections")
+    .select("id", { count: "exact", head: true })
+    .eq("inspector_id", userId);
+
+  if ((count ?? 0) > 0) {
+    throw new Error(
+      `점검 이력이 ${count}건 있는 사용자는 삭제할 수 없습니다. 대신 '비활성' 처리하세요.`
+    );
+  }
+
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) {
+    throw new Error(error.message);
+  }
+
   revalidatePath("/users");
 }

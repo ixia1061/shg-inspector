@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { QRScanner } from "@/components/inspector/QRScanner";
+import { Button } from "@/components/ui/button";
 
 function extractAssetCode(decodedText: string): string {
   try {
@@ -33,6 +35,15 @@ export default function ScanPage() {
         </p>
       </div>
       <QRScanner onScan={handleScan} />
+      <Button
+        variant="outline"
+        size="lg"
+        className="w-full max-w-xs"
+        nativeButton={false}
+        render={<Link href="/status" />}
+      >
+        점검 현황 보기
+      </Button>
     </div>
   );
 }
