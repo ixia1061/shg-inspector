@@ -25,8 +25,9 @@ export async function watermarkImage(file: File, lines: string[]): Promise<File>
     ctx.fillStyle = "#ffffff";
     ctx.font = `bold ${fontSize}px sans-serif`;
     ctx.textBaseline = "top";
+    ctx.textAlign = "center";
     lines.forEach((line, i) => {
-      ctx.fillText(line, padding, canvas.height - bandHeight + padding + i * lineHeight);
+      ctx.fillText(line, canvas.width / 2, canvas.height - bandHeight + padding + i * lineHeight);
     });
 
     const blob = await new Promise<Blob | null>((resolve) =>
