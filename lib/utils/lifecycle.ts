@@ -9,9 +9,11 @@ import type { LifecycleStatus } from "@/types/database.types";
  */
 export function computeLifecycleStatus(
   manufactureDate: string,
-  usefulLifeYears: number,
+  usefulLifeYears: number | null,
   today: Date = new Date()
 ): LifecycleStatus {
+  if (usefulLifeYears == null) return "none";
+
   const replaceDueDate = addYears(new Date(manufactureDate), usefulLifeYears);
 
   if (differenceInCalendarDays(replaceDueDate, today) <= 0) return "expired";
@@ -25,4 +27,5 @@ export const LIFECYCLE_STATUS_LABEL: Record<LifecycleStatus, string> = {
   due_90: "교체 90일 전",
   due_30: "교체 30일 전",
   expired: "만료",
+  none: "내용연수 없음",
 };

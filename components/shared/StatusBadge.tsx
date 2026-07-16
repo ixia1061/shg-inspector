@@ -7,6 +7,7 @@ const VARIANT: Record<LifecycleStatus, "default" | "secondary" | "destructive" |
   due_90: "outline",
   due_30: "default",
   expired: "destructive",
+  none: "outline",
 };
 
 export function LifecycleStatusBadge({ status }: { status: LifecycleStatus }) {

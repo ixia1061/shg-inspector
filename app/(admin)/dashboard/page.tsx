@@ -20,8 +20,8 @@ export default async function DashboardPage() {
 
   const summary = summaryRows?.[0] ?? {
     total_extinguishers: 0,
-    inspected_today: 0,
-    not_inspected_today: 0,
+    inspected_this_month: 0,
+    not_inspected_this_month: 0,
     due_soon: 0,
     expired: 0,
     recent_abnormal: 0,

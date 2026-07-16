@@ -4,7 +4,7 @@
  *   npx supabase gen types typescript --project-id <PROJECT_ID> > types/database.types.ts
  */
 
-export type LifecycleStatus = "normal" | "due_90" | "due_30" | "expired";
+export type LifecycleStatus = "normal" | "due_90" | "due_30" | "expired" | "none";
 export type UserRole = "admin" | "inspector";
 export type ExtinguisherStatus = "active" | "replaced" | "disposed";
 export type InspectionResult = "normal" | "abnormal";
@@ -133,12 +133,12 @@ export interface Database {
         Row: {
           id: string;
           name: string;
-          default_useful_life_years: number;
+          default_useful_life_years: number | null;
         };
         Insert: {
           id?: string;
           name: string;
-          default_useful_life_years?: number;
+          default_useful_life_years?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["extinguisher_types"]["Insert"]>;
         Relationships: [];
@@ -154,7 +154,7 @@ export interface Database {
           asset_code: string;
           extinguisher_type_id: string;
           manufacture_date: string;
-          useful_life_years: number;
+          useful_life_years: number | null;
           capacity: string | null;
           install_note: string | null;
           status: ExtinguisherStatus;
@@ -173,7 +173,7 @@ export interface Database {
           asset_code?: string;
           extinguisher_type_id: string;
           manufacture_date: string;
-          useful_life_years: number;
+          useful_life_years: number | null;
           capacity?: string | null;
           install_note?: string | null;
           status?: ExtinguisherStatus;
@@ -248,10 +248,10 @@ export interface Database {
           extinguisher_no: number;
           status: ExtinguisherStatus;
           manufacture_date: string;
-          useful_life_years: number;
+          useful_life_years: number | null;
           capacity: string | null;
           install_note: string | null;
-          replace_due_date: string;
+          replace_due_date: string | null;
           lifecycle_status: LifecycleStatus;
           extinguisher_type_id: string;
           extinguisher_type_name: string;
@@ -281,15 +281,15 @@ export interface Database {
     };
     Functions: {
       fn_extinguisher_status: {
-        Args: { p_manufacture_date: string; p_useful_life_years: number };
+        Args: { p_manufacture_date: string; p_useful_life_years: number | null };
         Returns: LifecycleStatus;
       };
       fn_dashboard_summary: {
         Args: { p_site_id?: string | null };
         Returns: {
           total_extinguishers: number;
-          inspected_today: number;
-          not_inspected_today: number;
+          inspected_this_month: number;
+          not_inspected_this_month: number;
           due_soon: number;
           expired: number;
           recent_abnormal: number;

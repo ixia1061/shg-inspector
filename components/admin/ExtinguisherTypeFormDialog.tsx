@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -40,11 +41,15 @@ export function ExtinguisherTypeFormDialog({
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<ExtinguisherTypeFormValues>({
     resolver: zodResolver(extinguisherTypeSchema),
     defaultValues: { name: "", default_useful_life_years: 10 },
   });
+
+  const noUsefulLife = watch("default_useful_life_years") === null;
 
   async function onSubmit(values: ExtinguisherTypeFormValues) {
     setSubmitting(true);
@@ -92,11 +97,30 @@ export function ExtinguisherTypeFormDialog({
             </Field>
             <Field data-invalid={!!errors.default_useful_life_years}>
               <FieldLabel htmlFor="type-life">기본 내용연수(년)</FieldLabel>
-              <Input
-                id="type-life"
-                type="number"
-                {...register("default_useful_life_years", { valueAsNumber: true })}
-              />
+              <div className="flex items-center gap-3">
+                <Input
+                  id="type-life"
+                  type="number"
+                  className="w-28"
+                  disabled={noUsefulLife}
+                  value={watch("default_useful_life_years") ?? ""}
+                  onChange={(e) =>
+                    setValue(
+                      "default_useful_life_years",
+                      e.target.value === "" ? undefined! : Number(e.target.value)
+                    )
+                  }
+                />
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={noUsefulLife}
+                    onCheckedChange={(checked) =>
+                      setValue("default_useful_life_years", checked ? null : 10)
+                    }
+                  />
+                  내용연수 없음
+                </label>
+              </div>
               <FieldError
                 errors={
                   errors.default_useful_life_years ? [errors.default_useful_life_years] : undefined

@@ -7,7 +7,9 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { ExtinguisherTypeFormDialog } from "@/components/admin/ExtinguisherTypeFormDialog";
+import { DateInput } from "@/components/shared/DateInput";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -85,7 +87,8 @@ export function ExtinguisherForm({
       vehicle_id: extinguisher?.vehicle_id ?? undefined,
       extinguisher_type_id: extinguisher?.extinguisher_type_id ?? "",
       manufacture_date: extinguisher?.manufacture_date ?? "",
-      useful_life_years: extinguisher?.useful_life_years ?? 10,
+      // null은 '내용연수 없음'이므로 ?? 로 덮어쓰면 안 된다
+      useful_life_years: extinguisher ? extinguisher.useful_life_years : 10,
       capacity: extinguisher?.capacity ?? "",
       install_note: extinguisher?.install_note ?? "",
     },
@@ -93,6 +96,7 @@ export function ExtinguisherForm({
 
   const locationType = watch("location_type");
   const floorId = watch("floor_id");
+  const noUsefulLife = watch("useful_life_years") === null;
 
   const filteredBuildings = useMemo(
     () => buildings.filter((b) => b.site_id === siteId),
@@ -381,17 +385,40 @@ export function ExtinguisherForm({
 
         <Field data-invalid={!!errors.manufacture_date}>
           <FieldLabel htmlFor="manufacture_date">제조일</FieldLabel>
-          <Input id="manufacture_date" type="date" {...register("manufacture_date")} />
+          <DateInput
+            id="manufacture_date"
+            value={watch("manufacture_date")}
+            onChange={(v) => setValue("manufacture_date", v, { shouldValidate: !!errors.manufacture_date })}
+          />
           <FieldError errors={errors.manufacture_date ? [errors.manufacture_date] : undefined} />
         </Field>
 
         <Field data-invalid={!!errors.useful_life_years}>
           <FieldLabel htmlFor="useful_life_years">내용연수(년)</FieldLabel>
-          <Input
-            id="useful_life_years"
-            type="number"
-            {...register("useful_life_years", { valueAsNumber: true })}
-          />
+          <div className="flex items-center gap-3">
+            <Input
+              id="useful_life_years"
+              type="number"
+              className="w-28"
+              disabled={noUsefulLife}
+              value={watch("useful_life_years") ?? ""}
+              onChange={(e) =>
+                setValue(
+                  "useful_life_years",
+                  e.target.value === "" ? undefined! : Number(e.target.value)
+                )
+              }
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={noUsefulLife}
+                onCheckedChange={(checked) =>
+                  setValue("useful_life_years", checked ? null : 10)
+                }
+              />
+              내용연수 없음
+            </label>
+          </div>
           <FieldError errors={errors.useful_life_years ? [errors.useful_life_years] : undefined} />
         </Field>
 

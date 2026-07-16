@@ -20,6 +20,7 @@ const STATUS_OPTIONS = [
   { value: "due_90", label: "교체 90일 전" },
   { value: "due_30", label: "교체 30일 전" },
   { value: "expired", label: "만료" },
+  { value: "none", label: "내용연수 없음" },
 ];
 
 export function ExtinguisherFilters({ sites }: { sites: Site[] }) {
