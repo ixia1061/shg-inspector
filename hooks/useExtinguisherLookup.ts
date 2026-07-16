@@ -75,7 +75,11 @@ export function useExtinguisherLookup(assetCode: string) {
           setData(cached);
           setFromCache(true);
         } else {
-          setError("소화기 정보를 찾을 수 없습니다. 온라인 상태에서 먼저 한 번 스캔해야 합니다.");
+          setError(
+            navigator.onLine
+              ? `등록되지 않은 QR 코드입니다. (스캔된 관리번호: ${assetCode})`
+              : "오프라인 상태이고 캐시된 정보가 없습니다. 온라인 상태에서 먼저 한 번 스캔해야 합니다."
+          );
         }
         setLoading(false);
       }
