@@ -19,14 +19,14 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
-import { buildingSchema, type BuildingFormValues } from "@/lib/validations/building.schema";
+import { vehicleSchema, type VehicleFormValues } from "@/lib/validations/vehicle.schema";
 
-export function BuildingFormDialog({
+export function VehicleFormDialog({
   siteId,
-  nextBuildingNo = 1,
+  nextVehicleNo = 1,
 }: {
   siteId: string;
-  nextBuildingNo?: number;
+  nextVehicleNo?: number;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -37,15 +37,15 @@ export function BuildingFormDialog({
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<BuildingFormValues>({
-    resolver: zodResolver(buildingSchema),
-    defaultValues: { site_id: siteId, building_no: nextBuildingNo, name: "", address: "" },
+  } = useForm<VehicleFormValues>({
+    resolver: zodResolver(vehicleSchema),
+    defaultValues: { site_id: siteId, vehicle_no: nextVehicleNo, name: "" },
   });
 
-  async function onSubmit(values: BuildingFormValues) {
+  async function onSubmit(values: VehicleFormValues) {
     setSubmitting(true);
     const supabase = createClient();
-    const { error } = await supabase.from("buildings").insert(values);
+    const { error } = await supabase.from("vehicles").insert(values);
     setSubmitting(false);
 
     if (error) {
@@ -53,39 +53,35 @@ export function BuildingFormDialog({
       return;
     }
 
-    toast.success("건물을 등록했습니다");
+    toast.success("차량을 등록했습니다");
     setOpen(false);
-    reset({ site_id: siteId, building_no: nextBuildingNo + 1, name: "", address: "" });
+    reset({ site_id: siteId, vehicle_no: nextVehicleNo + 1, name: "" });
     router.refresh();
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="outline" size="sm" />}>
-        <Plus className="size-4" /> 건물 추가
+        <Plus className="size-4" /> 차량 추가
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>건물 등록</DialogTitle>
+          <DialogTitle>차량 등록</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
-            <Field data-invalid={!!errors.building_no}>
-              <FieldLabel htmlFor="building-no">건물 번호 (관리번호에 사용)</FieldLabel>
+            <Field data-invalid={!!errors.vehicle_no}>
+              <FieldLabel htmlFor="vehicle-no">차량 번호 (관리번호에 사용)</FieldLabel>
               <Input
-                id="building-no"
+                id="vehicle-no"
                 type="number"
-                {...register("building_no", { valueAsNumber: true })}
+                {...register("vehicle_no", { valueAsNumber: true })}
               />
-              <FieldError errors={errors.building_no ? [errors.building_no] : undefined} />
+              <FieldError errors={errors.vehicle_no ? [errors.vehicle_no] : undefined} />
             </Field>
             <Field>
-              <FieldLabel htmlFor="building-name">건물명 (선택, 표시용)</FieldLabel>
-              <Input id="building-name" placeholder="예: 본관, 신관" {...register("name")} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="building-address">주소</FieldLabel>
-              <Input id="building-address" {...register("address")} />
+              <FieldLabel htmlFor="vehicle-name">차량명 (선택, 표시용)</FieldLabel>
+              <Input id="vehicle-name" placeholder="예: 순찰차 1호" {...register("name")} />
             </Field>
           </FieldGroup>
           <DialogFooter className="mt-4">

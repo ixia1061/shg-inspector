@@ -1,8 +1,9 @@
 /**
- * QR 코드에는 순차 ID 대신 qr_token(uuid)만 노출한다.
- * 라벨 분실/파손 시 extinguishers.qr_token만 재발급하면 code/이력은 그대로 유지된다.
+ * QR 코드에는 사람이 읽는 관리번호(asset_code)를 그대로 인코딩한다.
+ * 원칙적으로 QR은 재발급하지 않으며, 관리번호가 부득이 바뀌더라도
+ * asset_code_history를 통해 과거 QR 스캔도 현재 소화기로 정상 연결된다.
  */
-export function buildInspectionUrl(qrToken: string): string {
+export function buildInspectionUrl(assetCode: string): string {
   const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  return `${origin}/inspect/${qrToken}`;
+  return `${origin}/inspect/${encodeURIComponent(assetCode)}`;
 }

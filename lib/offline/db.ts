@@ -34,7 +34,7 @@ class OfflineDB extends Dexie {
   constructor() {
     super("shg-inspector-offline");
     this.version(1).stores({
-      extinguisherCache: "qr_token, id, code",
+      extinguisherCache: "id, asset_code",
       outbox: "localId, status, createdAt",
     });
   }

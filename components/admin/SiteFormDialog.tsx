@@ -36,6 +36,7 @@ export function SiteFormDialog({ site }: { site?: Site }) {
   } = useForm<SiteFormValues>({
     resolver: zodResolver(siteSchema),
     defaultValues: {
+      org_code: site?.org_code ?? "",
       name: site?.name ?? "",
       address: site?.address ?? "",
       manager_name: site?.manager_name ?? "",
@@ -77,6 +78,11 @@ export function SiteFormDialog({ site }: { site?: Site }) {
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
+            <Field data-invalid={!!errors.org_code}>
+              <FieldLabel htmlFor="org_code">관리기관 코드</FieldLabel>
+              <Input id="org_code" placeholder="예: 공사, 남부" {...register("org_code")} />
+              <FieldError errors={errors.org_code ? [errors.org_code] : undefined} />
+            </Field>
             <Field data-invalid={!!errors.name}>
               <FieldLabel htmlFor="name">사업장명</FieldLabel>
               <Input id="name" {...register("name")} />

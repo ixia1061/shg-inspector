@@ -12,7 +12,7 @@ export default async function DashboardPage() {
       supabase.rpc("fn_inspection_rate", { p_group_by: "building", p_period: "month" }),
       supabase
         .from("inspections")
-        .select("id, inspected_at, memo, extinguishers(code)")
+        .select("id, inspected_at, memo, extinguishers(asset_code)")
         .eq("overall_result", "abnormal")
         .order("inspected_at", { ascending: false })
         .limit(5),
@@ -53,8 +53,8 @@ export default async function DashboardPage() {
               <ul className="flex flex-col gap-2 text-sm">
                 {abnormalInspections.map((row) => (
                   <li key={row.id} className="flex flex-col border-b pb-2 last:border-0">
-                    <span className="font-medium">
-                      {(row.extinguishers as unknown as { code: string } | null)?.code ?? "-"}
+                    <span className="font-mono font-medium">
+                      {(row.extinguishers as unknown as { asset_code: string } | null)?.asset_code ?? "-"}
                     </span>
                     <span className="text-muted-foreground">
                       {new Date(row.inspected_at).toLocaleString("ko-KR")}

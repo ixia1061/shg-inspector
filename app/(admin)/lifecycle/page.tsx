@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatLocationPath } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function LifecyclePage() {
@@ -44,13 +45,11 @@ export default async function LifecyclePage() {
             extinguishers.map((e) => (
               <TableRow key={e.id}>
                 <TableCell>
-                  <Link href={`/extinguishers/${e.id}`} className="font-medium hover:underline">
-                    {e.code}
+                  <Link href={`/extinguishers/${e.id}`} className="font-mono font-medium hover:underline">
+                    {e.asset_code}
                   </Link>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {[e.site_name, e.building_name, e.floor_name].filter(Boolean).join(" > ")}
-                </TableCell>
+                <TableCell className="text-muted-foreground text-sm">{formatLocationPath(e)}</TableCell>
                 <TableCell>{e.manufacture_date}</TableCell>
                 <TableCell>{e.replace_due_date}</TableCell>
                 <TableCell>

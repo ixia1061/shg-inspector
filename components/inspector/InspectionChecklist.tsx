@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { LIFECYCLE_STATUS_LABEL } from "@/lib/utils/lifecycle";
+import { formatLocationPath } from "@/lib/utils/location";
 import { enqueueInspection } from "@/lib/offline/outbox";
 import { flushOutbox } from "@/lib/offline/syncEngine";
 import { createClient } from "@/lib/supabase/client";
@@ -109,11 +110,8 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-1 flex-col gap-6 p-4">
       <div className="rounded-lg border p-4">
-        <p className="text-lg font-bold">{extinguisher.code}</p>
-        <p className="text-muted-foreground text-sm">
-          {extinguisher.site_name} &gt; {extinguisher.building_name} &gt; {extinguisher.floor_name}
-          {extinguisher.zone_name ? ` > ${extinguisher.zone_name}` : ""}
-        </p>
+        <p className="text-lg font-bold">{extinguisher.asset_code}</p>
+        <p className="text-muted-foreground text-sm">{formatLocationPath(extinguisher)}</p>
         <p className="text-muted-foreground mt-2 text-sm">
           {extinguisher.extinguisher_type_name} · 제조일 {extinguisher.manufacture_date} ·{" "}
           {LIFECYCLE_STATUS_LABEL[extinguisher.lifecycle_status]}

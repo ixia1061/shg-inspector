@@ -25,6 +25,7 @@ export default async function SitesPage() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>코드</TableHead>
             <TableHead>사업장명</TableHead>
             <TableHead>주소</TableHead>
             <TableHead>담당자</TableHead>
@@ -35,6 +36,7 @@ export default async function SitesPage() {
           {sites?.length ? (
             sites.map((site) => (
               <TableRow key={site.id}>
+                <TableCell className="text-muted-foreground">{site.org_code}</TableCell>
                 <TableCell>
                   <Link href={`/sites/${site.id}`} className="font-medium hover:underline">
                     {site.name}
@@ -47,7 +49,7 @@ export default async function SitesPage() {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={4} className="text-muted-foreground text-center">
+              <TableCell colSpan={5} className="text-muted-foreground text-center">
                 등록된 사업장이 없습니다.
               </TableCell>
             </TableRow>

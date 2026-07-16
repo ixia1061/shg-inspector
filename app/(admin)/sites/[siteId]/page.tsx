@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { BuildingFormDialog } from "@/components/admin/BuildingFormDialog";
 import { FloorFormDialog } from "@/components/admin/FloorFormDialog";
 import { SiteFormDialog } from "@/components/admin/SiteFormDialog";
+import { VehicleFormDialog } from "@/components/admin/VehicleFormDialog";
 import { ZoneFormDialog } from "@/components/admin/ZoneFormDialog";
 import { createClient } from "@/lib/supabase/server";
 import type { Floor, Zone } from "@/types/domain";
@@ -22,7 +23,13 @@ export default async function SiteDetailPage({
     .from("buildings")
     .select("*")
     .eq("site_id", siteId)
-    .order("name");
+    .order("building_no");
+
+  const { data: vehicles } = await supabase
+    .from("vehicles")
+    .select("*")
+    .eq("site_id", siteId)
+    .order("vehicle_no");
 
   const buildingIds = (buildings ?? []).map((b) => b.id);
 
@@ -39,31 +46,42 @@ export default async function SiteDetailPage({
   const floorsByBuilding = groupBy(floors ?? [], "building_id");
   const zonesByFloor = groupBy(zones ?? [], "floor_id");
 
+  const nextBuildingNo = (buildings ?? []).reduce((max, b) => Math.max(max, b.building_no), 0) + 1;
+  const nextVehicleNo = (vehicles ?? []).reduce((max, v) => Math.max(max, v.vehicle_no), 0) + 1;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{site.name}</h1>
+          <h1 className="text-2xl font-bold">
+            {site.name} <span className="text-muted-foreground text-base font-normal">({site.org_code})</span>
+          </h1>
           <p className="text-muted-foreground text-sm">{site.address}</p>
         </div>
         <div className="flex gap-2">
           <SiteFormDialog site={site} />
-          <BuildingFormDialog siteId={site.id} />
+          <BuildingFormDialog siteId={site.id} nextBuildingNo={nextBuildingNo} />
+          <VehicleFormDialog siteId={site.id} nextVehicleNo={nextVehicleNo} />
         </div>
       </div>
 
       <div className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">건물</h2>
         {(buildings ?? []).map((building) => (
           <div key={building.id} className="rounded-lg border p-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">{building.name}</h2>
+              <h3 className="font-semibold">
+                {building.building_no}동{building.name ? ` (${building.name})` : ""}
+              </h3>
               <FloorFormDialog buildingId={building.id} />
             </div>
             <div className="mt-3 flex flex-col gap-2 pl-4">
               {(floorsByBuilding[building.id] ?? []).map((floor) => (
                 <div key={floor.id} className="border-l pl-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{floor.name}</span>
+                    <span className="text-sm font-medium">
+                      {floor.name} <span className="text-muted-foreground">[{floor.floor_code}]</span>
+                    </span>
                     <ZoneFormDialog floorId={floor.id} />
                   </div>
                   {(zonesByFloor[floor.id] ?? []).length > 0 && (
@@ -85,6 +103,21 @@ export default async function SiteDetailPage({
         ))}
         {(buildings ?? []).length === 0 && (
           <p className="text-muted-foreground text-sm">등록된 건물이 없습니다.</p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">차량</h2>
+        {(vehicles ?? []).length ? (
+          <ul className="flex flex-wrap gap-2">
+            {(vehicles ?? []).map((vehicle) => (
+              <li key={vehicle.id} className="bg-muted rounded px-3 py-2 text-sm">
+                차량 {vehicle.vehicle_no}호{vehicle.name ? ` (${vehicle.name})` : ""}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground text-sm">등록된 차량이 없습니다.</p>
         )}
       </div>
     </div>

@@ -1,14 +1,8 @@
-export function LocationPath({
-  siteName,
-  buildingName,
-  floorName,
-  zoneName,
-}: {
-  siteName: string;
-  buildingName: string;
-  floorName: string;
-  zoneName?: string | null;
-}) {
-  const parts = [siteName, buildingName, floorName, zoneName].filter(Boolean);
-  return <span className="text-muted-foreground text-sm">{parts.join(" > ")}</span>;
+import { formatLocationPath } from "@/lib/utils/location";
+import type { ExtinguisherOverview } from "@/types/domain";
+
+type LocationFields = Parameters<typeof formatLocationPath>[0];
+
+export function LocationPath({ extinguisher }: { extinguisher: LocationFields | ExtinguisherOverview }) {
+  return <span className="text-muted-foreground text-sm">{formatLocationPath(extinguisher)}</span>;
 }

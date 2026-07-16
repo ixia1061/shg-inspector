@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { QrLabelPreview } from "@/components/admin/QrLabelPreview";
 import { buildInspectionUrl } from "@/lib/qr/encode";
+import { formatLocationPath } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ExtinguisherLabelPage({
@@ -20,14 +21,16 @@ export default async function ExtinguisherLabelPage({
 
   if (!overview) notFound();
 
-  const location = [overview.building_name, overview.floor_name, overview.zone_name]
-    .filter(Boolean)
-    .join(" ");
+  const location = formatLocationPath(overview);
 
   return (
     <div className="flex flex-col items-center gap-6">
-      <h1 className="text-2xl font-bold">QR 라벨 — {overview.code}</h1>
-      <QrLabelPreview url={buildInspectionUrl(overview.qr_token)} code={overview.code} location={location} />
+      <h1 className="text-2xl font-bold font-mono">QR 라벨 — {overview.asset_code}</h1>
+      <QrLabelPreview
+        url={buildInspectionUrl(overview.asset_code)}
+        code={overview.asset_code}
+        location={location}
+      />
     </div>
   );
 }

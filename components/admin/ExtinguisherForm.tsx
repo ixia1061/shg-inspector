@@ -16,22 +16,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
 import {
   extinguisherSchema,
   type ExtinguisherFormValues,
 } from "@/lib/validations/extinguisher.schema";
-import type { Building, Extinguisher, ExtinguisherType, Floor, Site, Zone } from "@/types/domain";
+import type {
+  Building,
+  Extinguisher,
+  ExtinguisherType,
+  Floor,
+  Site,
+  Vehicle,
+  Zone,
+} from "@/types/domain";
+import type { Database } from "@/types/database.types";
 
 interface ExtinguisherFormProps {
   sites: Site[];
   buildings: Building[];
   floors: Floor[];
   zones: Zone[];
+  vehicles: Vehicle[];
   types: ExtinguisherType[];
   extinguisher?: Extinguisher;
-  initialSiteId?: string;
-  initialBuildingId?: string;
 }
 
 export function ExtinguisherForm({
@@ -39,10 +48,9 @@ export function ExtinguisherForm({
   buildings,
   floors,
   zones,
+  vehicles,
   types,
   extinguisher,
-  initialSiteId,
-  initialBuildingId,
 }: ExtinguisherFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -50,9 +58,11 @@ export function ExtinguisherForm({
 
   const initialFloor = floors.find((f) => f.id === extinguisher?.floor_id);
   const initialBuilding = buildings.find((b) => b.id === initialFloor?.building_id);
+  const initialVehicle = vehicles.find((v) => v.id === extinguisher?.vehicle_id);
+  const initialSiteId = initialBuilding?.site_id ?? initialVehicle?.site_id ?? "";
 
-  const [siteId, setSiteId] = useState(initialBuilding?.site_id ?? initialSiteId ?? "");
-  const [buildingId, setBuildingId] = useState(initialFloor?.building_id ?? initialBuildingId ?? "");
+  const [siteId, setSiteId] = useState(initialSiteId);
+  const [buildingId, setBuildingId] = useState(initialFloor?.building_id ?? "");
 
   const {
     register,
@@ -63,9 +73,10 @@ export function ExtinguisherForm({
   } = useForm<ExtinguisherFormValues>({
     resolver: zodResolver(extinguisherSchema),
     defaultValues: {
-      code: extinguisher?.code ?? "",
-      floor_id: extinguisher?.floor_id ?? "",
+      location_type: extinguisher?.location_type ?? "BUILDING",
+      floor_id: extinguisher?.floor_id ?? undefined,
       zone_id: extinguisher?.zone_id ?? undefined,
+      vehicle_id: extinguisher?.vehicle_id ?? undefined,
       extinguisher_type_id: extinguisher?.extinguisher_type_id ?? "",
       manufacture_date: extinguisher?.manufacture_date ?? "",
       useful_life_years: extinguisher?.useful_life_years ?? 10,
@@ -74,6 +85,7 @@ export function ExtinguisherForm({
     },
   });
 
+  const locationType = watch("location_type");
   const floorId = watch("floor_id");
 
   const filteredBuildings = useMemo(
@@ -85,15 +97,48 @@ export function ExtinguisherForm({
     [floors, buildingId]
   );
   const filteredZones = useMemo(() => zones.filter((z) => z.floor_id === floorId), [zones, floorId]);
+  const filteredVehicles = useMemo(
+    () => vehicles.filter((v) => v.site_id === siteId),
+    [vehicles, siteId]
+  );
 
   async function onSubmit(values: ExtinguisherFormValues) {
     setSubmitting(true);
     const supabase = createClient();
-    const payload = { ...values, zone_id: values.zone_id || null };
+
+    const payload: Database["public"]["Tables"]["extinguishers"]["Insert"] =
+      values.location_type === "BUILDING"
+        ? {
+            location_type: "BUILDING",
+            floor_id: values.floor_id,
+            zone_id: values.zone_id || null,
+            vehicle_id: null,
+            extinguisher_type_id: values.extinguisher_type_id,
+            manufacture_date: values.manufacture_date,
+            useful_life_years: values.useful_life_years,
+            capacity: values.capacity,
+            install_note: values.install_note,
+          }
+        : {
+            location_type: "VEHICLE",
+            floor_id: null,
+            zone_id: null,
+            vehicle_id: values.vehicle_id,
+            extinguisher_type_id: values.extinguisher_type_id,
+            manufacture_date: values.manufacture_date,
+            useful_life_years: values.useful_life_years,
+            capacity: values.capacity,
+            install_note: values.install_note,
+          };
 
     const { error, data } = isEdit
-      ? await supabase.from("extinguishers").update(payload).eq("id", extinguisher.id).select("id").single()
-      : await supabase.from("extinguishers").insert(payload).select("id").single();
+      ? await supabase
+          .from("extinguishers")
+          .update(payload)
+          .eq("id", extinguisher.id)
+          .select("id, asset_code")
+          .single()
+      : await supabase.from("extinguishers").insert(payload).select("id, asset_code").single();
 
     setSubmitting(false);
 
@@ -102,7 +147,9 @@ export function ExtinguisherForm({
       return;
     }
 
-    toast.success(isEdit ? "소화기 정보를 수정했습니다" : "소화기를 등록했습니다");
+    toast.success(
+      isEdit ? `관리번호가 ${data.asset_code}로 갱신되었습니다` : `관리번호 ${data.asset_code}로 등록되었습니다`
+    );
     router.push(`/extinguishers/${data.id}`);
     router.refresh();
   }
@@ -110,10 +157,23 @@ export function ExtinguisherForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex max-w-xl flex-col gap-4">
       <FieldGroup>
-        <Field data-invalid={!!errors.code}>
-          <FieldLabel htmlFor="code">관리번호</FieldLabel>
-          <Input id="code" placeholder="예: A동-3F-001" {...register("code")} />
-          <FieldError errors={errors.code ? [errors.code] : undefined} />
+        <Field>
+          <FieldLabel>위치 유형</FieldLabel>
+          <Tabs
+            value={locationType}
+            onValueChange={(v) => {
+              if (!v) return;
+              setValue("location_type", v as "BUILDING" | "VEHICLE");
+              setValue("floor_id", undefined);
+              setValue("zone_id", undefined);
+              setValue("vehicle_id", undefined);
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value="BUILDING">건물</TabsTrigger>
+              <TabsTrigger value="VEHICLE">차량</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </Field>
 
         <Field>
@@ -124,8 +184,9 @@ export function ExtinguisherForm({
               if (!v) return;
               setSiteId(v);
               setBuildingId("");
-              setValue("floor_id", "");
+              setValue("floor_id", undefined);
               setValue("zone_id", undefined);
+              setValue("vehicle_id", undefined);
             }}
           >
             <SelectTrigger className="w-full">
@@ -134,82 +195,107 @@ export function ExtinguisherForm({
             <SelectContent>
               {sites.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
-                  {s.name}
+                  {s.org_code} — {s.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
 
-        <Field>
-          <FieldLabel>건물</FieldLabel>
-          <Select
-            value={buildingId}
-            onValueChange={(v) => {
-              if (!v) return;
-              setBuildingId(v);
-              setValue("floor_id", "");
-              setValue("zone_id", undefined);
-            }}
-            disabled={!siteId}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="건물 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredBuildings.map((b) => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+        {locationType === "BUILDING" ? (
+          <>
+            <Field>
+              <FieldLabel>건물</FieldLabel>
+              <Select
+                value={buildingId}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  setBuildingId(v);
+                  setValue("floor_id", undefined);
+                  setValue("zone_id", undefined);
+                }}
+                disabled={!siteId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="건물 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredBuildings.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.building_no}동{b.name ? ` (${b.name})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
 
-        <Field data-invalid={!!errors.floor_id}>
-          <FieldLabel>층</FieldLabel>
-          <Select
-            value={watch("floor_id")}
-            onValueChange={(v) => {
-              if (!v) return;
-              setValue("floor_id", v);
-              setValue("zone_id", undefined);
-            }}
-            disabled={!buildingId}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="층 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredFloors.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldError errors={errors.floor_id ? [errors.floor_id] : undefined} />
-        </Field>
+            <Field data-invalid={!!errors.floor_id}>
+              <FieldLabel>층</FieldLabel>
+              <Select
+                value={watch("floor_id") ?? ""}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  setValue("floor_id", v);
+                  setValue("zone_id", undefined);
+                }}
+                disabled={!buildingId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="층 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredFloors.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name} [{f.floor_code}]
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError errors={errors.floor_id ? [errors.floor_id] : undefined} />
+            </Field>
 
-        <Field>
-          <FieldLabel>구역 (선택)</FieldLabel>
-          <Select
-            value={watch("zone_id") ?? ""}
-            onValueChange={(v) => setValue("zone_id", v || undefined)}
-            disabled={!floorId}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="구역 선택 (선택사항)" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredZones.map((z) => (
-                <SelectItem key={z.id} value={z.id}>
-                  {z.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+            <Field>
+              <FieldLabel>구역 (선택)</FieldLabel>
+              <Select
+                value={watch("zone_id") ?? ""}
+                onValueChange={(v) => setValue("zone_id", v || undefined)}
+                disabled={!floorId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="구역 선택 (선택사항)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredZones.map((z) => (
+                    <SelectItem key={z.id} value={z.id}>
+                      {z.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </>
+        ) : (
+          <Field data-invalid={!!errors.vehicle_id}>
+            <FieldLabel>차량</FieldLabel>
+            <Select
+              value={watch("vehicle_id") ?? ""}
+              onValueChange={(v) => v && setValue("vehicle_id", v)}
+              disabled={!siteId}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="차량 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredVehicles.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    차량 {v.vehicle_no}호{v.name ? ` (${v.name})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldError errors={errors.vehicle_id ? [errors.vehicle_id] : undefined} />
+          </Field>
+        )}
 
         <Field data-invalid={!!errors.extinguisher_type_id}>
           <FieldLabel>소화기 종류</FieldLabel>
@@ -262,6 +348,13 @@ export function ExtinguisherForm({
           <Input id="install_note" placeholder="예: 출입구 옆 소화전함" {...register("install_note")} />
         </Field>
       </FieldGroup>
+
+      {isEdit && (
+        <p className="text-muted-foreground text-xs">
+          현재 관리번호: <span className="font-mono">{extinguisher.asset_code}</span> — 위치를
+          변경하면 관리번호가 자동으로 갱신되고 이전 번호는 이력으로 보존됩니다.
+        </p>
+      )}
 
       <Button type="submit" disabled={submitting}>
         {submitting ? "저장 중..." : isEdit ? "수정 저장" : "등록"}

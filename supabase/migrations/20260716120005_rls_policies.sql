@@ -3,11 +3,35 @@ alter table public.sites enable row level security;
 alter table public.buildings enable row level security;
 alter table public.floors enable row level security;
 alter table public.zones enable row level security;
+alter table public.vehicles enable row level security;
 alter table public.extinguisher_types enable row level security;
 alter table public.extinguishers enable row level security;
+alter table public.asset_code_history enable row level security;
 alter table public.inspections enable row level security;
 alter table public.inspection_photos enable row level security;
 alter table public.user_sites enable row level security;
+
+-- 소화기 하나(id)가 속한 사업장을 위치 유형(건물/차량)에 관계없이 찾는다. RLS에서 공용으로 사용.
+create or replace function public.fn_extinguisher_site_id(p_extinguisher_id uuid)
+returns uuid
+language sql
+stable
+security definer set search_path = public
+as $$
+  select coalesce(
+    (
+      select b.site_id from public.extinguishers e
+      join public.floors f on f.id = e.floor_id
+      join public.buildings b on b.id = f.building_id
+      where e.id = p_extinguisher_id
+    ),
+    (
+      select v.site_id from public.extinguishers e
+      join public.vehicles v on v.id = e.vehicle_id
+      where e.id = p_extinguisher_id
+    )
+  );
+$$;
 
 -- profiles ---------------------------------------------------------------
 create policy "profiles_select_own_or_admin" on public.profiles
@@ -59,6 +83,13 @@ create policy "zones_inspector_read" on public.zones
     ))
   );
 
+-- vehicles ---------------------------------------------------------------
+create policy "vehicles_admin_write" on public.vehicles
+  for all using (public.is_admin()) with check (public.is_admin());
+
+create policy "vehicles_inspector_read" on public.vehicles
+  for select using (public.has_site_access(site_id));
+
 -- extinguisher_types (룩업, 로그인 사용자 전체 읽기 허용) --------------------
 create policy "types_read_all" on public.extinguisher_types
   for select using (auth.uid() is not null);
@@ -71,13 +102,11 @@ create policy "extinguishers_admin_write" on public.extinguishers
   for all using (public.is_admin()) with check (public.is_admin());
 
 create policy "extinguishers_inspector_read" on public.extinguishers
-  for select using (
-    public.has_site_access((
-      select b.site_id from public.buildings b
-      join public.floors f on f.building_id = b.id
-      where f.id = floor_id
-    ))
-  );
+  for select using (public.has_site_access(public.fn_extinguisher_site_id(id)));
+
+-- asset_code_history (관리자 전용 열람) ---------------------------------------
+create policy "asset_code_history_admin_read" on public.asset_code_history
+  for select using (public.is_admin());
 
 -- inspections (append-only: update/delete 정책을 두지 않아 감사 무결성 보장) --
 create policy "inspections_admin_read" on public.inspections
@@ -89,12 +118,7 @@ create policy "inspections_own_read" on public.inspections
 create policy "inspections_insert_own" on public.inspections
   for insert with check (
     inspector_id = auth.uid()
-    and public.has_site_access((
-      select b.site_id from public.extinguishers e
-      join public.floors f on f.id = e.floor_id
-      join public.buildings b on b.id = f.building_id
-      where e.id = extinguisher_id
-    ))
+    and public.has_site_access(public.fn_extinguisher_site_id(extinguisher_id))
   );
 
 -- inspection_photos ---------------------------------------------------------------

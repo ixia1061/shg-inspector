@@ -4,14 +4,14 @@ import { useRouter } from "next/navigation";
 
 import { QRScanner } from "@/components/inspector/QRScanner";
 
-function extractQrToken(decodedText: string): string {
+function extractAssetCode(decodedText: string): string {
   try {
     const url = new URL(decodedText);
     const parts = url.pathname.split("/").filter(Boolean);
     const idx = parts.indexOf("inspect");
-    if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
+    if (idx !== -1 && parts[idx + 1]) return decodeURIComponent(parts[idx + 1]);
   } catch {
-    // URL이 아니면 스캔된 텍스트 자체를 토큰으로 취급한다.
+    // URL이 아니면 스캔된 텍스트 자체를 관리번호로 취급한다.
   }
   return decodedText;
 }
@@ -20,8 +20,8 @@ export default function ScanPage() {
   const router = useRouter();
 
   function handleScan(decodedText: string) {
-    const token = extractQrToken(decodedText);
-    router.push(`/inspect/${token}`);
+    const assetCode = extractAssetCode(decodedText);
+    router.push(`/inspect/${encodeURIComponent(assetCode)}`);
   }
 
   return (

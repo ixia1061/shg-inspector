@@ -13,13 +13,15 @@ as $$
 $$;
 
 -- 소화기 목록/대시보드/검색의 기본 소스가 되는 뷰.
--- 위치 전체 경로, 계산된 내용연수 상태, 최근 점검 정보를 한 번에 제공한다.
+-- 위치가 건물(BUILDING)이든 차량(VEHICLE)이든 site_id/site_name/org_code는 항상 채워지며,
+-- 나머지 위치 필드는 location_type에 맞는 쪽만 값이 있고 반대쪽은 null이다.
 create or replace view public.v_extinguisher_overview
 with (security_invoker = true) as
 select
   e.id,
-  e.qr_token,
-  e.code,
+  e.asset_code,
+  e.location_type,
+  e.extinguisher_no,
   e.status,
   e.manufacture_date,
   e.useful_life_years,
@@ -29,14 +31,20 @@ select
   public.fn_extinguisher_status(e.manufacture_date, e.useful_life_years) as lifecycle_status,
   et.id as extinguisher_type_id,
   et.name as extinguisher_type_name,
-  s.id as site_id,
-  s.name as site_name,
+  coalesce(s_building.id, s_vehicle.id) as site_id,
+  coalesce(s_building.name, s_vehicle.name) as site_name,
+  coalesce(s_building.org_code, s_vehicle.org_code) as org_code,
   b.id as building_id,
   b.name as building_name,
+  b.building_no as building_no,
   f.id as floor_id,
   f.name as floor_name,
+  f.floor_code as floor_code,
   z.id as zone_id,
   z.name as zone_name,
+  veh.id as vehicle_id,
+  veh.name as vehicle_name,
+  veh.vehicle_no as vehicle_no,
   li.inspected_at as last_inspected_at,
   li.overall_result as last_inspection_result,
   li.inspector_id as last_inspector_id,
@@ -51,10 +59,12 @@ select
   ) as inspected_this_month
 from public.extinguishers e
 join public.extinguisher_types et on et.id = e.extinguisher_type_id
-join public.floors f on f.id = e.floor_id
+left join public.floors f on f.id = e.floor_id
+left join public.buildings b on b.id = f.building_id
+left join public.sites s_building on s_building.id = b.site_id
 left join public.zones z on z.id = e.zone_id
-join public.buildings b on b.id = f.building_id
-join public.sites s on s.id = b.site_id
+left join public.vehicles veh on veh.id = e.vehicle_id
+left join public.sites s_vehicle on s_vehicle.id = veh.site_id
 left join lateral (
   select inspected_at, overall_result, inspector_id
   from public.inspections i
@@ -85,23 +95,16 @@ as $$
     count(*) filter (where v.lifecycle_status = 'expired') as expired,
     (
       select count(*) from public.inspections i
-      join public.extinguishers e on e.id = i.extinguisher_id
+      join public.v_extinguisher_overview v2 on v2.id = i.extinguisher_id
       where i.overall_result = 'abnormal'
         and i.inspected_at > now() - interval '7 days'
-        and (
-          p_site_id is null
-          or e.floor_id in (
-            select f.id from public.floors f
-            join public.buildings b on b.id = f.building_id
-            where b.site_id = p_site_id
-          )
-        )
+        and (p_site_id is null or v2.site_id = p_site_id)
     ) as recent_abnormal
   from public.v_extinguisher_overview v
   where p_site_id is null or v.site_id = p_site_id;
 $$;
 
--- 건물/층/구역별 점검률 ('today' | 'month')
+-- 건물/층/구역/차량별 점검률 ('today' | 'month')
 create or replace function public.fn_inspection_rate(
   p_group_by text default 'building',
   p_period text default 'month'
@@ -121,11 +124,13 @@ as $$
     case p_group_by
       when 'floor' then v.floor_id
       when 'zone' then v.zone_id
+      when 'vehicle' then v.vehicle_id
       else v.building_id
     end as group_id,
     case p_group_by
       when 'floor' then v.floor_name
       when 'zone' then v.zone_name
+      when 'vehicle' then v.vehicle_name
       else v.building_name
     end as group_name,
     count(*) as total,

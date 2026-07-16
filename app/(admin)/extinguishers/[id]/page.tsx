@@ -6,6 +6,7 @@ import { InspectionHistoryTimeline } from "@/components/admin/InspectionHistoryT
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatLocationPath } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ExtinguisherDetailPage({
@@ -30,14 +31,21 @@ export default async function ExtinguisherDetailPage({
     .eq("id", id)
     .single();
 
-  const [{ data: sites }, { data: buildings }, { data: floors }, { data: zones }, { data: types }] =
-    await Promise.all([
-      supabase.from("sites").select("*").order("name"),
-      supabase.from("buildings").select("*").order("name"),
-      supabase.from("floors").select("*").order("order_index"),
-      supabase.from("zones").select("*").order("name"),
-      supabase.from("extinguisher_types").select("*").order("name"),
-    ]);
+  const [
+    { data: sites },
+    { data: buildings },
+    { data: floors },
+    { data: zones },
+    { data: vehicles },
+    { data: types },
+  ] = await Promise.all([
+    supabase.from("sites").select("*").order("name"),
+    supabase.from("buildings").select("*").order("building_no"),
+    supabase.from("floors").select("*").order("order_index"),
+    supabase.from("zones").select("*").order("name"),
+    supabase.from("vehicles").select("*").order("vehicle_no"),
+    supabase.from("extinguisher_types").select("*").order("name"),
+  ]);
 
   const { data: inspections } = await supabase
     .from("inspections")
@@ -74,12 +82,8 @@ export default async function ExtinguisherDetailPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{overview.code}</h1>
-          <p className="text-muted-foreground text-sm">
-            {[overview.site_name, overview.building_name, overview.floor_name, overview.zone_name]
-              .filter(Boolean)
-              .join(" > ")}
-          </p>
+          <h1 className="text-2xl font-bold font-mono">{overview.asset_code}</h1>
+          <p className="text-muted-foreground text-sm">{formatLocationPath(overview)}</p>
         </div>
         <div className="flex items-center gap-2">
           <LifecycleStatusBadge status={overview.lifecycle_status} />
@@ -101,6 +105,7 @@ export default async function ExtinguisherDetailPage({
                 buildings={buildings ?? []}
                 floors={floors ?? []}
                 zones={zones ?? []}
+                vehicles={vehicles ?? []}
                 types={types ?? []}
                 extinguisher={extinguisher}
               />

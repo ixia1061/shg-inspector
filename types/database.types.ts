@@ -8,6 +8,7 @@ export type LifecycleStatus = "normal" | "due_90" | "due_30" | "expired";
 export type UserRole = "admin" | "inspector";
 export type ExtinguisherStatus = "active" | "replaced" | "disposed";
 export type InspectionResult = "normal" | "abnormal";
+export type LocationType = "BUILDING" | "VEHICLE";
 
 export interface Database {
   public: {
@@ -40,6 +41,7 @@ export interface Database {
       sites: {
         Row: {
           id: string;
+          org_code: string;
           name: string;
           address: string | null;
           manager_name: string | null;
@@ -49,6 +51,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          org_code: string;
           name: string;
           address?: string | null;
           manager_name?: string | null;
@@ -61,7 +64,8 @@ export interface Database {
         Row: {
           id: string;
           site_id: string;
-          name: string;
+          building_no: number;
+          name: string | null;
           address: string | null;
           created_at: string;
           updated_at: string;
@@ -69,7 +73,8 @@ export interface Database {
         Insert: {
           id?: string;
           site_id: string;
-          name: string;
+          building_no: number;
+          name?: string | null;
           address?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["buildings"]["Insert"]>;
@@ -79,6 +84,7 @@ export interface Database {
         Row: {
           id: string;
           building_id: string;
+          floor_code: string;
           name: string;
           order_index: number;
           created_at: string;
@@ -86,6 +92,7 @@ export interface Database {
         Insert: {
           id?: string;
           building_id: string;
+          floor_code: string;
           name: string;
           order_index?: number;
         };
@@ -101,6 +108,23 @@ export interface Database {
         };
         Insert: { id?: string; floor_id: string; name: string };
         Update: Partial<Database["public"]["Tables"]["zones"]["Insert"]>;
+        Relationships: [];
+      };
+      vehicles: {
+        Row: {
+          id: string;
+          site_id: string;
+          vehicle_no: number;
+          name: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          site_id: string;
+          vehicle_no: number;
+          name?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;
         Relationships: [];
       };
       extinguisher_types: {
@@ -120,10 +144,12 @@ export interface Database {
       extinguishers: {
         Row: {
           id: string;
-          qr_token: string;
-          code: string;
-          floor_id: string;
+          location_type: LocationType;
+          floor_id: string | null;
           zone_id: string | null;
+          vehicle_id: string | null;
+          extinguisher_no: number;
+          asset_code: string;
           extinguisher_type_id: string;
           manufacture_date: string;
           useful_life_years: number;
@@ -135,10 +161,14 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          qr_token?: string;
-          code: string;
-          floor_id: string;
+          location_type: LocationType;
+          floor_id?: string | null;
           zone_id?: string | null;
+          vehicle_id?: string | null;
+          // 지정하지 않으면 서버(트리거)가 위치 스코프 내에서 자동 채번한다.
+          extinguisher_no?: number;
+          // 서버(트리거)가 항상 재계산하므로 클라이언트에서 지정할 필요 없음.
+          asset_code?: string;
           extinguisher_type_id: string;
           manufacture_date: string;
           useful_life_years: number;
@@ -147,6 +177,17 @@ export interface Database {
           status?: ExtinguisherStatus;
         };
         Update: Partial<Database["public"]["Tables"]["extinguishers"]["Insert"]>;
+        Relationships: [];
+      };
+      asset_code_history: {
+        Row: {
+          id: string;
+          extinguisher_id: string;
+          asset_code: string;
+          changed_at: string;
+        };
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
       inspections: {
@@ -200,8 +241,9 @@ export interface Database {
       v_extinguisher_overview: {
         Row: {
           id: string;
-          qr_token: string;
-          code: string;
+          asset_code: string;
+          location_type: LocationType;
+          extinguisher_no: number;
           status: ExtinguisherStatus;
           manufacture_date: string;
           useful_life_years: number;
@@ -213,12 +255,18 @@ export interface Database {
           extinguisher_type_name: string;
           site_id: string;
           site_name: string;
-          building_id: string;
-          building_name: string;
-          floor_id: string;
-          floor_name: string;
+          org_code: string;
+          building_id: string | null;
+          building_name: string | null;
+          building_no: number | null;
+          floor_id: string | null;
+          floor_name: string | null;
+          floor_code: string | null;
           zone_id: string | null;
           zone_name: string | null;
+          vehicle_id: string | null;
+          vehicle_name: string | null;
+          vehicle_no: number | null;
           last_inspected_at: string | null;
           last_inspection_result: InspectionResult | null;
           last_inspector_id: string | null;
@@ -245,7 +293,10 @@ export interface Database {
         }[];
       };
       fn_inspection_rate: {
-        Args: { p_group_by?: "building" | "floor" | "zone"; p_period?: "today" | "month" };
+        Args: {
+          p_group_by?: "building" | "floor" | "zone" | "vehicle";
+          p_period?: "today" | "month";
+        };
         Returns: {
           group_id: string;
           group_name: string;
@@ -257,6 +308,10 @@ export interface Database {
       fn_submit_inspection: {
         Args: { p_payload: Record<string, unknown> };
         Returns: string;
+      };
+      fn_find_extinguisher_id_by_code: {
+        Args: { p_code: string };
+        Returns: string | null;
       };
       is_admin: { Args: Record<string, never>; Returns: boolean };
       has_site_access: { Args: { p_site_id: string }; Returns: boolean };

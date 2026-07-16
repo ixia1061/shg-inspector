@@ -38,12 +38,12 @@ export function ExtinguisherFilters({ sites }: { sites: Site[] }) {
     <div className="flex flex-wrap items-center gap-2">
       <Input
         placeholder="소화기 관리번호 검색"
-        defaultValue={searchParams.get("code") ?? ""}
+        defaultValue={searchParams.get("asset_code") ?? ""}
         className="w-48"
         onChange={(e) => {
           const params = new URLSearchParams(searchParams.toString());
-          if (e.target.value) params.set("code", e.target.value);
-          else params.delete("code");
+          if (e.target.value) params.set("asset_code", e.target.value);
+          else params.delete("asset_code");
           router.push(`/extinguishers?${params.toString()}`);
         }}
       />

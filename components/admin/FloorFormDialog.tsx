@@ -33,7 +33,7 @@ export function FloorFormDialog({ buildingId }: { buildingId: string }) {
     formState: { errors },
   } = useForm<FloorFormValues>({
     resolver: zodResolver(floorSchema),
-    defaultValues: { building_id: buildingId, name: "", order_index: 0 },
+    defaultValues: { building_id: buildingId, floor_code: "", name: "", order_index: 0 },
   });
 
   async function onSubmit(values: FloorFormValues) {
@@ -49,7 +49,7 @@ export function FloorFormDialog({ buildingId }: { buildingId: string }) {
 
     toast.success("층을 등록했습니다");
     setOpen(false);
-    reset({ building_id: buildingId, name: "", order_index: 0 });
+    reset({ building_id: buildingId, floor_code: "", name: "", order_index: 0 });
     router.refresh();
   }
 
@@ -64,8 +64,13 @@ export function FloorFormDialog({ buildingId }: { buildingId: string }) {
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
+            <Field data-invalid={!!errors.floor_code}>
+              <FieldLabel htmlFor="floor-code">층 코드 (관리번호에 사용, 예: 0=지하, 1, 2, R=옥상)</FieldLabel>
+              <Input id="floor-code" {...register("floor_code")} />
+              <FieldError errors={errors.floor_code ? [errors.floor_code] : undefined} />
+            </Field>
             <Field data-invalid={!!errors.name}>
-              <FieldLabel htmlFor="floor-name">층 이름 (예: 3층, B1)</FieldLabel>
+              <FieldLabel htmlFor="floor-name">층 이름 (표시용, 예: 지하1층, 3층, 옥상)</FieldLabel>
               <Input id="floor-name" {...register("name")} />
               <FieldError errors={errors.name ? [errors.name] : undefined} />
             </Field>

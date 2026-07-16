@@ -9,10 +9,11 @@ import { useExtinguisherLookup } from "@/hooks/useExtinguisherLookup";
 export default function InspectPage({
   params,
 }: {
-  params: Promise<{ qrToken: string }>;
+  params: Promise<{ assetCode: string }>;
 }) {
-  const { qrToken } = use(params);
-  const { data, loading, error, fromCache } = useExtinguisherLookup(qrToken);
+  // Next.js가 라우트 파라미터를 이미 디코딩해서 전달하므로 추가 decode는 하지 않는다.
+  const { assetCode } = use(params);
+  const { data, loading, error, fromCache } = useExtinguisherLookup(assetCode);
 
   if (loading) {
     return (

@@ -11,13 +11,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatLocationPath } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
+import type { ExtinguisherOverview } from "@/types/domain";
 
-function UninspectedTable({
-  rows,
-}: {
-  rows: { id: string; code: string; site_name: string; building_name: string; floor_name: string; zone_name: string | null }[];
-}) {
+function UninspectedTable({ rows }: { rows: ExtinguisherOverview[] }) {
   return (
     <Table>
       <TableHeader>
@@ -31,13 +29,11 @@ function UninspectedTable({
           rows.map((e) => (
             <TableRow key={e.id}>
               <TableCell>
-                <Link href={`/extinguishers/${e.id}`} className="font-medium hover:underline">
-                  {e.code}
+                <Link href={`/extinguishers/${e.id}`} className="font-mono font-medium hover:underline">
+                  {e.asset_code}
                 </Link>
               </TableCell>
-              <TableCell className="text-muted-foreground text-sm">
-                {[e.site_name, e.building_name, e.floor_name, e.zone_name].filter(Boolean).join(" > ")}
-              </TableCell>
+              <TableCell className="text-muted-foreground text-sm">{formatLocationPath(e)}</TableCell>
             </TableRow>
           ))
         ) : (
@@ -57,8 +53,12 @@ export default async function InspectionsPage() {
 
   const [{ data: notTodayRows }, { data: notMonthRows }, { data: buildingRate }, { data: floorRate }] =
     await Promise.all([
-      supabase.from("v_extinguisher_overview").select("*").eq("inspected_today", false).order("code"),
-      supabase.from("v_extinguisher_overview").select("*").eq("inspected_this_month", false).order("code"),
+      supabase.from("v_extinguisher_overview").select("*").eq("inspected_today", false).order("asset_code"),
+      supabase
+        .from("v_extinguisher_overview")
+        .select("*")
+        .eq("inspected_this_month", false)
+        .order("asset_code"),
       supabase.rpc("fn_inspection_rate", { p_group_by: "building", p_period: "month" }),
       supabase.rpc("fn_inspection_rate", { p_group_by: "floor", p_period: "month" }),
     ]);

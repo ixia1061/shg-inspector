@@ -11,20 +11,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatLocationPath } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
 import type { LifecycleStatus } from "@/types/domain";
 
 export default async function ExtinguishersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string; site_id?: string; status?: string }>;
+  searchParams: Promise<{ asset_code?: string; site_id?: string; status?: string }>;
 }) {
-  const { code, site_id, status } = await searchParams;
+  const { asset_code, site_id, status } = await searchParams;
   const supabase = await createClient();
 
-  let query = supabase.from("v_extinguisher_overview").select("*").order("code");
+  let query = supabase.from("v_extinguisher_overview").select("*").order("asset_code");
 
-  if (code) query = query.ilike("code", `%${code}%`);
+  if (asset_code) query = query.ilike("asset_code", `%${asset_code}%`);
   if (site_id) query = query.eq("site_id", site_id);
   if (status) query = query.eq("lifecycle_status", status as LifecycleStatus);
 
@@ -57,15 +58,11 @@ export default async function ExtinguishersPage({
             extinguishers.map((e) => (
               <TableRow key={e.id}>
                 <TableCell>
-                  <Link href={`/extinguishers/${e.id}`} className="font-medium hover:underline">
-                    {e.code}
+                  <Link href={`/extinguishers/${e.id}`} className="font-mono font-medium hover:underline">
+                    {e.asset_code}
                   </Link>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {[e.site_name, e.building_name, e.floor_name, e.zone_name]
-                    .filter(Boolean)
-                    .join(" > ")}
-                </TableCell>
+                <TableCell className="text-muted-foreground text-sm">{formatLocationPath(e)}</TableCell>
                 <TableCell>{e.extinguisher_type_name}</TableCell>
                 <TableCell>
                   <LifecycleStatusBadge status={e.lifecycle_status} />
