@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Serwist가 빌드 시 생성하는 서비스워커 번들 (소스 아님)
+    "public/sw.js",
   ]),
 ]);
 

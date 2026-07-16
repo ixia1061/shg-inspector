@@ -1,0 +1,122 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { ExtinguisherForm } from "@/components/admin/ExtinguisherForm";
+import { InspectionHistoryTimeline } from "@/components/admin/InspectionHistoryTimeline";
+import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function ExtinguisherDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: overview } = await supabase
+    .from("v_extinguisher_overview")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (!overview) notFound();
+
+  const { data: extinguisher } = await supabase
+    .from("extinguishers")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  const [{ data: sites }, { data: buildings }, { data: floors }, { data: zones }, { data: types }] =
+    await Promise.all([
+      supabase.from("sites").select("*").order("name"),
+      supabase.from("buildings").select("*").order("name"),
+      supabase.from("floors").select("*").order("order_index"),
+      supabase.from("zones").select("*").order("name"),
+      supabase.from("extinguisher_types").select("*").order("name"),
+    ]);
+
+  const { data: inspections } = await supabase
+    .from("inspections")
+    .select("id, inspected_at, overall_result, memo, inspector_id")
+    .eq("extinguisher_id", id)
+    .order("inspected_at", { ascending: false });
+
+  const inspectorIds = [...new Set((inspections ?? []).map((i) => i.inspector_id))];
+  const { data: inspectors } = inspectorIds.length
+    ? await supabase.from("profiles").select("id, name").in("id", inspectorIds)
+    : { data: [] };
+
+  const inspectionIds = (inspections ?? []).map((i) => i.id);
+  const { data: photos } = inspectionIds.length
+    ? await supabase.from("inspection_photos").select("inspection_id").in("inspection_id", inspectionIds)
+    : { data: [] };
+
+  const inspectorNameById = new Map((inspectors ?? []).map((p) => [p.id, p.name]));
+  const photoCountByInspection = (photos ?? []).reduce<Record<string, number>>((acc, p) => {
+    acc[p.inspection_id] = (acc[p.inspection_id] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const historyItems = (inspections ?? []).map((i) => ({
+    id: i.id,
+    inspected_at: i.inspected_at,
+    overall_result: i.overall_result,
+    memo: i.memo,
+    inspector_name: inspectorNameById.get(i.inspector_id) ?? "알 수 없음",
+    photo_count: photoCountByInspection[i.id] ?? 0,
+  }));
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{overview.code}</h1>
+          <p className="text-muted-foreground text-sm">
+            {[overview.site_name, overview.building_name, overview.floor_name, overview.zone_name]
+              .filter(Boolean)
+              .join(" > ")}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <LifecycleStatusBadge status={overview.lifecycle_status} />
+          <Button variant="outline" render={<Link href={`/extinguishers/${id}/label`} />}>
+            QR/라벨
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>기본 정보 수정</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {extinguisher && (
+              <ExtinguisherForm
+                sites={sites ?? []}
+                buildings={buildings ?? []}
+                floors={floors ?? []}
+                zones={zones ?? []}
+                types={types ?? []}
+                extinguisher={extinguisher}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>점검 이력</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InspectionHistoryTimeline items={historyItems} />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

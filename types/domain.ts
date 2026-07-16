@@ -1,0 +1,21 @@
+import type { Database } from "@/types/database.types";
+
+export type {
+  LifecycleStatus,
+  UserRole,
+  ExtinguisherStatus,
+  InspectionResult,
+} from "@/types/database.types";
+
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type Site = Database["public"]["Tables"]["sites"]["Row"];
+export type Building = Database["public"]["Tables"]["buildings"]["Row"];
+export type Floor = Database["public"]["Tables"]["floors"]["Row"];
+export type Zone = Database["public"]["Tables"]["zones"]["Row"];
+export type ExtinguisherType = Database["public"]["Tables"]["extinguisher_types"]["Row"];
+export type Extinguisher = Database["public"]["Tables"]["extinguishers"]["Row"];
+export type Inspection = Database["public"]["Tables"]["inspections"]["Row"];
+export type InspectionPhoto = Database["public"]["Tables"]["inspection_photos"]["Row"];
+export type ExtinguisherOverview = Database["public"]["Views"]["v_extinguisher_overview"]["Row"];
+export type DashboardSummary = Database["public"]["Functions"]["fn_dashboard_summary"]["Returns"][number];
+export type InspectionRateRow = Database["public"]["Functions"]["fn_inspection_rate"]["Returns"][number];

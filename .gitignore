@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# serwist가 빌드 시 생성하는 서비스워커 번들
+/public/sw.js
+/public/sw.js.map
