@@ -2,7 +2,10 @@ import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // 같은 네트워크의 휴대폰 등 다른 기기에서 dev 서버로 접속하는 것을 허용.
+  // (Next.js 16은 기본적으로 크로스 오리진 dev 리소스 요청을 차단해 JS가 로드되지 않는다)
+  // PC의 IP가 바뀌면 여기에 새 IP를 추가해야 한다. *.trycloudflare.com은 휴대폰 테스트용 터널.
+  allowedDevOrigins: ["192.168.0.81", "localhost", "*.trycloudflare.com"],
 };
 
 const withSerwist = withSerwistInit({
