@@ -9,13 +9,14 @@ import { formatLocationPath } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
 import type { ExtinguisherOverview } from "@/types/domain";
 
-/** 목록 한 줄 — 누르면 해당 소화기의 점검 화면으로 바로 이동한다. */
-function ExtinguisherRow({ row }: { row: ExtinguisherOverview }) {
-  return (
-    <Link
-      href={`/inspect/${encodeURIComponent(row.asset_code)}`}
-      className="hover:bg-accent flex items-center justify-between gap-2 border-b px-1 py-3 last:border-0"
-    >
+/**
+ * 목록 한 줄.
+ * 관리자는 눌러서 바로 점검 화면으로 이동할 수 있고,
+ * 점검자는 QR 스캔으로만 점검할 수 있으므로 정보 표시만 한다.
+ */
+function ExtinguisherRow({ row, allowDirect }: { row: ExtinguisherOverview; allowDirect: boolean }) {
+  const inner = (
+    <>
       <div className="min-w-0">
         <p className="font-mono text-sm font-medium">{row.asset_code}</p>
         <p className="text-muted-foreground truncate text-xs">{formatLocationPath(row)}</p>
@@ -28,12 +29,70 @@ function ExtinguisherRow({ row }: { row: ExtinguisherOverview }) {
             : "점검이력 없음"}
         </span>
       </div>
+    </>
+  );
+
+  const className = "flex items-center justify-between gap-2 border-b px-1 py-3 last:border-0";
+
+  if (!allowDirect) {
+    return <div className={className}>{inner}</div>;
+  }
+
+  return (
+    <Link href={`/inspect/${encodeURIComponent(row.asset_code)}`} className={`hover:bg-accent ${className}`}>
+      {inner}
     </Link>
+  );
+}
+
+function buildingLabelOf(r: ExtinguisherOverview) {
+  return `${r.site_name} ${r.building_no}동${r.building_name ? ` (${r.building_name})` : ""}`;
+}
+
+/** 건물별로 묶은 목록. 건물 제목 + 대수 아래에 소화기들이 나열된다. */
+function BuildingGroupedList({
+  list,
+  allowDirect,
+}: {
+  list: ExtinguisherOverview[];
+  allowDirect: boolean;
+}) {
+  const groups = new Map<string, { label: string; items: ExtinguisherOverview[] }>();
+  for (const r of list) {
+    const key = String(r.building_id);
+    const group = groups.get(key) ?? { label: buildingLabelOf(r), items: [] };
+    group.items.push(r);
+    groups.set(key, group);
+  }
+  const sorted = [...groups.values()].sort((a, b) => a.label.localeCompare(b.label, "ko"));
+
+  return (
+    <div className="flex flex-col gap-4">
+      {sorted.map(({ label, items }) => (
+        <div key={label}>
+          <h2 className="bg-muted rounded px-2 py-1.5 text-sm font-semibold">
+            {label} <span className="text-muted-foreground font-normal">({items.length}대)</span>
+          </h2>
+          {items.map((row) => (
+            <ExtinguisherRow key={row.id} row={row} allowDirect={allowDirect} />
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
 
 export default async function InspectorStatusPage() {
   const supabase = await createClient();
+
+  // 관리자만 목록에서 바로 점검(QR 없이)이 가능하다.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
+  const allowDirect = profile?.role === "admin";
 
   // RLS가 담당 사업장 데이터만 반환하므로 별도 필터가 필요 없다.
   const { data: extinguishers } = await supabase
@@ -116,11 +175,11 @@ export default async function InspectorStatusPage() {
           {notInspected.length ? (
             <div>
               <p className="text-muted-foreground px-1 py-2 text-xs">
-                항목을 누르면 바로 점검 화면으로 이동합니다.
+                {allowDirect
+                  ? "항목을 누르면 바로 점검 화면으로 이동합니다."
+                  : "점검은 현장에서 소화기의 QR 코드를 스캔해야 완료할 수 있습니다."}
               </p>
-              {notInspected.map((row) => (
-                <ExtinguisherRow key={row.id} row={row} />
-              ))}
+              <BuildingGroupedList list={notInspected} allowDirect={allowDirect} />
             </div>
           ) : (
             <p className="text-muted-foreground py-8 text-center text-sm">
@@ -130,10 +189,9 @@ export default async function InspectorStatusPage() {
         </TabsContent>
 
         <TabsContent value="all">
-          {rows.map((row) => (
-            <ExtinguisherRow key={row.id} row={row} />
-          ))}
-          {rows.length === 0 && (
+          {rows.length ? (
+            <BuildingGroupedList list={rows} allowDirect={allowDirect} />
+          ) : (
             <p className="text-muted-foreground py-8 text-center text-sm">
               등록된 소화기가 없습니다.
             </p>
@@ -157,7 +215,7 @@ export default async function InspectorStatusPage() {
 
         <TabsContent value="lifecycle">
           {lifecycleAlerts.length ? (
-            lifecycleAlerts.map((row) => <ExtinguisherRow key={row.id} row={row} />)
+            <BuildingGroupedList list={lifecycleAlerts} allowDirect={allowDirect} />
           ) : (
             <p className="text-muted-foreground py-8 text-center text-sm">
               교체가 필요한 소화기가 없습니다.

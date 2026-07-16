@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { QRScanner } from "@/components/inspector/QRScanner";
 import { Button } from "@/components/ui/button";
+import { setScanPass } from "@/lib/utils/scanPass";
 
 function extractAssetCode(decodedText: string): string {
   try {
@@ -23,6 +24,8 @@ export default function ScanPage() {
 
   function handleScan(decodedText: string) {
     const assetCode = extractAssetCode(decodedText);
+    // 실제 스캔을 거쳤다는 통행증 발급 (점검자는 이게 있어야 점검 화면 진입 가능)
+    setScanPass(assetCode);
     router.push(`/inspect/${encodeURIComponent(assetCode)}`);
   }
 
