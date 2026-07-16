@@ -14,7 +14,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { LIFECYCLE_STATUS_LABEL } from "@/lib/utils/lifecycle";
 import { formatLocationPath } from "@/lib/utils/location";
-import { formatStampNow, watermarkImage } from "@/lib/utils/watermark";
+import { watermarkImage } from "@/lib/utils/watermark";
 import { enqueueInspection } from "@/lib/offline/outbox";
 import { flushOutbox } from "@/lib/offline/syncEngine";
 import { createClient } from "@/lib/supabase/client";
@@ -70,8 +70,8 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
     if (!files.length) return;
     setProcessingPhotos(true);
     try {
-      // 사진 하단에 관리번호 + 촬영일시 워터마크를 새긴다
-      const stampLines = [extinguisher.asset_code, formatStampNow()];
+      // 사진 하단에 관리번호 워터마크를 새긴다
+      const stampLines = [extinguisher.asset_code];
       const stamped = await Promise.all(files.map((f) => watermarkImage(f, stampLines)));
       setPhotos((prev) => {
         prev.forEach((p) => URL.revokeObjectURL(p.previewUrl));
