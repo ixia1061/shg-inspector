@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
@@ -33,7 +34,9 @@ export default async function AdminLayout({
       <AdminSidebar />
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b px-6">
-          <span className="text-sm font-medium">{profile.name}님</span>
+          <Link href="/account" className="text-sm font-medium hover:underline">
+            {profile.name}님
+          </Link>
           <SignOutButton />
         </header>
         <main className="flex-1 overflow-y-auto p-6">{children}</main>

@@ -1,3 +1,5 @@
+import { UserRound } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SignOutButton } from "@/components/shared/SignOutButton";
@@ -22,7 +24,12 @@ export default async function InspectorLayout({
     <div className="flex min-h-screen flex-col">
       <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
         <span className="text-base font-bold">소화기 점검</span>
-        <SignOutButton />
+        <div className="flex items-center gap-1">
+          <Link href="/account" className="text-muted-foreground p-2" aria-label="내 계정">
+            <UserRound className="size-5" />
+          </Link>
+          <SignOutButton />
+        </div>
       </header>
       <SyncStatusBanner />
       <main className="flex flex-1 flex-col">{children}</main>
