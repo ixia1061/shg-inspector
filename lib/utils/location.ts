@@ -31,3 +31,12 @@ export function formatLocationPath(row: LocationFields): string {
 
   return [row.site_name, buildingLabel, row.floor_name, row.zone_name].filter(Boolean).join(" > ");
 }
+
+/** "사업장 N동 (건물명)" 형식의 건물 라벨 */
+export function formatBuildingLabel(row: {
+  site_name: string;
+  building_no: number | null;
+  building_name: string | null;
+}): string {
+  return `${row.site_name} ${row.building_no}동${row.building_name ? ` (${row.building_name})` : ""}`;
+}
