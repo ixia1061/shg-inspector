@@ -42,7 +42,10 @@ export default async function InspectorStatusPage() {
     if (r.inspected_this_month) entry.inspected += 1;
     else entry.pending += 1;
   }
-  const buildings = [...byBuilding.values()].sort((a, b) => a.label.localeCompare(b.label, "ko"));
+  // 건물 번호를 숫자로 인식해 정렬(10동이 2동보다 앞서는 문제 방지)
+  const buildings = [...byBuilding.values()].sort((a, b) =>
+    a.label.localeCompare(b.label, "ko", { numeric: true })
+  );
 
   const summaryCards = [
     { label: "총 소화기", value: rows.length },
