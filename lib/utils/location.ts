@@ -11,6 +11,7 @@ type LocationFields = Pick<
   | "vehicle_name"
   | "vehicle_no"
   | "vehicle_plate_no"
+  | "vehicle_department"
   | "install_note"
 >;
 
@@ -50,10 +51,13 @@ export function formatShortLocation(row: LocationFields): string {
   const buildingLabel = buildingLabelOf(row);
 
   if (row.location_type === "VEHICLE") {
-    const plate = row.vehicle_plate_no ? ` [${row.vehicle_plate_no}]` : "";
-    const name = row.vehicle_name ? ` (${row.vehicle_name})` : "";
-    const vehicleLabel = `차량 ${row.vehicle_no}호${plate}${name}`;
-    return [buildingLabel, vehicleLabel, row.install_note].filter(Boolean).join(" > ");
+    // 차량: 건물 > 차량번호판(차종) > 관리부서
+    const vehicleLabel = row.vehicle_plate_no
+      ? row.vehicle_name
+        ? `${row.vehicle_plate_no} (${row.vehicle_name})`
+        : row.vehicle_plate_no
+      : (row.vehicle_name ?? `차량 ${row.vehicle_no}호`);
+    return [buildingLabel, vehicleLabel, row.vehicle_department].filter(Boolean).join(" > ");
   }
 
   return [buildingLabel, row.floor_name, row.install_note].filter(Boolean).join(" > ");

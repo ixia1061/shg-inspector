@@ -277,6 +277,7 @@ export interface Database {
           last_inspector_id: string | null;
           inspected_today: boolean;
           inspected_this_month: boolean;
+          vehicle_department: string | null;
         };
         Relationships: [];
       };
