@@ -66,21 +66,24 @@ export function AdminInspectDialog({
   }
 
   async function handleFiles(selected: File[]) {
-    if (!selected.length) {
-      setFiles([]);
+    if (!selected.length) return;
+    // 기존 사진에 "추가"한다 (조치 전·후). 최대 장수까지만.
+    const room = MAX_PHOTOS - files.length;
+    if (room <= 0) {
+      toast.warning(`사진은 최대 ${MAX_PHOTOS}장까지 첨부됩니다`);
       return;
     }
-    const trimmed = selected.slice(0, MAX_PHOTOS);
-    if (selected.length > MAX_PHOTOS) {
-      toast.warning(`사진은 최대 ${MAX_PHOTOS}장까지 첨부됩니다`);
+    const use = selected.slice(0, room);
+    if (selected.length > room) {
+      toast.warning(`사진은 최대 ${MAX_PHOTOS}장까지 첨부됩니다`, {
+        description: `${use.length}장만 추가했습니다.`,
+      });
     }
     setProcessing(true);
     try {
       // 사진 하단 중앙에 관리번호 워터마크
-      const stamped = await Promise.all(
-        trimmed.map((f) => watermarkImage(f, [extinguisher.asset_code]))
-      );
-      setFiles(stamped);
+      const stamped = await Promise.all(use.map((f) => watermarkImage(f, [extinguisher.asset_code])));
+      setFiles((prev) => [...prev, ...stamped]);
     } finally {
       setProcessing(false);
     }
@@ -186,20 +189,38 @@ export function AdminInspectDialog({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="ai-photos">사진 (선택, 최대 {MAX_PHOTOS}장)</FieldLabel>
+            <FieldLabel htmlFor="ai-photos">
+              사진 (선택, 최대 {MAX_PHOTOS}장 · 조치 전·후)
+            </FieldLabel>
             <input
               id="ai-photos"
               type="file"
               accept="image/*"
               multiple
               className="text-sm"
-              onChange={(e) => void handleFiles(Array.from(e.target.files ?? []))}
+              disabled={files.length >= MAX_PHOTOS}
+              onChange={(e) => {
+                // 다시 선택해도 추가되도록 입력값을 비운다(누적)
+                void handleFiles(Array.from(e.target.files ?? []));
+                e.target.value = "";
+              }}
             />
             {processing && (
               <p className="text-muted-foreground text-xs">사진에 관리번호를 새기는 중...</p>
             )}
             {files.length > 0 && !processing && (
-              <p className="text-muted-foreground text-xs">{files.length}장 첨부됨</p>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">
+                  {files.length}/{MAX_PHOTOS}장 첨부됨
+                </span>
+                <button
+                  type="button"
+                  className="text-muted-foreground text-xs underline"
+                  onClick={() => setFiles([])}
+                >
+                  모두 지우기
+                </button>
+              </div>
             )}
           </Field>
         </FieldGroup>

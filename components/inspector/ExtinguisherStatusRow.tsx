@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
-import { formatLocationPath } from "@/lib/utils/location";
+import { formatShortLocation } from "@/lib/utils/location";
 import type { ExtinguisherOverview } from "@/types/domain";
 
 /**
@@ -20,7 +20,7 @@ export function ExtinguisherStatusRow({
     <>
       <div className="min-w-0">
         <p className="font-mono text-sm font-medium">{row.asset_code}</p>
-        <p className="text-muted-foreground truncate text-xs">{formatLocationPath(row)}</p>
+        <p className="text-muted-foreground truncate text-xs">{formatShortLocation(row)}</p>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <LifecycleStatusBadge status={row.lifecycle_status} />

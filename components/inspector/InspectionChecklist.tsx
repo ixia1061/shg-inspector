@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { CheckCircle2, Download, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Download, TriangleAlert, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { LIFECYCLE_STATUS_LABEL } from "@/lib/utils/lifecycle";
-import { formatLocationPath } from "@/lib/utils/location";
+import { formatShortLocation } from "@/lib/utils/location";
 import { watermarkImage } from "@/lib/utils/watermark";
 import { trimExtinguisherPhotosAction } from "@/app/actions/photoActions";
 import { enqueueInspection } from "@/lib/offline/outbox";
@@ -74,24 +74,37 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
 
   async function handlePhotosSelected(files: File[]) {
     if (!files.length) return;
-    if (files.length > MAX_INSPECTION_PHOTOS) {
+    // 기존 사진을 유지하고 새로 찍은 사진을 "추가"한다 (전·후 사진). 최대 장수까지만.
+    const room = MAX_INSPECTION_PHOTOS - photos.length;
+    if (room <= 0) {
+      toast.warning(`사진은 최대 ${MAX_INSPECTION_PHOTOS}장까지 첨부할 수 있습니다`);
+      return;
+    }
+    const use = files.slice(0, room);
+    if (files.length > room) {
       toast.warning(`사진은 최대 ${MAX_INSPECTION_PHOTOS}장까지 첨부할 수 있습니다`, {
-        description: `앞의 ${MAX_INSPECTION_PHOTOS}장만 사용됩니다.`,
+        description: `${use.length}장만 추가했습니다.`,
       });
-      files = files.slice(0, MAX_INSPECTION_PHOTOS);
     }
     setProcessingPhotos(true);
     try {
       // 사진 하단에 관리번호 워터마크를 새긴다
       const stampLines = [extinguisher.asset_code];
-      const stamped = await Promise.all(files.map((f) => watermarkImage(f, stampLines)));
-      setPhotos((prev) => {
-        prev.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-        return stamped.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }));
-      });
+      const stamped = await Promise.all(use.map((f) => watermarkImage(f, stampLines)));
+      const added = stamped.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }));
+      setPhotos((prev) => [...prev, ...added]);
     } finally {
       setProcessingPhotos(false);
     }
+  }
+
+  /** 첨부한 사진 한 장을 제거한다. */
+  function removePhoto(index: number) {
+    setPhotos((prev) => {
+      const target = prev[index];
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
   }
 
   /** 워터마크가 새겨진 사진을 휴대폰에 저장 (iOS: 공유 시트 → '이미지 저장') */
@@ -209,7 +222,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-1 flex-col gap-6 p-4">
       <div className="rounded-lg border p-4">
         <p className="text-lg font-bold">{extinguisher.asset_code}</p>
-        <p className="text-muted-foreground text-sm">{formatLocationPath(extinguisher)}</p>
+        <p className="text-muted-foreground text-sm">{formatShortLocation(extinguisher)}</p>
         <p className="text-muted-foreground mt-2 text-sm">
           {extinguisher.extinguisher_type_name} · 제조일 {extinguisher.manufacture_date} ·{" "}
           {LIFECYCLE_STATUS_LABEL[extinguisher.lifecycle_status]}
@@ -241,7 +254,10 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
           <Textarea id="memo" rows={2} placeholder="이상사항이 있으면 입력하세요" {...register("memo")} />
         </Field>
         <Field>
-          <FieldLabel htmlFor="photos">사진 (선택)</FieldLabel>
+          <FieldLabel htmlFor="photos">
+            사진 (선택, 최대 {MAX_INSPECTION_PHOTOS}장 · 전·후 촬영){" "}
+            {photos.length > 0 ? `— ${photos.length}/${MAX_INSPECTION_PHOTOS}` : ""}
+          </FieldLabel>
           <input
             id="photos"
             type="file"
@@ -249,7 +265,12 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
             capture="environment"
             multiple
             className="text-sm"
-            onChange={(e) => void handlePhotosSelected(Array.from(e.target.files ?? []))}
+            disabled={photos.length >= MAX_INSPECTION_PHOTOS}
+            onChange={(e) => {
+              // 같은 카메라로 다시 찍어도 onChange가 다시 발생하도록 입력값을 비운다(누적 촬영).
+              void handlePhotosSelected(Array.from(e.target.files ?? []));
+              e.target.value = "";
+            }}
           />
           {processingPhotos && (
             <p className="text-muted-foreground text-xs">사진에 관리번호를 새기는 중...</p>
@@ -257,15 +278,28 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
           {photos.length > 0 && !processingPhotos && (
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap gap-2">
-                {photos.map((photo) => (
-                  <img
-                    key={photo.previewUrl}
-                    src={photo.previewUrl}
-                    alt="점검 사진 미리보기"
-                    className="size-20 rounded-md border object-cover"
-                  />
+                {photos.map((photo, index) => (
+                  <div key={photo.previewUrl} className="relative">
+                    <img
+                      src={photo.previewUrl}
+                      alt="점검 사진 미리보기"
+                      className="size-20 rounded-md border object-cover"
+                    />
+                    <button
+                      type="button"
+                      aria-label="사진 삭제"
+                      onClick={() => removePhoto(index)}
+                      className="bg-destructive text-destructive-foreground absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full shadow"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
                 ))}
               </div>
+              <p className="text-muted-foreground text-xs">
+                버튼을 다시 눌러 사진을 추가로 촬영할 수 있습니다(조치 전·후). 잘못 찍은 사진은
+                우측 상단 ✕로 삭제하세요.
+              </p>
               <Button type="button" variant="outline" size="sm" onClick={savePhotosToDevice}>
                 <Download className="size-4" /> 휴대폰에 저장
               </Button>
