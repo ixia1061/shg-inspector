@@ -85,6 +85,7 @@ export function ExtinguisherForm({
       floor_id: extinguisher?.floor_id ?? undefined,
       zone_id: extinguisher?.zone_id ?? undefined,
       vehicle_id: extinguisher?.vehicle_id ?? undefined,
+      extinguisher_no: extinguisher?.extinguisher_no ?? undefined,
       extinguisher_type_id: extinguisher?.extinguisher_type_id ?? "",
       manufacture_date: extinguisher?.manufacture_date ?? "",
       // null은 '내용연수 없음'이므로 ?? 로 덮어쓰면 안 된다
@@ -174,6 +175,11 @@ export function ExtinguisherForm({
             capacity: values.capacity,
             install_note: values.install_note,
           };
+
+    // 끝자리를 지정했을 때만 보낸다. 비우면 트리거가 자동 채번한다.
+    if (values.extinguisher_no != null) {
+      payload.extinguisher_no = values.extinguisher_no;
+    }
 
     const { error, data } = isEdit
       ? await supabase
@@ -330,6 +336,25 @@ export function ExtinguisherForm({
         <Field>
           <FieldLabel htmlFor="install_note">설치 위치</FieldLabel>
           <Input id="install_note" placeholder="예: 출입구 옆 소화전함" {...register("install_note")} />
+        </Field>
+
+        <Field data-invalid={!!errors.extinguisher_no}>
+          <FieldLabel htmlFor="extinguisher_no">관리번호 끝자리 (선택)</FieldLabel>
+          <Input
+            id="extinguisher_no"
+            type="number"
+            min={1}
+            className="w-40"
+            placeholder="비워두면 자동 부여"
+            {...register("extinguisher_no", {
+              setValueAs: (v) => (v === "" || v == null ? undefined : Number(v)),
+            })}
+          />
+          <p className="text-muted-foreground text-xs">
+            비워두면 자동으로 다음 번호가 부여됩니다. 직접 지정하면 그 번호로 등록되며, 이미 사용
+            중인 번호이면 저장이 막힙니다.
+          </p>
+          <FieldError errors={errors.extinguisher_no ? [errors.extinguisher_no] : undefined} />
         </Field>
 
         <Field data-invalid={!!errors.extinguisher_type_id}>

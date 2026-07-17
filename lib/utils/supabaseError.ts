@@ -5,7 +5,8 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
   floors_building_id_floor_code_key: "이미 사용 중인 층 코드입니다. 다른 코드를 입력하세요.",
   vehicles_site_id_vehicle_no_key: "이미 사용 중인 차량 번호입니다. 다른 번호를 입력하세요.",
   extinguisher_types_name_key: "이미 존재하는 소화기 종류명입니다.",
-  extinguishers_asset_code_key: "이미 사용 중인 관리번호입니다. 위치를 다시 확인하세요.",
+  extinguishers_asset_code_key:
+    "이미 사용 중인 관리번호입니다. 관리번호 끝자리를 비우면 자동으로 다음 번호가 부여됩니다.",
 };
 
 export function friendlyErrorMessage(error: {

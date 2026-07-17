@@ -1,12 +1,19 @@
 import { z } from "zod";
 
-// 관리번호(asset_code)는 서버(트리거)가 자동 생성하므로 여기서는 입력받지 않는다.
+// 관리번호(asset_code)는 서버(트리거)가 조합한다. 끝자리(extinguisher_no)는
+// 비워두면 자동 채번하고, 지정하면 그 번호로 등록한다(중복 시 저장이 막힌다).
 export const extinguisherSchema = z
   .object({
     location_type: z.enum(["BUILDING", "VEHICLE"]),
     floor_id: z.string().uuid().optional().nullable(),
     zone_id: z.string().uuid().optional().nullable(),
     vehicle_id: z.string().uuid().optional().nullable(),
+    extinguisher_no: z
+      .number({ message: "숫자를 입력하세요" })
+      .int("정수를 입력하세요")
+      .min(1, "1 이상의 번호를 입력하세요")
+      .max(9999)
+      .optional(),
     extinguisher_type_id: z.string().uuid("소화기 종류를 선택하세요"),
     manufacture_date: z
       .string()
