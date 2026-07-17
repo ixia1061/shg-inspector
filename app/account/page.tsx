@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { ChangePasswordForm } from "@/components/shared/ChangePasswordForm";
 import { SignOutButton } from "@/components/shared/SignOutButton";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/utils/roles";
 
 export default async function AccountPage() {
   const supabase = await createClient();
@@ -22,7 +23,7 @@ export default async function AccountPage() {
     .eq("id", user.id)
     .single();
 
-  const homeHref = profile?.role === "admin" ? "/dashboard" : "/scan";
+  const homeHref = isAdminRole(profile?.role) ? "/dashboard" : "/scan";
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 p-4">

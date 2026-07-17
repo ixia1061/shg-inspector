@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/types/domain";
 
-async function assertAdmin() {
+async function assertSuperAdmin() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -14,7 +14,9 @@ async function assertAdmin() {
   if (!user) throw new Error("로그인이 필요합니다");
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "admin") throw new Error("관리자만 사용할 수 있습니다");
+  if (profile?.role !== "super_admin") {
+    throw new Error("사용자 관리는 시스템관리자만 사용할 수 있습니다");
+  }
 
   return user;
 }
@@ -26,7 +28,10 @@ export async function createUserAction(input: {
   role: UserRole;
   siteIds: string[];
 }) {
-  await assertAdmin();
+  await assertSuperAdmin();
+  if (input.role !== "admin" && input.role !== "inspector") {
+    throw new Error("허용되지 않은 역할입니다");
+  }
   const admin = createAdminClient();
 
   const { data, error } = await admin.auth.admin.createUser({
@@ -53,27 +58,51 @@ export async function createUserAction(input: {
 }
 
 export async function updateUserRoleAction(userId: string, role: UserRole) {
-  await assertAdmin();
+  await assertSuperAdmin();
+  if (role !== "admin" && role !== "inspector") {
+    throw new Error("시스템관리자 역할은 부여할 수 없습니다");
+  }
+
   const admin = createAdminClient();
+
+  // 시스템관리자 계정의 역할은 강등할 수 없다 (최상위 권한 보호)
+  const { data: target } = await admin.from("profiles").select("role").eq("id", userId).single();
+  if (target?.role === "super_admin") {
+    throw new Error("시스템관리자 계정의 역할은 변경할 수 없습니다");
+  }
+
   await admin.from("profiles").update({ role }).eq("id", userId);
   revalidatePath("/users");
 }
 
 export async function toggleUserActiveAction(userId: string, isActive: boolean) {
-  await assertAdmin();
+  await assertSuperAdmin();
   const admin = createAdminClient();
+
+  // 시스템관리자 계정은 비활성화할 수 없다 (잠금 방지)
+  const { data: target } = await admin.from("profiles").select("role").eq("id", userId).single();
+  if (target?.role === "super_admin") {
+    throw new Error("시스템관리자 계정은 비활성화할 수 없습니다");
+  }
+
   await admin.from("profiles").update({ is_active: isActive }).eq("id", userId);
   revalidatePath("/users");
 }
 
 export async function deleteUserAction(userId: string) {
-  const currentUser = await assertAdmin();
+  const currentUser = await assertSuperAdmin();
 
   if (currentUser.id === userId) {
     throw new Error("본인 계정은 삭제할 수 없습니다");
   }
 
   const admin = createAdminClient();
+
+  // 시스템관리자 계정은 삭제할 수 없다 (최상위 권한 보호)
+  const { data: target } = await admin.from("profiles").select("role").eq("id", userId).single();
+  if (target?.role === "super_admin") {
+    throw new Error("시스템관리자 계정은 삭제할 수 없습니다");
+  }
 
   // 점검 이력이 있는 사용자는 감사 기록 보존을 위해 삭제 대신 비활성 처리를 유도한다.
   // (inspections.inspector_id가 on delete restrict라 DB에서도 막히지만, 먼저 친절하게 안내)

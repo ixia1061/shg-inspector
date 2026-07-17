@@ -11,11 +11,15 @@ import {
 } from "lucide-react";
 
 /** 데스크톱 사이드바와 모바일 드로어가 공유하는 관리자 네비게이션 항목 */
-export const NAV_ITEMS: {
+export type NavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-}[] = [
+  /** 시스템관리자에게만 보이는 항목 */
+  superAdminOnly?: boolean;
+};
+
+export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
   { href: "/sites", label: "사업장/건물 관리", icon: Building2 },
   { href: "/extinguishers", label: "소화기 관리", icon: QrCode },
@@ -24,5 +28,11 @@ export const NAV_ITEMS: {
   { href: "/lifecycle", label: "내용연수 관리", icon: ShieldAlert },
   { href: "/photos", label: "사진 관리", icon: Images },
   { href: "/stats", label: "통계", icon: Gauge },
-  { href: "/users", label: "사용자 관리", icon: Users },
+  { href: "/users", label: "사용자 관리", icon: Users, superAdminOnly: true },
 ];
+
+/** 역할에 따라 볼 수 있는 네비게이션 항목만 남긴다. */
+export function navItemsForRole(role: string | null | undefined): NavItem[] {
+  const isSuper = role === "super_admin";
+  return NAV_ITEMS.filter((item) => !item.superAdminOnly || isSuper);
+}

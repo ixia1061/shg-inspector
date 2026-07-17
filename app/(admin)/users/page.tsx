@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { UserRow } from "@/components/admin/UserRow";
 import {
@@ -12,6 +14,17 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function UsersPage() {
   const supabase = await createClient();
+
+  // 사용자 관리는 시스템관리자 전용
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
+  if (me?.role !== "super_admin") {
+    redirect("/dashboard");
+  }
 
   const [{ data: profiles }, { data: sites }, { data: userSites }] = await Promise.all([
     supabase.from("profiles").select("*").order("created_at"),

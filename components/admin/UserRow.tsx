@@ -18,12 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { ASSIGNABLE_ROLE_ITEMS, ROLE_LABELS } from "@/lib/utils/roles";
 import type { UserRole } from "@/types/domain";
-
-const ROLE_ITEMS = [
-  { value: "inspector", label: "점검자" },
-  { value: "admin", label: "관리자" },
-];
 
 export function UserRow({
   id,
@@ -41,6 +37,9 @@ export function UserRow({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [active, setActive] = useState(isActive);
+
+  // 시스템관리자 계정은 역할 변경·비활성·삭제가 불가능하도록 잠근다.
+  const locked = role === "super_admin";
 
   function handleRoleChange(value: string | null) {
     if (!value) return;
@@ -90,28 +89,43 @@ export function UserRow({
     <TableRow>
       <TableCell className="font-medium">{name}</TableCell>
       <TableCell>
-        <Select items={ROLE_ITEMS} value={role} onValueChange={handleRoleChange} disabled={isPending}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="inspector">점검자</SelectItem>
-            <SelectItem value="admin">관리자</SelectItem>
-          </SelectContent>
-        </Select>
+        {locked ? (
+          <span className="inline-flex h-9 items-center rounded-md bg-primary/10 px-3 text-sm font-medium text-primary">
+            {ROLE_LABELS.super_admin}
+          </span>
+        ) : (
+          <Select
+            items={ASSIGNABLE_ROLE_ITEMS}
+            value={role}
+            onValueChange={handleRoleChange}
+            disabled={isPending}
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="inspector">점검자</SelectItem>
+              <SelectItem value="admin">관리자</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">
         {siteNames.length ? siteNames.join(", ") : "-"}
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleToggleActive} disabled={isPending}>
-            {active ? "활성" : "비활성"}
-          </Button>
-          <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isPending}>
-            삭제
-          </Button>
-        </div>
+        {locked ? (
+          <span className="text-muted-foreground text-sm">활성 (보호됨)</span>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleToggleActive} disabled={isPending}>
+              {active ? "활성" : "비활성"}
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isPending}>
+              삭제
+            </Button>
+          </div>
+        )}
       </TableCell>
     </TableRow>
   );

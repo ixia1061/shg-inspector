@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ExtinguisherStatusRow } from "@/components/inspector/ExtinguisherStatusRow";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBuildingLabel } from "@/lib/utils/location";
+import { isAdminRole } from "@/lib/utils/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { ExtinguisherOverview } from "@/types/domain";
 
@@ -36,7 +37,7 @@ export default async function BuildingStatusPage({
   const { data: profile } = user
     ? await supabase.from("profiles").select("role").eq("id", user.id).single()
     : { data: null };
-  const allowDirect = profile?.role === "admin";
+  const allowDirect = isAdminRole(profile?.role);
 
   const { data: extinguishers } = await supabase
     .from("v_extinguisher_overview")

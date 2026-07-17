@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExtinguisherLookup } from "@/hooks/useExtinguisherLookup";
 import { createClient } from "@/lib/supabase/client";
+import { isAdminRole } from "@/lib/utils/roles";
 import { hasValidScanPass } from "@/lib/utils/scanPass";
 
 type Access = "checking" | "allowed" | "denied";
@@ -50,7 +51,7 @@ export default function InspectPage({
           .select("role")
           .eq("id", user.id)
           .single();
-        if (!cancelled) setAccess(profile?.role === "admin" ? "allowed" : "denied");
+        if (!cancelled) setAccess(isAdminRole(profile?.role) ? "allowed" : "denied");
       } catch {
         if (!cancelled) setAccess("denied");
       }

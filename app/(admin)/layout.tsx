@@ -5,6 +5,7 @@ import { AdminMobileNav } from "@/components/admin/AdminMobileNav";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { SignOutButton } from "@/components/shared/SignOutButton";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/utils/roles";
 
 export default async function AdminLayout({
   children,
@@ -26,19 +27,21 @@ export default async function AdminLayout({
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") {
+  if (!isAdminRole(profile?.role)) {
     redirect("/scan");
   }
 
+  const role = profile?.role ?? "admin";
+
   return (
     <div className="flex min-h-screen">
-      <AdminSidebar />
+      <AdminSidebar role={role} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between gap-2 border-b px-4 sm:px-6">
           <div className="flex items-center gap-2">
-            <AdminMobileNav />
+            <AdminMobileNav role={role} />
             <Link href="/account" className="text-sm font-medium hover:underline">
-              {profile.name}님
+              {profile?.name}님
             </Link>
           </div>
           <SignOutButton />

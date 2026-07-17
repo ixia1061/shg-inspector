@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/utils/roles";
 
 const PHOTO_BUCKET = "inspection-photos";
 
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
   }
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "admin") {
+  if (!isAdminRole(profile?.role)) {
     return NextResponse.json({ error: "관리자만 사용할 수 있습니다" }, { status: 403 });
   }
 

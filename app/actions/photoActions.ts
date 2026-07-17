@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/utils/roles";
 
 // 소화기(관리번호) 1대당 서버에 보관하는 최대 사진 수
 const MAX_PHOTOS_PER_EXTINGUISHER = 5;
@@ -22,7 +23,7 @@ async function assertLoggedIn() {
 async function assertAdmin() {
   const { supabase, user } = await assertLoggedIn();
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "admin") throw new Error("관리자만 사용할 수 있습니다");
+  if (!isAdminRole(profile?.role)) throw new Error("관리자만 사용할 수 있습니다");
   return user;
 }
 

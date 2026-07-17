@@ -5,7 +5,7 @@
  */
 
 export type LifecycleStatus = "normal" | "due_90" | "due_30" | "expired" | "none";
-export type UserRole = "admin" | "inspector";
+export type UserRole = "super_admin" | "admin" | "inspector";
 export type ExtinguisherStatus = "active" | "replaced" | "disposed";
 export type InspectionResult = "normal" | "abnormal";
 export type LocationType = "BUILDING" | "VEHICLE";

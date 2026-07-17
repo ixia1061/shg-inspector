@@ -4,19 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS } from "./adminNav";
+import { navItemsForRole } from "./adminNav";
+import { ROLE_LABELS } from "@/lib/utils/roles";
 
 /** 데스크톱(lg 이상) 전용 고정 사이드바. 모바일에서는 숨기고 AdminMobileNav(햄버거)가 대신한다. */
-export function AdminSidebar() {
+export function AdminSidebar({ role }: { role: string }) {
   const pathname = usePathname();
+  const items = navItemsForRole(role);
 
   return (
     <nav className="hidden h-full w-56 shrink-0 flex-col gap-1 border-r bg-sidebar p-3 lg:flex">
       <div className="mb-4 px-2">
         <p className="text-sm font-semibold">소화기 점검 관리</p>
-        <p className="text-muted-foreground text-xs">관리자</p>
+        <p className="text-muted-foreground text-xs">
+          {ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? "관리자"}
+        </p>
       </div>
-      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+      {items.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link
