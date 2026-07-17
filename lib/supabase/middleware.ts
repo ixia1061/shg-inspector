@@ -45,10 +45,15 @@ export async function updateSession(request: NextRequest) {
       },
     });
 
-    // getUser()는 매 요청마다 토큰을 검증한다 (getSession()은 검증 없이 쿠키만 읽으므로 사용하지 않는다).
+    // 성능: 미들웨어는 화면 이동(프리페치 포함)마다 실행된다. getUser()는 매번 Supabase
+    // 인증 서버로 네트워크 왕복(리전이 뭄바이라 지연 큼)을 하므로 이동이 버벅인다.
+    // 여기서는 "로그인 여부"에 따른 리다이렉트 판단만 필요하므로, 쿠키를 로컬에서 읽고
+    // 만료 시에만 갱신하는 getSession()을 쓴다. (토큰 만료 시 setAll로 쿠키가 자동 갱신됨)
+    // 실제 인증·권한의 최종 검증은 각 레이아웃의 getUser() + RLS가 담당하므로 안전하다.
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session?.user ?? null;
 
     if (!user && !isPublicPath) {
       return redirectToLogin();

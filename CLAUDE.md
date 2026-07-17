@@ -191,6 +191,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
+- **2026-07-17** — **성능: 미들웨어 인증 검증을 `getUser()`→`getSession()`으로 변경.** 화면 이동(프리페치 포함)마다 뭄바이 인증 서버로 네트워크 왕복하던 것을 제거(쿠키 로컬 읽기, 만료 시에만 갱신) → 로그인 후 이동 버벅임 대폭 완화. 최종 인증·권한 검증은 각 레이아웃 `getUser()` + RLS가 유지하므로 보안 동일. (근본적 지연 해소는 리전 이전 TODO 참고.)
 - **2026-07-17** — 점검현황(미점검 목록) 위치 표기에 **소화기 설치위치(install_note)까지** 포함(`formatLocationPath`에 `withInstallNote` 옵션 추가, 점검현황에서만 사용 — 내용연수/LocationPath는 기존 유지).
 - **2026-07-17** — 미들웨어(`lib/supabase/middleware.ts`) 방어 강화: `NEXT_PUBLIC_*` 환경변수 누락이나 Supabase 세션 조회 예외 시 사이트 전체가 500(`MIDDLEWARE_INVOCATION_FAILED`)으로 죽지 않고, 공개 경로는 통과·보호 경로는 `/login`으로 안전 폴백. (env가 빌드에 안 박힌 배포에서 발생하던 장애 방지.)
 - **2026-07-17** — 소화기 등록/수정 폼에 **관리번호 끝자리(extinguisher_no) 수동 지정** 옵션 추가(설치 위치 아래). 비우면 트리거가 자동 채번(기존 동작), 지정하면 그 번호로 등록. 중복 시 `extinguishers_asset_code_key` 유니크 위반 → "관리번호 끝자리를 비우면 자동 부여" 안내. Zod에 `extinguisher_no`(정수 1~9999, optional) 추가.
