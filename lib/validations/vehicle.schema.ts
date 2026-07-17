@@ -5,6 +5,7 @@ export const vehicleSchema = z.object({
   vehicle_no: z.number().int().min(1, "차량 번호를 입력하세요"),
   plate_no: z.string().optional(),
   name: z.string().optional(),
+  department: z.string().optional(),
 });
 
 export type VehicleFormValues = z.infer<typeof vehicleSchema>;

@@ -117,6 +117,7 @@ export interface Database {
           vehicle_no: number;
           name: string | null;
           plate_no: string | null;
+          department: string | null;
           created_at: string;
         };
         Insert: {
@@ -125,6 +126,7 @@ export interface Database {
           vehicle_no: number;
           name?: string | null;
           plate_no?: string | null;
+          department?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;
         Relationships: [];

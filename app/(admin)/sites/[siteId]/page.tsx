@@ -120,6 +120,11 @@ export default async function SiteDetailPage({
                         차량 {vehicle.vehicle_no}호
                         {vehicle.plate_no ? ` [${vehicle.plate_no}]` : ""}
                         {vehicle.name ? ` (${vehicle.name})` : ""}
+                        {vehicle.department ? (
+                          <span className="bg-background text-muted-foreground rounded px-1 text-xs">
+                            {vehicle.department}
+                          </span>
+                        ) : null}
                         <VehicleFormDialog buildingId={building.id} vehicle={vehicle} />
                       </li>
                     ))}

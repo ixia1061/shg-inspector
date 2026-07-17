@@ -49,6 +49,7 @@ export function VehicleFormDialog({
       vehicle_no: vehicle?.vehicle_no ?? nextVehicleNo,
       plate_no: vehicle?.plate_no ?? "",
       name: vehicle?.name ?? "",
+      department: vehicle?.department ?? "",
     },
   });
 
@@ -67,7 +68,14 @@ export function VehicleFormDialog({
 
     toast.success(isEdit ? "차량 정보를 수정했습니다" : "차량을 등록했습니다");
     setOpen(false);
-    if (!isEdit) reset({ building_id: buildingId, vehicle_no: nextVehicleNo + 1, plate_no: "", name: "" });
+    if (!isEdit)
+      reset({
+        building_id: buildingId,
+        vehicle_no: nextVehicleNo + 1,
+        plate_no: "",
+        name: "",
+        department: "",
+      });
     router.refresh();
   }
 
@@ -121,8 +129,12 @@ export function VehicleFormDialog({
               <Input id="vehicle-plate" placeholder="예: 12가 3456" {...register("plate_no")} />
             </Field>
             <Field>
-              <FieldLabel htmlFor="vehicle-name">차량명 (선택, 표시용)</FieldLabel>
-              <Input id="vehicle-name" placeholder="예: 소방차 1호" {...register("name")} />
+              <FieldLabel htmlFor="vehicle-name">차량명 (차종)</FieldLabel>
+              <Input id="vehicle-name" placeholder="예: 스타렉스, 소방펌프차" {...register("name")} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="vehicle-department">관리부서</FieldLabel>
+              <Input id="vehicle-department" placeholder="예: 소방, 전기, 통신" {...register("department")} />
             </Field>
           </FieldGroup>
           <DialogFooter className="mt-4">
