@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 import { QRScanner } from "@/components/inspector/QRScanner";
 import { Button } from "@/components/ui/button";
+import { prewarmExtinguisherCache } from "@/lib/offline/prewarm";
 import { setScanPass } from "@/lib/utils/scanPass";
 
 function extractAssetCode(decodedText: string): string {
@@ -21,6 +23,14 @@ function extractAssetCode(decodedText: string): string {
 
 export default function ScanPage() {
   const router = useRouter();
+
+  // 스캔 대기 중에 미리 준비해 두면 QR 인식 → 점검 화면 전환이 즉시 일어난다:
+  // 1) 소화기 정보 전체를 IndexedDB에 사전 적재 (점검 화면이 캐시에서 바로 렌더링)
+  // 2) 점검 화면의 JS 번들을 미리 로드
+  useEffect(() => {
+    void prewarmExtinguisherCache();
+    router.prefetch("/inspect/_");
+  }, [router]);
 
   function handleScan(decodedText: string) {
     const assetCode = extractAssetCode(decodedText);

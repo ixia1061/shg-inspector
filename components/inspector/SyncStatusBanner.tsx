@@ -1,14 +1,22 @@
 "use client";
 
 import { CloudUpload, WifiOff } from "lucide-react";
+import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { prewarmExtinguisherCache } from "@/lib/offline/prewarm";
 
 export function SyncStatusBanner() {
   const isOnline = useOnlineStatus();
   const { pendingCount, sync } = useOfflineQueue();
+
+  // 점검자 화면 어디서든 접속만 하면 소화기 정보를 미리 캐시해 둔다
+  // (QR 스캔 시 즉시 렌더링 + 오프라인 점검 대비). 내부에서 호출 빈도를 스로틀링한다.
+  useEffect(() => {
+    void prewarmExtinguisherCache();
+  }, []);
 
   if (isOnline && pendingCount === 0) return null;
 
