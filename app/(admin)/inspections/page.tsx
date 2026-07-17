@@ -33,7 +33,9 @@ function UninspectedTable({ rows }: { rows: ExtinguisherOverview[] }) {
                   {e.asset_code}
                 </Link>
               </TableCell>
-              <TableCell className="text-muted-foreground text-sm">{formatLocationPath(e)}</TableCell>
+              <TableCell className="text-muted-foreground text-sm">
+                {formatLocationPath(e, { withInstallNote: true })}
+              </TableCell>
             </TableRow>
           ))
         ) : (
