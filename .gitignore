@@ -36,6 +36,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# 2FA 복구 코드 등 민감 파일 (절대 커밋 금지)
+recovery-codes.txt
+*recovery*.txt
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
