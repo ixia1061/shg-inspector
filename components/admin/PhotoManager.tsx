@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { Trash2 } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -23,6 +23,37 @@ export function PhotoManager({ photos }: { photos: ManagedPhoto[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [downloading, setDownloading] = useState(false);
+
+  /** 선택(또는 전체) 사진을 ZIP으로 내려받는다. ZIP 내부는 관리번호별 폴더로 정리된다. */
+  async function handleDownload(ids: string[]) {
+    setDownloading(true);
+    try {
+      const res = await fetch("/api/photos/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoIds: ids }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? `다운로드 실패 (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `점검사진_${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("ZIP 다운로드를 시작했습니다");
+    } catch (err) {
+      toast.error("다운로드에 실패했습니다", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const groups = photos.reduce<Map<string, ManagedPhoto[]>>((map, photo) => {
     const list = map.get(photo.assetCode) ?? [];
@@ -68,15 +99,31 @@ export function PhotoManager({ photos }: { photos: ManagedPhoto[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={toggleAll} disabled={isPending}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" size="sm" onClick={toggleAll} disabled={isPending || downloading}>
           {selected.size === photos.length ? "전체 해제" : "전체 선택"}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleDownload([...selected])}
+          disabled={isPending || downloading || selected.size === 0}
+        >
+          <Download className="size-4" /> 선택 다운로드 ({selected.size})
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleDownload([])}
+          disabled={isPending || downloading}
+        >
+          <Download className="size-4" /> {downloading ? "ZIP 생성 중..." : "전체 다운로드"}
         </Button>
         <Button
           variant="destructive"
           size="sm"
           onClick={handleDelete}
-          disabled={isPending || selected.size === 0}
+          disabled={isPending || downloading || selected.size === 0}
         >
           <Trash2 className="size-4" /> 선택 삭제 ({selected.size})
         </Button>

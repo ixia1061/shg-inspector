@@ -2,8 +2,8 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { Download } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { CheckCircle2, Download, TriangleAlert } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -46,10 +46,12 @@ const CHECK_ITEMS: { key: keyof Omit<ChecklistValues, "memo">; label: string }[]
 const MAX_INSPECTION_PHOTOS = 5;
 
 export function InspectionChecklist({ extinguisher }: { extinguisher: ExtinguisherOverview }) {
-  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState<StampedPhoto[]>([]);
   const [processingPhotos, setProcessingPhotos] = useState(false);
+  // 페이지 이동 대신 이 화면 안에서 완료 상태로 전환한다.
+  // (개발/터널 환경에서 라우터 전환이 멈추는 문제 + 오프라인에서 완료 페이지 이동 실패 문제 방지)
+  const [completed, setCompleted] = useState<"normal" | "abnormal" | null>(null);
 
   // 언마운트 시 미리보기 URL 해제를 위한 최신 상태 참조
   const photosRef = useRef<StampedPhoto[]>([]);
@@ -164,7 +166,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
         });
       }
 
-      router.push(`/inspect/complete?result=${overall_result}`);
+      setCompleted(overall_result);
       void flushOutbox();
     } catch (err) {
       toast.error("점검 저장에 실패했습니다", {
@@ -173,6 +175,34 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (completed) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 p-4 text-center">
+        {completed === "abnormal" ? (
+          <TriangleAlert className="text-destructive size-20" />
+        ) : (
+          <CheckCircle2 className="size-20 text-green-600" />
+        )}
+        <div>
+          <h1 className="text-2xl font-bold">
+            {completed === "abnormal" ? "이상사항이 기록되었습니다" : "점검이 완료되었습니다"}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {extinguisher.asset_code} · 수고하셨습니다
+          </p>
+        </div>
+        <Button
+          size="lg"
+          className="h-14 w-full max-w-xs text-lg"
+          nativeButton={false}
+          render={<Link href="/scan" />}
+        >
+          다음 소화기 스캔
+        </Button>
+      </div>
+    );
   }
 
   return (
