@@ -270,7 +270,8 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
                 <Download className="size-4" /> 휴대폰에 저장
               </Button>
               <p className="text-muted-foreground text-xs">
-                iPhone: 공유 메뉴에서 &quot;이미지 저장&quot;을 누르면 사진 앱에 저장됩니다.
+                iPhone은 공유 메뉴에서 &quot;이미지 저장&quot;, Android는 공유 대상에서 갤러리(사진)를
+                선택하면 저장됩니다.
               </p>
             </div>
           )}
