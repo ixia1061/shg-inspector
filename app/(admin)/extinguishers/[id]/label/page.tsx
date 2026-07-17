@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { QrLabelPreview } from "@/components/admin/QrLabelPreview";
 import { buildInspectionUrl } from "@/lib/qr/encode";
-import { formatLocationPath } from "@/lib/utils/location";
+import { formatShortLocation } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ExtinguisherLabelPage({
@@ -21,7 +21,7 @@ export default async function ExtinguisherLabelPage({
 
   if (!overview) notFound();
 
-  const location = formatLocationPath(overview);
+  const location = formatShortLocation(overview);
 
   return (
     <div className="flex flex-col items-center gap-6">
