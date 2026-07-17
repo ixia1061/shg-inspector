@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AdminInspectDialog } from "@/components/admin/AdminInspectDialog";
 import { ExtinguisherFilters } from "@/components/admin/ExtinguisherFilters";
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ export default async function ExtinguishersPage({
             <TableHead>종류</TableHead>
             <TableHead>내용연수 상태</TableHead>
             <TableHead>최근 점검</TableHead>
+            <TableHead className="text-right">점검</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -74,11 +76,14 @@ export default async function ExtinguishersPage({
                     ? new Date(e.last_inspected_at).toLocaleDateString("ko-KR")
                     : "이력 없음"}
                 </TableCell>
+                <TableCell className="text-right">
+                  <AdminInspectDialog extinguisher={e} />
+                </TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={5} className="text-muted-foreground text-center">
+              <TableCell colSpan={6} className="text-muted-foreground text-center">
                 검색 결과가 없습니다.
               </TableCell>
             </TableRow>

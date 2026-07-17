@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AdminInspectDialog } from "@/components/admin/AdminInspectDialog";
 import { ExtinguisherForm } from "@/components/admin/ExtinguisherForm";
 import { InspectionHistoryTimeline } from "@/components/admin/InspectionHistoryTimeline";
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
@@ -100,6 +101,7 @@ export default async function ExtinguisherDetailPage({
         </div>
         <div className="flex items-center gap-2">
           <LifecycleStatusBadge status={overview.lifecycle_status} />
+          <AdminInspectDialog extinguisher={overview} variant="detail" />
           <Button
             variant="outline"
             nativeButton={false}
