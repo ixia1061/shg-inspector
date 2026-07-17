@@ -31,6 +31,7 @@ export const extinguisherSchema = z
       .nullable(),
     capacity: z.string().optional(),
     install_note: z.string().optional(),
+    serial_no: z.string().optional(),
   })
   .superRefine((values, ctx) => {
     if (values.location_type === "BUILDING" && !values.floor_id) {

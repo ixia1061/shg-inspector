@@ -225,8 +225,12 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
         <p className="text-muted-foreground text-sm">{formatShortLocation(extinguisher)}</p>
         <p className="text-muted-foreground mt-2 text-sm">
           {extinguisher.extinguisher_type_name}
-          {extinguisher.capacity ? ` (${extinguisher.capacity})` : ""} · 제조일{" "}
-          {extinguisher.manufacture_date} · {LIFECYCLE_STATUS_LABEL[extinguisher.lifecycle_status]}
+          {extinguisher.capacity ? ` (${extinguisher.capacity})` : ""} ·{" "}
+          {LIFECYCLE_STATUS_LABEL[extinguisher.lifecycle_status]}
+        </p>
+        <p className="text-muted-foreground text-sm">
+          제조일 {extinguisher.manufacture_date}
+          {extinguisher.serial_no ? ` · 제조번호 ${extinguisher.serial_no}` : ""}
         </p>
         <p className="text-muted-foreground text-sm">
           최근 점검:{" "}
