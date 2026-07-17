@@ -38,6 +38,10 @@ export default async function UsersPage() {
     if (name) (acc[us.user_id] ??= []).push(name);
     return acc;
   }, {});
+  const siteIdsByUser = (userSites ?? []).reduce<Record<string, string[]>>((acc, us) => {
+    (acc[us.user_id] ??= []).push(us.site_id);
+    return acc;
+  }, {});
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,6 +69,8 @@ export default async function UsersPage() {
                 role={p.role}
                 isActive={p.is_active}
                 siteNames={siteNamesByUser[p.id] ?? []}
+                sites={sites ?? []}
+                assignedSiteIds={siteIdsByUser[p.id] ?? []}
               />
             ))
           ) : (

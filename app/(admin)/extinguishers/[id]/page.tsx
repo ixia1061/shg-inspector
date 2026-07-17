@@ -7,7 +7,7 @@ import { InspectionHistoryTimeline } from "@/components/admin/InspectionHistoryT
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatLocationPath } from "@/lib/utils/location";
+import { formatShortLocation } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ExtinguisherDetailPage({
@@ -97,7 +97,7 @@ export default async function ExtinguisherDetailPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold font-mono">{overview.asset_code}</h1>
-          <p className="text-muted-foreground text-sm">{formatLocationPath(overview)}</p>
+          <p className="text-muted-foreground text-sm">{formatShortLocation(overview)}</p>
         </div>
         <div className="flex items-center gap-2">
           <LifecycleStatusBadge status={overview.lifecycle_status} />

@@ -75,6 +75,25 @@ export async function updateUserRoleAction(userId: string, role: UserRole) {
   revalidatePath("/users");
 }
 
+export async function updateUserSitesAction(userId: string, siteIds: string[]) {
+  await assertSuperAdmin();
+  const admin = createAdminClient();
+
+  const { data: target } = await admin.from("profiles").select("role").eq("id", userId).single();
+  if (target?.role === "super_admin") {
+    throw new Error("시스템관리자는 모든 사업장에 접근하므로 배정이 필요 없습니다");
+  }
+
+  // 기존 배정을 전량 교체
+  await admin.from("user_sites").delete().eq("user_id", userId);
+  if (siteIds.length > 0) {
+    await admin
+      .from("user_sites")
+      .insert(siteIds.map((site_id) => ({ user_id: userId, site_id })));
+  }
+  revalidatePath("/users");
+}
+
 export async function toggleUserActiveAction(userId: string, isActive: boolean) {
   await assertSuperAdmin();
   const admin = createAdminClient();

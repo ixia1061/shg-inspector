@@ -6,7 +6,9 @@ import { FloorFormDialog } from "@/components/admin/FloorFormDialog";
 import { FloorList } from "@/components/admin/FloorList";
 import { SiteFormDialog } from "@/components/admin/SiteFormDialog";
 import { VehicleFormDialog } from "@/components/admin/VehicleFormDialog";
+import { getCurrentUserRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { isSuperAdminRole } from "@/lib/utils/roles";
 import type { Floor, Vehicle, Zone } from "@/types/domain";
 
 export default async function SiteDetailPage({
@@ -19,6 +21,9 @@ export default async function SiteDetailPage({
 
   const { data: site } = await supabase.from("sites").select("*").eq("id", siteId).single();
   if (!site) notFound();
+
+  // 사업장 수정/삭제는 시스템관리자만. 건물 이하는 일반 관리자도 가능.
+  const canManageSite = isSuperAdminRole(await getCurrentUserRole());
 
   const { data: buildings } = await supabase
     .from("buildings")
@@ -65,7 +70,7 @@ export default async function SiteDetailPage({
           <p className="text-muted-foreground text-sm">{site.address}</p>
         </div>
         <div className="flex gap-2">
-          <SiteFormDialog site={site} />
+          {canManageSite && <SiteFormDialog site={site} />}
           <BuildingFormDialog siteId={site.id} nextBuildingNo={nextBuildingNo} />
         </div>
       </div>

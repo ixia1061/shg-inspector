@@ -18,8 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { UserSitesDialog } from "@/components/admin/UserSitesDialog";
 import { ASSIGNABLE_ROLE_ITEMS, ROLE_LABELS } from "@/lib/utils/roles";
-import type { UserRole } from "@/types/domain";
+import type { Site, UserRole } from "@/types/domain";
 
 export function UserRow({
   id,
@@ -27,12 +28,16 @@ export function UserRow({
   role,
   isActive,
   siteNames,
+  sites,
+  assignedSiteIds,
 }: {
   id: string;
   name: string;
   role: UserRole;
   isActive: boolean;
   siteNames: string[];
+  sites: Site[];
+  assignedSiteIds: string[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -111,7 +116,19 @@ export function UserRow({
         )}
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">
-        {siteNames.length ? siteNames.join(", ") : "-"}
+        {locked ? (
+          <span>전체 (시스템관리자)</span>
+        ) : (
+          <div className="flex flex-col items-start gap-1">
+            <span>{siteNames.length ? siteNames.join(", ") : "미배정"}</span>
+            <UserSitesDialog
+              userId={id}
+              userName={name}
+              sites={sites}
+              assignedSiteIds={assignedSiteIds}
+            />
+          </div>
+        )}
       </TableCell>
       <TableCell>
         {locked ? (

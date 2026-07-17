@@ -301,27 +301,6 @@ export function ExtinguisherForm({
               </Select>
               <FieldError errors={errors.floor_id ? [errors.floor_id] : undefined} />
             </Field>
-
-            <Field>
-              <FieldLabel>구역 (선택)</FieldLabel>
-              <Select
-                items={zoneItems}
-                value={watch("zone_id") ?? ""}
-                onValueChange={(v) => setValue("zone_id", v || undefined)}
-                disabled={!floorId}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="구역 선택 (선택사항)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredZones.map((z) => (
-                    <SelectItem key={z.id} value={z.id}>
-                      {z.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
           </>
         ) : (
           <Field data-invalid={!!errors.vehicle_id}>
@@ -347,6 +326,11 @@ export function ExtinguisherForm({
             <FieldError errors={errors.vehicle_id ? [errors.vehicle_id] : undefined} />
           </Field>
         )}
+
+        <Field>
+          <FieldLabel htmlFor="install_note">설치 위치</FieldLabel>
+          <Input id="install_note" placeholder="예: 출입구 옆 소화전함" {...register("install_note")} />
+        </Field>
 
         <Field data-invalid={!!errors.extinguisher_type_id}>
           <div className="flex items-center justify-between">
@@ -427,10 +411,28 @@ export function ExtinguisherForm({
           <Input id="capacity" placeholder="예: 3.3kg" {...register("capacity")} />
         </Field>
 
-        <Field>
-          <FieldLabel htmlFor="install_note">설치 위치 비고</FieldLabel>
-          <Input id="install_note" placeholder="예: 출입구 옆 소화전함" {...register("install_note")} />
-        </Field>
+        {locationType === "BUILDING" && (
+          <Field>
+            <FieldLabel>구역 (선택)</FieldLabel>
+            <Select
+              items={zoneItems}
+              value={watch("zone_id") ?? ""}
+              onValueChange={(v) => setValue("zone_id", v || undefined)}
+              disabled={!floorId}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="구역 선택 (선택사항)" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredZones.map((z) => (
+                  <SelectItem key={z.id} value={z.id}>
+                    {z.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
       </FieldGroup>
 
       {isEdit && (

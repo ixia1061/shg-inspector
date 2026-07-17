@@ -114,9 +114,14 @@ export function CreateUserDialog({ sites }: { sites: Site[] }) {
                 </SelectContent>
               </Select>
             </Field>
-            {role === "inspector" && (
+            {(role === "inspector" || role === "admin") && (
               <Field>
                 <FieldLabel>담당 사업장</FieldLabel>
+                <p className="text-muted-foreground text-xs">
+                  {role === "admin"
+                    ? "관리자는 배정된 사업장의 건물·소화기·점검만 관리합니다."
+                    : "점검자는 배정된 사업장만 조회·점검합니다."}
+                </p>
                 <div className="flex flex-col gap-2">
                   {sites.map((site) => (
                     <label key={site.id} className="flex items-center gap-2 text-sm">

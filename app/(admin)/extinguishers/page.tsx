@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatLocationPath } from "@/lib/utils/location";
+import { formatShortLocation } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
 import type { LifecycleStatus } from "@/types/domain";
 
@@ -66,7 +66,7 @@ export default async function ExtinguishersPage({
                     {e.asset_code}
                   </Link>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">{formatLocationPath(e)}</TableCell>
+                <TableCell className="text-muted-foreground text-sm">{formatShortLocation(e)}</TableCell>
                 <TableCell>{e.extinguisher_type_name}</TableCell>
                 <TableCell>
                   <LifecycleStatusBadge status={e.lifecycle_status} />

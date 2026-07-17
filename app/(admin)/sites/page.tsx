@@ -9,17 +9,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getCurrentUserRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { isSuperAdminRole } from "@/lib/utils/roles";
 
 export default async function SitesPage() {
   const supabase = await createClient();
-  const { data: sites } = await supabase.from("sites").select("*").order("name");
+  const [{ data: sites }, role] = await Promise.all([
+    supabase.from("sites").select("*").order("name"),
+    getCurrentUserRole(),
+  ]);
+  const canManageSites = isSuperAdminRole(role);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">사업장 관리</h1>
-        <SiteFormDialog />
+        {canManageSites ? (
+          <SiteFormDialog />
+        ) : (
+          <p className="text-muted-foreground text-sm">사업장 등록은 시스템관리자만 가능합니다.</p>
+        )}
       </div>
 
       <Table>
