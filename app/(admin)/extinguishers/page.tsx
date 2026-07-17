@@ -67,7 +67,10 @@ export default async function ExtinguishersPage({
                   </Link>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">{formatShortLocation(e)}</TableCell>
-                <TableCell>{e.extinguisher_type_name}</TableCell>
+                <TableCell>
+                  {e.extinguisher_type_name}
+                  {e.capacity ? ` (${e.capacity})` : ""}
+                </TableCell>
                 <TableCell>
                   <LifecycleStatusBadge status={e.lifecycle_status} />
                 </TableCell>

@@ -224,8 +224,9 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
         <p className="text-lg font-bold">{extinguisher.asset_code}</p>
         <p className="text-muted-foreground text-sm">{formatShortLocation(extinguisher)}</p>
         <p className="text-muted-foreground mt-2 text-sm">
-          {extinguisher.extinguisher_type_name} · 제조일 {extinguisher.manufacture_date} ·{" "}
-          {LIFECYCLE_STATUS_LABEL[extinguisher.lifecycle_status]}
+          {extinguisher.extinguisher_type_name}
+          {extinguisher.capacity ? ` (${extinguisher.capacity})` : ""} · 제조일{" "}
+          {extinguisher.manufacture_date} · {LIFECYCLE_STATUS_LABEL[extinguisher.lifecycle_status]}
         </p>
         <p className="text-muted-foreground text-sm">
           최근 점검:{" "}

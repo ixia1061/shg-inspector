@@ -367,6 +367,11 @@ export function ExtinguisherForm({
           <FieldError errors={errors.extinguisher_type_id ? [errors.extinguisher_type_id] : undefined} />
         </Field>
 
+        <Field>
+          <FieldLabel htmlFor="capacity">소화기 용량</FieldLabel>
+          <Input id="capacity" placeholder="예: 3.3kg" {...register("capacity")} />
+        </Field>
+
         <Field data-invalid={!!errors.manufacture_date}>
           <FieldLabel htmlFor="manufacture_date">제조일</FieldLabel>
           <DateInput
@@ -404,11 +409,6 @@ export function ExtinguisherForm({
             </label>
           </div>
           <FieldError errors={errors.useful_life_years ? [errors.useful_life_years] : undefined} />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="capacity">용량</FieldLabel>
-          <Input id="capacity" placeholder="예: 3.3kg" {...register("capacity")} />
         </Field>
 
         {locationType === "BUILDING" && (
