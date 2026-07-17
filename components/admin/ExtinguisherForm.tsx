@@ -33,7 +33,6 @@ import type {
   Floor,
   Site,
   Vehicle,
-  Zone,
 } from "@/types/domain";
 import type { Database } from "@/types/database.types";
 
@@ -41,7 +40,6 @@ interface ExtinguisherFormProps {
   sites: Site[];
   buildings: Building[];
   floors: Floor[];
-  zones: Zone[];
   vehicles: Vehicle[];
   types: ExtinguisherType[];
   extinguisher?: Extinguisher;
@@ -51,7 +49,6 @@ export function ExtinguisherForm({
   sites,
   buildings,
   floors,
-  zones,
   vehicles,
   types,
   extinguisher,
@@ -92,11 +89,11 @@ export function ExtinguisherForm({
       useful_life_years: extinguisher ? extinguisher.useful_life_years : 10,
       capacity: extinguisher?.capacity ?? "",
       install_note: extinguisher?.install_note ?? "",
+      serial_no: extinguisher?.serial_no ?? "",
     },
   });
 
   const locationType = watch("location_type");
-  const floorId = watch("floor_id");
   const noUsefulLife = watch("useful_life_years") === null;
 
   const filteredBuildings = useMemo(
@@ -107,7 +104,6 @@ export function ExtinguisherForm({
     () => floors.filter((f) => f.building_id === buildingId),
     [floors, buildingId]
   );
-  const filteredZones = useMemo(() => zones.filter((z) => z.floor_id === floorId), [zones, floorId]);
   const filteredVehicles = useMemo(
     () => vehicles.filter((v) => v.building_id === buildingId),
     [vehicles, buildingId]
@@ -129,10 +125,6 @@ export function ExtinguisherForm({
   const floorItems = useMemo(
     () => filteredFloors.map((f) => ({ value: f.id, label: `${f.name} [${f.floor_code}]` })),
     [filteredFloors]
-  );
-  const zoneItems = useMemo(
-    () => filteredZones.map((z) => ({ value: z.id, label: z.name })),
-    [filteredZones]
   );
   const vehicleItems = useMemo(
     () =>
@@ -163,6 +155,7 @@ export function ExtinguisherForm({
             useful_life_years: values.useful_life_years,
             capacity: values.capacity,
             install_note: values.install_note,
+            serial_no: values.serial_no || null,
           }
         : {
             location_type: "VEHICLE",
@@ -174,6 +167,7 @@ export function ExtinguisherForm({
             useful_life_years: values.useful_life_years,
             capacity: values.capacity,
             install_note: values.install_note,
+            serial_no: values.serial_no || null,
           };
 
     // 끝자리를 지정했을 때만 보낸다. 비우면 트리거가 자동 채번한다.
@@ -407,6 +401,11 @@ export function ExtinguisherForm({
           <FieldError errors={errors.manufacture_date ? [errors.manufacture_date] : undefined} />
         </Field>
 
+        <Field>
+          <FieldLabel htmlFor="serial_no">제조번호</FieldLabel>
+          <Input id="serial_no" placeholder="소화기 명판의 제조번호" {...register("serial_no")} />
+        </Field>
+
         <Field data-invalid={!!errors.useful_life_years}>
           <FieldLabel htmlFor="useful_life_years">내용연수(년)</FieldLabel>
           <div className="flex items-center gap-3">
@@ -435,29 +434,6 @@ export function ExtinguisherForm({
           </div>
           <FieldError errors={errors.useful_life_years ? [errors.useful_life_years] : undefined} />
         </Field>
-
-        {locationType === "BUILDING" && (
-          <Field>
-            <FieldLabel>구역 (선택)</FieldLabel>
-            <Select
-              items={zoneItems}
-              value={watch("zone_id") ?? ""}
-              onValueChange={(v) => setValue("zone_id", v || undefined)}
-              disabled={!floorId}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="구역 선택 (선택사항)" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredZones.map((z) => (
-                  <SelectItem key={z.id} value={z.id}>
-                    {z.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-        )}
       </FieldGroup>
 
       {isEdit && (

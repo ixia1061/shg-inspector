@@ -159,6 +159,7 @@ export interface Database {
           useful_life_years: number | null;
           capacity: string | null;
           install_note: string | null;
+          serial_no: string | null;
           status: ExtinguisherStatus;
           created_at: string;
           updated_at: string;
@@ -178,6 +179,7 @@ export interface Database {
           useful_life_years: number | null;
           capacity?: string | null;
           install_note?: string | null;
+          serial_no?: string | null;
           status?: ExtinguisherStatus;
         };
         Update: Partial<Database["public"]["Tables"]["extinguishers"]["Insert"]>;
@@ -278,6 +280,7 @@ export interface Database {
           inspected_today: boolean;
           inspected_this_month: boolean;
           vehicle_department: string | null;
+          serial_no: string | null;
         };
         Relationships: [];
       };

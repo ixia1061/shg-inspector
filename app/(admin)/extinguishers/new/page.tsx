@@ -8,14 +8,12 @@ export default async function NewExtinguisherPage() {
     { data: sites },
     { data: buildings },
     { data: floors },
-    { data: zones },
     { data: vehicles },
     { data: types },
   ] = await Promise.all([
     supabase.from("sites").select("*").order("name"),
     supabase.from("buildings").select("*").order("building_no"),
     supabase.from("floors").select("*").order("order_index"),
-    supabase.from("zones").select("*").order("name"),
     supabase.from("vehicles").select("*").order("vehicle_no"),
     supabase.from("extinguisher_types").select("*").order("name"),
   ]);
@@ -27,7 +25,6 @@ export default async function NewExtinguisherPage() {
         sites={sites ?? []}
         buildings={buildings ?? []}
         floors={floors ?? []}
-        zones={zones ?? []}
         vehicles={vehicles ?? []}
         types={types ?? []}
       />
