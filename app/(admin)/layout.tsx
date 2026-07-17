@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AdminMobileNav } from "@/components/admin/AdminMobileNav";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { SignOutButton } from "@/components/shared/SignOutButton";
 import { createClient } from "@/lib/supabase/server";
@@ -32,14 +33,17 @@ export default async function AdminLayout({
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b px-6">
-          <Link href="/account" className="text-sm font-medium hover:underline">
-            {profile.name}님
-          </Link>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 items-center justify-between gap-2 border-b px-4 sm:px-6">
+          <div className="flex items-center gap-2">
+            <AdminMobileNav />
+            <Link href="/account" className="text-sm font-medium hover:underline">
+              {profile.name}님
+            </Link>
+          </div>
           <SignOutButton />
         </header>
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );
