@@ -23,8 +23,14 @@ function buildingLabelOf(row: Pick<LocationFields, "building_no" | "building_nam
     : null;
 }
 
-/** 건물/차량 위치 유형에 따라 사람이 읽는 위치 경로 문자열을 만든다. 차량도 건물 소속이다. */
-export function formatLocationPath(row: LocationFields): string {
+/**
+ * 건물/차량 위치 유형에 따라 사람이 읽는 위치 경로 문자열을 만든다. 차량도 건물 소속이다.
+ * `withInstallNote`를 켜면 맨 끝에 소화기 설치위치(install_note)까지 붙인다(점검현황 등에서 사용).
+ */
+export function formatLocationPath(
+  row: LocationFields,
+  opts?: { withInstallNote?: boolean }
+): string {
   const buildingLabel =
     row.building_no != null
       ? row.building_name
@@ -32,14 +38,18 @@ export function formatLocationPath(row: LocationFields): string {
         : `${row.building_no}동`
       : null;
 
+  const installNote = opts?.withInstallNote ? row.install_note : null;
+
   if (row.location_type === "VEHICLE") {
     const plate = row.vehicle_plate_no ? ` [${row.vehicle_plate_no}]` : "";
     const name = row.vehicle_name ? ` (${row.vehicle_name})` : "";
     const vehicleLabel = `차량 ${row.vehicle_no}호${plate}${name}`;
-    return [row.site_name, buildingLabel, vehicleLabel].filter(Boolean).join(" > ");
+    return [row.site_name, buildingLabel, vehicleLabel, installNote].filter(Boolean).join(" > ");
   }
 
-  return [row.site_name, buildingLabel, row.floor_name, row.zone_name].filter(Boolean).join(" > ");
+  return [row.site_name, buildingLabel, row.floor_name, row.zone_name, installNote]
+    .filter(Boolean)
+    .join(" > ");
 }
 
 /**
