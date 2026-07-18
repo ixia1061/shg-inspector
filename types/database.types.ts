@@ -281,6 +281,11 @@ export interface Database {
           inspected_this_month: boolean;
           vehicle_department: string | null;
           serial_no: string | null;
+          last_inspection_memo: string | null;
+          last_pressure_ok: boolean | null;
+          last_seal_ok: boolean | null;
+          last_appearance_ok: boolean | null;
+          last_installation_ok: boolean | null;
         };
         Relationships: [];
       };
