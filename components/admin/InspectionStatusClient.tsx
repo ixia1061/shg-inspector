@@ -4,11 +4,18 @@ import { useMemo, useState } from "react";
 
 import { InspectionRateChart } from "@/components/admin/InspectionRateChart";
 import { LedgerDownloadButton } from "@/components/admin/LedgerDownloadButton";
+import { UninspectedList } from "@/components/admin/UninspectedList";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { sortByAssetCode } from "@/lib/utils/sort";
 import type { ExtinguisherOverview, InspectionRateRow, Site } from "@/types/domain";
 
-/** 건물별 이번달 점검률을 사업장 버튼으로 나눠 보고, 건물번호 순으로 정렬해 표시한다. */
-export function InspectionRateBySite({
+/**
+ * 점검현황 전체를 사업장 선택으로 구동한다. 사업장 버튼을 누르면
+ * 건물별 점검률·이번달 미점검·점검완료 목록·관리대장 다운로드가 모두 그 사업장으로 한정된다.
+ */
+export function InspectionStatusClient({
   extinguishers,
   sites,
 }: {
@@ -17,13 +24,18 @@ export function InspectionRateBySite({
 }) {
   const [siteId, setSiteId] = useState(sites[0]?.id ?? "");
 
-  const rows: InspectionRateRow[] = useMemo(() => {
+  const siteRows = useMemo(
+    () => extinguishers.filter((e) => e.site_id === siteId),
+    [extinguishers, siteId],
+  );
+
+  // 건물별 이번달 점검률 (건물번호 순)
+  const rateRows: InspectionRateRow[] = useMemo(() => {
     const map = new Map<
       string,
       { group_id: string; group_name: string; building_no: number; total: number; inspected: number }
     >();
-    for (const e of extinguishers) {
-      if (e.site_id !== siteId) continue;
+    for (const e of siteRows) {
       const key = String(e.building_id);
       let g = map.get(key);
       if (!g) {
@@ -48,12 +60,21 @@ export function InspectionRateBySite({
         inspected: g.inspected,
         rate: g.total ? Math.round((1000 * g.inspected) / g.total) / 10 : 0,
       }));
-  }, [extinguishers, siteId]);
+  }, [siteRows]);
+
+  const notMonth = useMemo(
+    () => sortByAssetCode(siteRows.filter((r) => !r.inspected_this_month)),
+    [siteRows],
+  );
+  const doneMonth = useMemo(
+    () => sortByAssetCode(siteRows.filter((r) => r.inspected_this_month)),
+    [siteRows],
+  );
 
   const selectedSite = sites.find((s) => s.id === siteId);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">
           {sites.map((s) => (
@@ -69,7 +90,28 @@ export function InspectionRateBySite({
         </div>
         {selectedSite ? <LedgerDownloadButton site={selectedSite} /> : null}
       </div>
-      <InspectionRateChart rows={rows} />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>건물별 이번달 점검률</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <InspectionRateChart rows={rateRows} />
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="month">
+        <TabsList>
+          <TabsTrigger value="month">이번달 미점검 ({notMonth.length})</TabsTrigger>
+          <TabsTrigger value="done">점검완료 ({doneMonth.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="month">
+          <UninspectedList rows={notMonth} />
+        </TabsContent>
+        <TabsContent value="done">
+          <UninspectedList rows={doneMonth} emptyMessage="이번달 점검완료된 소화기가 없습니다." />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
