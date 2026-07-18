@@ -53,6 +53,13 @@ function actionNote(e: ExtinguisherOverview): string {
   return e.last_inspection_memo ?? "";
 }
 
+/** timestamptz(UTC ISO)를 KST 기준 'YYYY-MM-DD'로. (UTC로 자르면 최대 9시간 하루 오차) */
+function kstDate(iso: string | null): string {
+  if (!iso) return "";
+  // en-CA 로케일은 YYYY-MM-DD 형식
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
+}
+
 /**
  * 관리자 전용: 지정 사업장(site 쿼리)의 소화기 관리대장을 Excel(.xlsx)로 내려준다.
  * - 표지 시트: 점검일자·점검자 수기 기입란 + 동·층별 종류/수량 보유현황표
@@ -210,7 +217,7 @@ function buildCoverSheet(
     const isVehicle = r.location_type === "VEHICLE";
     const floorLabel = isVehicle ? "차량" : (r.floor_name ?? r.floor_code ?? "-");
     const floorSort = isVehicle ? "￿" : (r.floor_code ?? r.floor_name ?? "");
-    const key = `${r.building_no ?? 0} ${floorSort} ${floorLabel}`;
+    const key = `${r.building_no ?? 0} ${floorSort} ${floorLabel}`;
     let g = groups.get(key);
     if (!g) {
       g = {
@@ -347,7 +354,7 @@ function buildLedgerSheet(
       useful_life: e.useful_life_years ?? "",
       replace_due: e.replace_due_date ?? "",
       lifecycle: LIFECYCLE_STATUS_LABEL[e.lifecycle_status as LifecycleStatus] ?? "",
-      last_inspected: e.last_inspected_at ? e.last_inspected_at.slice(0, 10) : "",
+      last_inspected: kstDate(e.last_inspected_at),
       result: resultLabel(e.last_inspection_result),
       defect: defectItems(e),
       action: actionNote(e),
