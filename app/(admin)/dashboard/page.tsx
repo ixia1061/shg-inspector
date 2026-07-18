@@ -18,6 +18,11 @@ export default async function DashboardPage() {
         .limit(5),
     ]);
 
+  // 건물별 점검률은 건물명 가나다순으로 정렬해 표시한다.
+  const rateRowsSorted = [...(rateRows ?? [])].sort((a, b) =>
+    (a.group_name ?? "").localeCompare(b.group_name ?? "", "ko"),
+  );
+
   const summary = summaryRows?.[0] ?? {
     total_extinguishers: 0,
     inspected_this_month: 0,
@@ -38,7 +43,7 @@ export default async function DashboardPage() {
             <CardTitle>건물별 이번달 점검률</CardTitle>
           </CardHeader>
           <CardContent>
-            <InspectionRateChart rows={rateRows ?? []} />
+            <InspectionRateChart rows={rateRowsSorted} />
           </CardContent>
         </Card>
 
