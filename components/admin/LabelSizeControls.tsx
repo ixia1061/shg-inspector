@@ -18,7 +18,7 @@ export interface LabelSize {
   showLocation: boolean;
 }
 
-export const DEFAULT_LABEL_SIZE: LabelSize = { widthMm: 50, heightMm: 30, showLocation: true };
+export const DEFAULT_LABEL_SIZE: LabelSize = { widthMm: 40, heightMm: 40, showLocation: true };
 
 // 라벨(스티커) 크기 프리셋. 값은 mm. Zebra 등 라벨 프린터의 실제 규격에 맞춘다.
 const SIZE_PRESETS = [
@@ -33,9 +33,9 @@ const SIZE_PRESETS = [
 
 /** 라벨 크기/위치표시 옵션 컨트롤. 값이 바뀔 때마다 onChange로 알린다(QR 라벨 인쇄 공용). */
 export function LabelSizeControls({ onChange }: { onChange: (v: LabelSize) => void }) {
-  const [sizeKey, setSizeKey] = useState("50x30");
-  const [customW, setCustomW] = useState(50);
-  const [customH, setCustomH] = useState(30);
+  const [sizeKey, setSizeKey] = useState("40x40");
+  const [customW, setCustomW] = useState(40);
+  const [customH, setCustomH] = useState(40);
   const [showLocation, setShowLocation] = useState(true);
 
   const preset = SIZE_PRESETS.find((p) => p.value === sizeKey) ?? SIZE_PRESETS[0];
@@ -49,7 +49,7 @@ export function LabelSizeControls({ onChange }: { onChange: (v: LabelSize) => vo
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 p-2">
       <span className="text-muted-foreground text-sm">라벨 크기</span>
-      <Select items={SIZE_PRESETS} value={sizeKey} onValueChange={(v) => setSizeKey(v ?? "50x30")}>
+      <Select items={SIZE_PRESETS} value={sizeKey} onValueChange={(v) => setSizeKey(v ?? "40x40")}>
         <SelectTrigger className="w-32">
           <SelectValue placeholder="라벨 크기" />
         </SelectTrigger>
