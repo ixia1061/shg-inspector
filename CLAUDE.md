@@ -192,6 +192,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
+- **2026-07-18** — **소화기 상세 QR/라벨 화면도 라벨 크기 조절식으로 통일.** 기존 고정 220px QR + (프린터 없어 항상 비활성이던) Zebra 버튼을 제거하고, QR Code 관리와 동일한 크기 옵션 + 라벨 규격 인쇄로 교체. 크기 옵션 UI를 공용 컴포넌트 `LabelSizeControls`(+ `DEFAULT_LABEL_SIZE`)로 추출해 일괄/단일 화면이 동일 동작. `lib/qr/zebraPrint.ts`·`labelTemplate.ts`는 실제 Zebra 프린터 확보 후 ZPL 직접 전송용으로 보존(현재 미사용).
 - **2026-07-18** — **라벨 인쇄: 크기 조절 + 한 장씩 정확 출력.** QR Code 관리에서 라벨 크기(프리셋 50×30/40×30/60×40/30×20 mm + 직접 지정)와 위치 표시 여부를 고르고, 선택 QR을 라벨 규격대로 **한 장에 하나씩** 인쇄. `components/admin/PrintLabelSheet.tsx` 신설(`@page { size }` + `break-after: page`, 화면 숨김/인쇄시 표시, `#pl-sheet`). 기존 `QrLabelCard.tsx`(A4 격자용) 제거. Zebra 등 라벨프린터는 Windows 드라이버/AirPrint 인쇄로 동작, 모바일 현장 출력은 OS 인쇄(안드로이드 Bluetooth·Mopria / iOS AirPrint)로 커버. (Zebra ZPL 직접 전송·Web Bluetooth는 실제 프린터 확보 후 별도 검토.)
 - **2026-07-18** — 사이드바에서 **QR Code 관리를 통계 아래로 이동**.
 - **2026-07-18** — **수량 현황을 사업장별 버튼 전환식으로 변경.** 상단에 사업장 버튼(무안국제공항/상주업체 등)을 두고 누르면 해당 사업장의 요약카드·건물×종류 교차표만 표시. 클라이언트 컴포넌트 `InventoryClient` 신설(전체 로드 후 즉시 전환), 건물 라벨에서 사업장명 생략(이미 버튼으로 선택). 기본 선택은 이름순 첫 사업장.
