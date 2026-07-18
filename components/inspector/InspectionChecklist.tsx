@@ -262,11 +262,23 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
           <Textarea id="memo" rows={2} placeholder="이상사항이 있으면 입력하세요" {...register("memo")} />
         </Field>
         <Field>
-          <FieldLabel htmlFor="photos">
-            사진 (선택, 최대 {MAX_INSPECTION_PHOTOS}장 · 전·후 촬영){" "}
-            {photos.length > 0 ? `— ${photos.length}/${MAX_INSPECTION_PHOTOS}` : ""}
-          </FieldLabel>
-          {/* 실제 파일 입력은 숨기고, 아래 카메라 버튼으로 촬영을 연다 */}
+          <div className="flex items-center gap-2">
+            <FieldLabel htmlFor="photos" className="mb-0">
+              사진 (선택, 최대 {MAX_INSPECTION_PHOTOS}장 · 전·후 촬영){" "}
+              {photos.length > 0 ? `— ${photos.length}/${MAX_INSPECTION_PHOTOS}` : ""}
+            </FieldLabel>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={photos.length > 0 ? "사진 추가 촬영" : "사진 촬영"}
+              disabled={photos.length >= MAX_INSPECTION_PHOTOS || processingPhotos}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Camera className="size-4" />
+            </Button>
+          </div>
+          {/* 실제 파일 입력은 숨기고, 위 카메라 버튼으로 촬영을 연다 */}
           <input
             id="photos"
             ref={fileInputRef}
@@ -282,17 +294,6 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
               e.target.value = "";
             }}
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-fit"
-            disabled={photos.length >= MAX_INSPECTION_PHOTOS || processingPhotos}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Camera className="size-4" />
-            {photos.length > 0 ? "사진 추가 촬영" : "사진 촬영"}
-          </Button>
           {processingPhotos && (
             <p className="text-muted-foreground text-xs">사진에 관리번호를 새기는 중...</p>
           )}
