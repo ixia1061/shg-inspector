@@ -38,17 +38,19 @@ const resultLabel = (r: string | null): string =>
 /** 종류+용량 조합 컬럼 정의 */
 type Combo = { key: string; type: string; capacity: string; header: string };
 
-/** 최근 점검의 불량 항목 + 비고를 한 문자열로. 정상이면 비고만, 미점검이면 빈 문자열. */
-function inspectionNote(e: ExtinguisherOverview): string {
+/** 최근 점검에서 불량으로 체크된 항목 목록. 정상/미점검이면 빈 문자열. */
+function defectItems(e: ExtinguisherOverview): string {
   const failed: string[] = [];
   if (e.last_pressure_ok === false) failed.push("압력 불량");
   if (e.last_seal_ok === false) failed.push("봉인 불량");
   if (e.last_appearance_ok === false) failed.push("외관 불량");
   if (e.last_installation_ok === false) failed.push("설치 불량");
-  const parts: string[] = [];
-  if (failed.length) parts.push(failed.join(", "));
-  if (e.last_inspection_memo) parts.push(e.last_inspection_memo);
-  return parts.join(" · ");
+  return failed.join(", ");
+}
+
+/** 최근 점검의 비고(조치 내용 등). 없으면 빈 문자열. */
+function actionNote(e: ExtinguisherOverview): string {
+  return e.last_inspection_memo ?? "";
 }
 
 /**
@@ -320,7 +322,8 @@ function buildLedgerSheet(
     { header: "내용연수상태", key: "lifecycle", width: 14 },
     { header: "최근점검일", key: "last_inspected", width: 12 },
     { header: "점검결과", key: "result", width: 10 },
-    { header: "점검내용(불량/조치)", key: "note", width: 34 },
+    { header: "불량항목", key: "defect", width: 20 },
+    { header: "조치내용", key: "action", width: 28 },
     { header: "점검자", key: "inspector", width: 12 },
     { header: "이번달점검", key: "month", width: 10 },
   ];
@@ -346,13 +349,15 @@ function buildLedgerSheet(
       lifecycle: LIFECYCLE_STATUS_LABEL[e.lifecycle_status as LifecycleStatus] ?? "",
       last_inspected: e.last_inspected_at ? e.last_inspected_at.slice(0, 10) : "",
       result: resultLabel(e.last_inspection_result),
-      note: inspectionNote(e),
+      defect: defectItems(e),
+      action: actionNote(e),
       inspector: e.last_inspector_id ? (nameById.get(e.last_inspector_id) ?? "") : "",
       month: e.inspected_this_month ? "O" : "X",
     });
-    // 위치(2)·점검내용(12) 셀은 왼쪽 정렬로 전체가 보이게
+    // 위치(2)·불량항목(12)·조치내용(13) 셀은 왼쪽 정렬로 전체가 보이게
     row.getCell(2).alignment = { vertical: "middle", horizontal: "left" };
     row.getCell(12).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+    row.getCell(13).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
   }
 
   sheet.eachRow({ includeEmpty: false }, (row) => {
