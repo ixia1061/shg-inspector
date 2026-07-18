@@ -4,7 +4,7 @@ import { Printer, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
-import { QrLabelCard } from "@/components/admin/QrLabelCard";
+import { PrintLabelSheet } from "@/components/admin/PrintLabelSheet";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,15 @@ const STATUS_OPTIONS = [
   { value: "none", label: "내용연수 없음" },
 ];
 
+// 라벨(스티커) 크기 프리셋. 값은 mm. Zebra 등 라벨 프린터의 실제 규격에 맞춘다.
+const SIZE_PRESETS = [
+  { value: "50x30", label: "50 × 30 mm", w: 50, h: 30 },
+  { value: "40x30", label: "40 × 30 mm", w: 40, h: 30 },
+  { value: "60x40", label: "60 × 40 mm", w: 60, h: 40 },
+  { value: "30x20", label: "30 × 20 mm", w: 30, h: 20 },
+  { value: "custom", label: "직접 지정", w: 0, h: 0 },
+];
+
 export function QrBulkPrint({
   extinguishers,
   sites,
@@ -42,6 +51,14 @@ export function QrBulkPrint({
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sizeKey, setSizeKey] = useState("50x30");
+  const [customW, setCustomW] = useState(50);
+  const [customH, setCustomH] = useState(30);
+  const [showLocation, setShowLocation] = useState(true);
+
+  const preset = SIZE_PRESETS.find((p) => p.value === sizeKey) ?? SIZE_PRESETS[0];
+  const widthMm = sizeKey === "custom" ? customW : preset.w;
+  const heightMm = sizeKey === "custom" ? customH : preset.h;
 
   const siteItems = useMemo(
     () => [{ value: "all", label: "전체 사업장" }, ...sites.map((s) => ({ value: s.id, label: s.name }))],
@@ -149,6 +166,52 @@ export function QrBulkPrint({
           </span>
         </div>
 
+        {/* 라벨 크기/내용 옵션 */}
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 p-2">
+          <span className="text-muted-foreground text-sm">라벨 크기</span>
+          <Select items={SIZE_PRESETS} value={sizeKey} onValueChange={(v) => setSizeKey(v ?? "50x30")}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="라벨 크기" />
+            </SelectTrigger>
+            <SelectContent>
+              {SIZE_PRESETS.map((p) => (
+                <SelectItem key={p.value} value={p.value}>
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {sizeKey === "custom" && (
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                min={10}
+                value={customW}
+                onChange={(e) => setCustomW(Number(e.target.value) || 0)}
+                className="w-20"
+                aria-label="라벨 가로(mm)"
+              />
+              <span className="text-sm">×</span>
+              <Input
+                type="number"
+                min={10}
+                value={customH}
+                onChange={(e) => setCustomH(Number(e.target.value) || 0)}
+                className="w-20"
+                aria-label="라벨 세로(mm)"
+              />
+              <span className="text-muted-foreground text-sm">mm</span>
+            </div>
+          )}
+          <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+            <Checkbox checked={showLocation} onCheckedChange={(c) => setShowLocation(c === true)} />
+            위치 표시
+          </label>
+          <span className="text-muted-foreground ml-auto text-xs">
+            현재 {widthMm}×{heightMm}mm · 한 장에 하나씩 출력
+          </span>
+        </div>
+
         {/* 선택 목록 */}
         <div className="max-h-[480px] overflow-y-auto rounded-md border">
           <label className="bg-muted/50 flex items-center gap-3 border-b px-3 py-2 text-sm font-medium">
@@ -180,17 +243,17 @@ export function QrBulkPrint({
         </p>
       </div>
 
-      {/* 인쇄 영역: 화면에서는 숨기고 인쇄 시에만 표시 (QR은 미리 생성됨) */}
-      <div id="print-area" className="hidden grid-cols-3 gap-3 print:grid">
-        {selectedRows.map((e) => (
-          <QrLabelCard
-            key={e.id}
-            url={buildInspectionUrl(e.asset_code)}
-            code={e.asset_code}
-            location={formatShortLocation(e)}
-          />
-        ))}
-      </div>
+      {/* 인쇄 영역: 선택 라벨을 지정 크기(mm)로 한 장씩 출력 (화면 숨김, 인쇄 시만 표시) */}
+      <PrintLabelSheet
+        labels={selectedRows.map((e) => ({
+          url: buildInspectionUrl(e.asset_code),
+          code: e.asset_code,
+          location: formatShortLocation(e),
+        }))}
+        widthMm={widthMm}
+        heightMm={heightMm}
+        showLocation={showLocation}
+      />
     </div>
   );
 }
