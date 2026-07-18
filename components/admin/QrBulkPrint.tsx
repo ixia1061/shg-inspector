@@ -18,7 +18,7 @@ import {
 import { buildInspectionUrl } from "@/lib/qr/encode";
 import { formatShortLocation } from "@/lib/utils/location";
 import { compareAssetCode } from "@/lib/utils/sort";
-import type { ExtinguisherOverview, LifecycleStatus, Site } from "@/types/domain";
+import type { ExtinguisherListItem, LifecycleStatus, Site } from "@/types/domain";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "전체 상태" },
@@ -33,7 +33,7 @@ export function QrBulkPrint({
   extinguishers,
   sites,
 }: {
-  extinguishers: ExtinguisherOverview[];
+  extinguishers: ExtinguisherListItem[];
   sites: Site[];
 }) {
   const router = useRouter();

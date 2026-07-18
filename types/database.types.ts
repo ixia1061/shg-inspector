@@ -284,6 +284,46 @@ export interface Database {
         };
         Relationships: [];
       };
+      // 목록/QR/수량 페이지용 경량 뷰: 소화기마다 오늘/이번달 점검 여부를 계산하는
+      // 무거운 서브쿼리(inspected_today/inspected_this_month)를 제외한 것.
+      v_extinguisher_list: {
+        Row: {
+          id: string;
+          asset_code: string;
+          location_type: LocationType;
+          extinguisher_no: number;
+          status: ExtinguisherStatus;
+          manufacture_date: string;
+          useful_life_years: number | null;
+          capacity: string | null;
+          install_note: string | null;
+          replace_due_date: string | null;
+          lifecycle_status: LifecycleStatus;
+          extinguisher_type_id: string;
+          extinguisher_type_name: string;
+          site_id: string;
+          site_name: string;
+          org_code: string;
+          building_id: string | null;
+          building_name: string | null;
+          building_no: number | null;
+          floor_id: string | null;
+          floor_name: string | null;
+          floor_code: string | null;
+          zone_id: string | null;
+          zone_name: string | null;
+          vehicle_id: string | null;
+          vehicle_name: string | null;
+          vehicle_no: number | null;
+          vehicle_plate_no: string | null;
+          last_inspected_at: string | null;
+          last_inspection_result: InspectionResult | null;
+          last_inspector_id: string | null;
+          vehicle_department: string | null;
+          serial_no: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       fn_extinguisher_status: {
