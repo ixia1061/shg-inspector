@@ -23,8 +23,10 @@ export const DEFAULT_LABEL_SIZE: LabelSize = { widthMm: 50, heightMm: 30, showLo
 // 라벨(스티커) 크기 프리셋. 값은 mm. Zebra 등 라벨 프린터의 실제 규격에 맞춘다.
 const SIZE_PRESETS = [
   { value: "50x30", label: "50 × 30 mm", w: 50, h: 30 },
+  { value: "40x40", label: "40 × 40 mm (정사각)", w: 40, h: 40 },
   { value: "40x30", label: "40 × 30 mm", w: 40, h: 30 },
   { value: "60x40", label: "60 × 40 mm", w: 60, h: 40 },
+  { value: "30x30", label: "30 × 30 mm (정사각)", w: 30, h: 30 },
   { value: "30x20", label: "30 × 20 mm", w: 30, h: 20 },
   { value: "custom", label: "직접 지정", w: 0, h: 0 },
 ];
