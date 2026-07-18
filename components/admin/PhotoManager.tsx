@@ -10,7 +10,10 @@ import { toast } from "sonner";
 import { deletePhotosAction } from "@/app/actions/photoActions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
+
+const PAGE_SIZE = 50;
 
 export interface ManagedPhoto {
   id: string;
@@ -24,6 +27,7 @@ export function PhotoManager({ photos }: { photos: ManagedPhoto[] }) {
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
+  const [page, setPage] = useState(0);
 
   /** 선택(또는 전체) 사진을 ZIP으로 내려받는다. ZIP 내부는 관리번호별 폴더로 정리된다. */
   async function handleDownload(ids: string[]) {
@@ -61,6 +65,12 @@ export function PhotoManager({ photos }: { photos: ManagedPhoto[] }) {
     map.set(photo.assetCode, list);
     return map;
   }, new Map());
+
+  // 관리번호(소화기) 그룹 단위로 페이지네이션한다.
+  const groupEntries = [...groups.entries()];
+  const pageCount = Math.max(1, Math.ceil(groupEntries.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount - 1);
+  const pageGroups = groupEntries.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -127,10 +137,12 @@ export function PhotoManager({ photos }: { photos: ManagedPhoto[] }) {
         >
           <Trash2 className="size-4" /> 선택 삭제 ({selected.size})
         </Button>
-        <span className="text-muted-foreground ml-auto text-sm">총 {photos.length}장</span>
+        <span className="text-muted-foreground ml-auto text-sm">
+          소화기 {groupEntries.length}대 · 총 {photos.length}장
+        </span>
       </div>
 
-      {[...groups.entries()].map(([assetCode, groupPhotos]) => (
+      {pageGroups.map(([assetCode, groupPhotos]) => (
         <div key={assetCode} className="flex flex-col gap-2">
           <h2 className="font-mono text-sm font-semibold">
             {assetCode} <span className="text-muted-foreground font-sans">({groupPhotos.length}장)</span>
@@ -167,6 +179,8 @@ export function PhotoManager({ photos }: { photos: ManagedPhoto[] }) {
           </div>
         </div>
       ))}
+
+      <Pagination page={current} pageCount={pageCount} onPageChange={setPage} />
     </div>
   );
 }
