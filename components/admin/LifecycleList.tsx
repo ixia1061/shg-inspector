@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
 import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
@@ -17,8 +18,8 @@ import type { ExtinguisherOverview } from "@/types/domain";
 
 const PAGE_SIZE = 50;
 
-/** 미점검 소화기 목록 — 페이지당 50개만 렌더(긴 목록 렌더 부담 완화). */
-export function UninspectedList({ rows }: { rows: ExtinguisherOverview[] }) {
+/** 내용연수 관리 목록 — 페이지당 50개(교체예정일 순은 서버 정렬 유지). */
+export function LifecycleList({ rows }: { rows: ExtinguisherOverview[] }) {
   const [page, setPage] = useState(0);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -32,6 +33,9 @@ export function UninspectedList({ rows }: { rows: ExtinguisherOverview[] }) {
           <TableRow>
             <TableHead>관리번호</TableHead>
             <TableHead>위치</TableHead>
+            <TableHead>제조일</TableHead>
+            <TableHead>교체 예정일</TableHead>
+            <TableHead>상태</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -43,15 +47,18 @@ export function UninspectedList({ rows }: { rows: ExtinguisherOverview[] }) {
                     {e.asset_code}
                   </Link>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {formatLocationPath(e, { withInstallNote: true })}
+                <TableCell className="text-muted-foreground text-sm">{formatLocationPath(e)}</TableCell>
+                <TableCell>{e.manufacture_date}</TableCell>
+                <TableCell>{e.replace_due_date}</TableCell>
+                <TableCell>
+                  <LifecycleStatusBadge status={e.lifecycle_status} />
                 </TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={2} className="text-muted-foreground text-center">
-                모두 점검 완료되었습니다.
+              <TableCell colSpan={5} className="text-muted-foreground text-center">
+                교체가 필요한 소화기가 없습니다.
               </TableCell>
             </TableRow>
           )}

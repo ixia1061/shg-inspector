@@ -5,8 +5,8 @@ import { useMemo, useState } from "react";
 
 import { AdminInspectDialog } from "@/components/admin/AdminInspectDialog";
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -180,29 +180,7 @@ export function ExtinguisherListClient({
         </TableBody>
       </Table>
 
-      {pageCount > 1 && (
-        <div className="flex items-center justify-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={current === 0}
-            onClick={() => setPage(current - 1)}
-          >
-            이전
-          </Button>
-          <span className="text-muted-foreground text-sm">
-            {current + 1} / {pageCount} 페이지
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={current >= pageCount - 1}
-            onClick={() => setPage(current + 1)}
-          >
-            다음
-          </Button>
-        </div>
-      )}
+      <Pagination page={current} pageCount={pageCount} onPageChange={setPage} />
     </div>
   );
 }
