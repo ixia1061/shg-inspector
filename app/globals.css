@@ -142,5 +142,10 @@
     position: absolute;
     top: 0;
     left: 0;
+    width: 100%;
+  }
+  /* 일괄 인쇄 시 라벨 한 장이 페이지 경계에서 잘리지 않도록 */
+  .qr-label {
+    break-inside: avoid;
   }
 }
