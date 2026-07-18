@@ -1,43 +1,18 @@
 import Link from "next/link";
 
-import { AdminInspectDialog } from "@/components/admin/AdminInspectDialog";
-import { ExtinguisherFilters } from "@/components/admin/ExtinguisherFilters";
-import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
+import { ExtinguisherListClient } from "@/components/admin/ExtinguisherListClient";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { formatShortLocation } from "@/lib/utils/location";
-import { sortByAssetCode } from "@/lib/utils/sort";
 import { createClient } from "@/lib/supabase/server";
-import type { LifecycleStatus } from "@/types/domain";
 
-export default async function ExtinguishersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ asset_code?: string; site_id?: string; status?: string }>;
-}) {
-  const { asset_code, site_id, status } = await searchParams;
+export default async function ExtinguishersPage() {
   const supabase = await createClient();
 
-  let query = supabase.from("v_extinguisher_overview").select("*").order("asset_code");
-
-  if (asset_code) query = query.ilike("asset_code", `%${asset_code}%`);
-  if (site_id) query = query.eq("site_id", site_id);
-  if (status) query = query.eq("lifecycle_status", status as LifecycleStatus);
-
+  // 전체를 한 번만 불러오고, 필터·검색·페이지네이션은 클라이언트에서 즉시 처리한다.
+  // (사업장 전환/검색 때마다 수백 행을 서버에서 다시 불러오던 버벅임 제거)
   const [{ data: extinguishers }, { data: sites }] = await Promise.all([
-    query,
+    supabase.from("v_extinguisher_overview").select("*"),
     supabase.from("sites").select("*").order("name"),
   ]);
-
-  // 관리번호 자연 정렬(공사-2 < 공사-15, ...-1-1-2 < ...-1-1-10)
-  const sortedExtinguishers = sortByAssetCode(extinguishers ?? []);
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,55 +23,7 @@ export default async function ExtinguishersPage({
         </Button>
       </div>
 
-      <ExtinguisherFilters sites={sites ?? []} />
-
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>관리번호</TableHead>
-            <TableHead>위치</TableHead>
-            <TableHead>종류</TableHead>
-            <TableHead>내용연수 상태</TableHead>
-            <TableHead>최근 점검</TableHead>
-            <TableHead className="text-right">점검</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedExtinguishers.length ? (
-            sortedExtinguishers.map((e) => (
-              <TableRow key={e.id}>
-                <TableCell>
-                  <Link href={`/extinguishers/${e.id}`} className="font-mono font-medium hover:underline">
-                    {e.asset_code}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">{formatShortLocation(e)}</TableCell>
-                <TableCell>
-                  {e.extinguisher_type_name}
-                  {e.capacity ? ` (${e.capacity})` : ""}
-                </TableCell>
-                <TableCell>
-                  <LifecycleStatusBadge status={e.lifecycle_status} />
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {e.last_inspected_at
-                    ? new Date(e.last_inspected_at).toLocaleDateString("ko-KR")
-                    : "이력 없음"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <AdminInspectDialog extinguisher={e} />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={6} className="text-muted-foreground text-center">
-                검색 결과가 없습니다.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+      <ExtinguisherListClient extinguishers={extinguishers ?? []} sites={sites ?? []} />
     </div>
   );
 }
