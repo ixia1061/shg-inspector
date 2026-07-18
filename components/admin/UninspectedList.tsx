@@ -17,8 +17,14 @@ import type { ExtinguisherOverview } from "@/types/domain";
 
 const PAGE_SIZE = 50;
 
-/** 미점검 소화기 목록 — 페이지당 50개만 렌더(긴 목록 렌더 부담 완화). */
-export function UninspectedList({ rows }: { rows: ExtinguisherOverview[] }) {
+/** 소화기 목록(미점검/점검완료 공용) — 페이지당 50개만 렌더(긴 목록 렌더 부담 완화). */
+export function UninspectedList({
+  rows,
+  emptyMessage = "모두 점검 완료되었습니다.",
+}: {
+  rows: ExtinguisherOverview[];
+  emptyMessage?: string;
+}) {
   const [page, setPage] = useState(0);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -51,7 +57,7 @@ export function UninspectedList({ rows }: { rows: ExtinguisherOverview[] }) {
           ) : (
             <TableRow>
               <TableCell colSpan={2} className="text-muted-foreground text-center">
-                모두 점검 완료되었습니다.
+                {emptyMessage}
               </TableCell>
             </TableRow>
           )}
