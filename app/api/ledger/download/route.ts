@@ -190,16 +190,43 @@ function buildCoverSheet(
   bohaTitle.value = "■ 동·층별 보유현황 (종류·용량)";
   bohaTitle.font = { bold: true, size: 13 };
 
-  // 표 헤더 (7행)
-  const headerRowIdx = 7;
-  const headers = ["건물", "층", ...combos.map((c) => c.header), "합계"];
-  headers.forEach((h, i) => {
-    const cell = sheet.getCell(headerRowIdx, i + 1);
-    cell.value = h;
+  // 2단 헤더: 상위행=소화기 종류, 하위행=용량 (기존 대장 형식)
+  const headerRowIdx = 7; // 상위행(종류)
+  const subRowIdx = 8; // 하위행(용량)
+
+  // 종류별 컬럼 범위(연속 combos를 종류 단위로 묶음)
+  const typeGroups: { type: string; start: number; end: number }[] = [];
+  combos.forEach((combo, i) => {
+    const dataCol = 3 + i;
+    const last = typeGroups[typeGroups.length - 1];
+    if (last && last.type === combo.type) last.end = dataCol;
+    else typeGroups.push({ type: combo.type, start: dataCol, end: dataCol });
+  });
+
+  const styleHeader = (cell: ExcelJS.Cell, value: string) => {
+    cell.value = value;
     cell.font = { bold: true };
     cell.alignment = { horizontal: "center", vertical: "middle" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEFEFEF" } };
     cell.border = THIN_BORDER;
+  };
+
+  // 건물/층/합계: 두 행 세로 병합
+  sheet.mergeCells(headerRowIdx, 1, subRowIdx, 1);
+  styleHeader(sheet.getCell(headerRowIdx, 1), "건물");
+  sheet.mergeCells(headerRowIdx, 2, subRowIdx, 2);
+  styleHeader(sheet.getCell(headerRowIdx, 2), "층");
+  sheet.mergeCells(headerRowIdx, colCount, subRowIdx, colCount);
+  styleHeader(sheet.getCell(headerRowIdx, colCount), "합계");
+
+  // 종류(상위): 용량 컬럼들 위에 가로 병합
+  for (const tg of typeGroups) {
+    if (tg.end > tg.start) sheet.mergeCells(headerRowIdx, tg.start, headerRowIdx, tg.end);
+    styleHeader(sheet.getCell(headerRowIdx, tg.start), shortTypeName(tg.type));
+  }
+  // 용량(하위)
+  combos.forEach((combo, i) => {
+    styleHeader(sheet.getCell(subRowIdx, 3 + i), combo.capacity || "-");
   });
 
   // (건물, 층) 그룹별 종류 카운트 집계
@@ -243,7 +270,7 @@ function buildCoverSheet(
   const colTotal = new Map<string, number>();
   let grandTotal = 0;
 
-  let rowIdx = headerRowIdx + 1;
+  let rowIdx = subRowIdx + 1;
   let buildingStart = rowIdx;
   let prevBuilding: string | null = null;
   const mergeRanges: [number, number][] = [];
