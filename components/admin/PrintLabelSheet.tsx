@@ -1,30 +1,11 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
-import QRCode from "qrcode";
-import { useEffect, useState } from "react";
+import { LabelCard } from "@/components/admin/LabelCard";
 
 export interface PrintLabel {
   url: string;
   code: string;
   location: string;
-}
-
-function LabelQr({ url }: { url: string }) {
-  const [src, setSrc] = useState("");
-  useEffect(() => {
-    let alive = true;
-    QRCode.toDataURL(url, { width: 400, margin: 0 })
-      .then((d) => {
-        if (alive) setSrc(d);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [url]);
-  return src ? <img className="pl-qr" src={src} alt="" /> : <div className="pl-qr" />;
 }
 
 /**
@@ -43,10 +24,6 @@ export function PrintLabelSheet({
   heightMm: number;
   showLocation: boolean;
 }) {
-  const qrSize = Math.max(heightMm - 4, 8);
-  const codeSize = Math.min(heightMm / 9, 4).toFixed(1);
-  const locSize = Math.min(heightMm / 13, 2.6).toFixed(1);
-
   const css = `
 @media screen { #pl-sheet { display: none; } }
 @media print {
@@ -55,17 +32,8 @@ export function PrintLabelSheet({
   body * { visibility: hidden !important; }
   #pl-sheet, #pl-sheet * { visibility: visible !important; }
   #pl-sheet { position: absolute; left: 0; top: 0; }
-  #pl-sheet .pl-label {
-    width: ${widthMm}mm; height: ${heightMm}mm;
-    display: flex; align-items: center; gap: 1.5mm;
-    padding: 1.5mm; box-sizing: border-box; overflow: hidden;
-    break-after: page; page-break-after: always;
-  }
+  #pl-sheet .pl-label { break-after: page; page-break-after: always; }
   #pl-sheet .pl-label:last-child { break-after: auto; page-break-after: auto; }
-  #pl-sheet .pl-qr { width: ${qrSize}mm; height: ${qrSize}mm; flex: 0 0 auto; }
-  #pl-sheet .pl-text { flex: 1 1 auto; min-width: 0; }
-  #pl-sheet .pl-code { font-family: monospace; font-weight: 700; font-size: ${codeSize}mm; line-height: 1.1; word-break: break-all; }
-  #pl-sheet .pl-loc { font-size: ${locSize}mm; line-height: 1.1; margin-top: 0.8mm; color: #222; }
 }
   `;
 
@@ -75,11 +43,14 @@ export function PrintLabelSheet({
       <div id="pl-sheet">
         {labels.map((l, i) => (
           <div key={`${l.code}-${i}`} className="pl-label">
-            <LabelQr url={l.url} />
-            <div className="pl-text">
-              <div className="pl-code">{l.code}</div>
-              {showLocation && l.location ? <div className="pl-loc">{l.location}</div> : null}
-            </div>
+            <LabelCard
+              url={l.url}
+              code={l.code}
+              location={l.location}
+              widthMm={widthMm}
+              heightMm={heightMm}
+              showLocation={showLocation}
+            />
           </div>
         ))}
       </div>

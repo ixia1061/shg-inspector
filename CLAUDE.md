@@ -192,6 +192,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
+- **2026-07-18** — **라벨 레이아웃 정리 + 화면 미리보기 추가.** QR(왼쪽)·관리번호(굵게)·위치(작게, 최대 2줄)를 세로 가운데 정렬로 다듬고 여백/글자크기를 라벨 크기에 비례하게 계산. 공용 `LabelCard`(미리보기·인쇄 공용, mm 비율 렌더) 신설 → QR Code 관리(선택 첫 항목)·소화기 상세 QR/라벨에서 **실제 라벨 배치를 화면에서 바로 확인** 가능(인쇄 전 조정). `PrintLabelSheet`는 `LabelCard` + 페이지 분할만 담당.
 - **2026-07-18** — **소화기 상세 QR/라벨 화면도 라벨 크기 조절식으로 통일.** 기존 고정 220px QR + (프린터 없어 항상 비활성이던) Zebra 버튼을 제거하고, QR Code 관리와 동일한 크기 옵션 + 라벨 규격 인쇄로 교체. 크기 옵션 UI를 공용 컴포넌트 `LabelSizeControls`(+ `DEFAULT_LABEL_SIZE`)로 추출해 일괄/단일 화면이 동일 동작. `lib/qr/zebraPrint.ts`·`labelTemplate.ts`는 실제 Zebra 프린터 확보 후 ZPL 직접 전송용으로 보존(현재 미사용).
 - **2026-07-18** — **라벨 인쇄: 크기 조절 + 한 장씩 정확 출력.** QR Code 관리에서 라벨 크기(프리셋 50×30/40×30/60×40/30×20 mm + 직접 지정)와 위치 표시 여부를 고르고, 선택 QR을 라벨 규격대로 **한 장에 하나씩** 인쇄. `components/admin/PrintLabelSheet.tsx` 신설(`@page { size }` + `break-after: page`, 화면 숨김/인쇄시 표시, `#pl-sheet`). 기존 `QrLabelCard.tsx`(A4 격자용) 제거. Zebra 등 라벨프린터는 Windows 드라이버/AirPrint 인쇄로 동작, 모바일 현장 출력은 OS 인쇄(안드로이드 Bluetooth·Mopria / iOS AirPrint)로 커버. (Zebra ZPL 직접 전송·Web Bluetooth는 실제 프린터 확보 후 별도 검토.)
 - **2026-07-18** — 사이드바에서 **QR Code 관리를 통계 아래로 이동**.
