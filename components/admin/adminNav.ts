@@ -24,7 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
   { href: "/sites", label: "사업장/건물 관리", icon: Building2 },
   { href: "/extinguishers", label: "소화기 관리", icon: QrCode },
-  { href: "/labels", label: "QR 코드 관리", icon: Printer },
+  { href: "/labels", label: "QR Code 관리", icon: Printer },
   { href: "/inventory", label: "수량 현황", icon: Boxes },
   { href: "/inspections", label: "점검현황", icon: ClipboardList },
   { href: "/lifecycle", label: "내용연수 관리", icon: ShieldAlert },

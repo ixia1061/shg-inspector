@@ -47,7 +47,7 @@ app/
     dashboard/             대시보드 (월간 점검 집계)
     sites/[siteId]/        사업장·건물·층·구역·차량 관리
     extinguishers/         소화기 목록/등록/상세/라벨
-    labels/                QR 코드 관리 (검색·다중선택·일괄 인쇄, force-dynamic)
+    labels/                QR Code 관리 (검색·다중선택·일괄 인쇄, force-dynamic)
     inventory/             수량 현황 (건물×종류 교차표)
     inspections/           전체 점검현황
     lifecycle/             내용연수 관리
@@ -193,7 +193,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
 - **2026-07-18** — **버그: 관리자가 점검자 화면에 갇히는 문제 수정.** 점검자 레이아웃(`app/(inspector)/layout.tsx`)이 로그인만 확인하고 역할은 안 봐서, 관리자가 PWA 화면 복원/루트 프로필 조회 순간 실패 등으로 `/scan`에 들어오면 관리 화면으로 갈 링크가 없어 갇혔음(재로그인해야 탈출). 이제 레이아웃에서 **관리자면 `/dashboard`로 서버 리다이렉트**(`isAdminRole`) → 관리자는 점검자 화면에 머무를 수 없음. (Serwist 내비게이션은 NetworkFirst라 온라인 재실행 시 리다이렉트 동작.)
-- **2026-07-18** — **QR 코드 관리 페이지 신설**(`/labels`, 사이드바 "QR 코드 관리"). 소화기를 검색·필터(사업장/상태/관리번호)하고 **다중 선택 → 한 번에 인쇄**(`window.print()`, 인쇄 CSS로 `#print-area`의 라벨 그리드만 출력, `.qr-label { break-inside: avoid }`). QR은 관리번호로 실시간 생성(`QrLabelCard`, qrcode `toDataURL`)이라 **등록/관리번호 변경이 바로 반영**되도록 페이지를 `force-dynamic` + **새로고침 버튼**(router.refresh) 제공. 신규: `components/admin/QrBulkPrint.tsx`·`QrLabelCard.tsx`. 개별 라벨 출력(소화기 상세→QR/라벨)은 그대로 유지.
+- **2026-07-18** — **QR Code 관리 페이지 신설**(`/labels`, 사이드바 "QR Code 관리"). 소화기를 검색·필터(사업장/상태/관리번호)하고 **다중 선택 → 한 번에 인쇄**(`window.print()`, 인쇄 CSS로 `#print-area`의 라벨 그리드만 출력, `.qr-label { break-inside: avoid }`). QR은 관리번호로 실시간 생성(`QrLabelCard`, qrcode `toDataURL`)이라 **등록/관리번호 변경이 바로 반영**되도록 페이지를 `force-dynamic` + **새로고침 버튼**(router.refresh) 제공. 신규: `components/admin/QrBulkPrint.tsx`·`QrLabelCard.tsx`. 개별 라벨 출력(소화기 상세→QR/라벨)은 그대로 유지.
 - **2026-07-18** — **목록 성능: 클라이언트 필터 + 페이지네이션(50개/페이지).** 소화기 관리는 전체를 한 번만 불러와 사업장/상태/검색을 **클라이언트에서 즉시 필터**(기존엔 필터·검색 한 글자마다 수백 행 서버 재조회 → 버벅임·무반응). 점검현황 미점검·내용연수 관리·사진 관리도 페이지네이션 적용(사진은 관리번호 그룹 단위). 공용 `components/ui/pagination.tsx`, 목록 컴포넌트 `ExtinguisherListClient`/`UninspectedList`/`LifecycleList` 신설, 서버 필터 방식 `ExtinguisherFilters` 제거. (필터가 URL에 안 담기는 대신 즉시 반응.)
 - **2026-07-18** — **상주업체 소화기 17개 입력 + 사업장 재구성**(2단계). 처음엔 회사별 org(기상/AQ/식당/프리존/코드) 사업장 5개로 넣었다가, **사업장 1개 `상주업체`(org_code `상주`) + 회사별 건물**로 통합: 1동 기상대(6)·2동 AQ(2)·3동 생명푸드(6,층2 유지)·4동 프리존(1)·5동 코드주식회사(2). 관리번호 `상주-1-1-1`~`상주-5-1-2`. 종류: 분말 15·할론 1(기상 전산실)·K급 1(생명푸드 주방). **최종 사업장 2개**: `공사`(무안국제공항 462) + `상주`(상주업체 17) = 전체 **479개**. 임시 Node 스크립트 수행(사용 후 삭제), 데이터라 재배포 불필요(운영 DB 즉시 반영).
 - **2026-07-18** — **관리번호/건물 목록 자연 정렬** 통일. 문자열 정렬로 `공사-15`가 `공사-2`보다 앞, `...-1-1-10`이 `...-1-1-2`보다 앞, `10동`이 `2동`보다 앞으로 오던 문제 수정. `lib/utils/sort.ts`(`compareAssetCode`/`sortByAssetCode`, `localeCompare(..,{numeric:true})`) 추가 후 점검현황·소화기관리·점검자 건물상세에 `sortByAssetCode` 적용, 점검자 건물요약·수량현황(inventory) 건물 정렬에 `{numeric:true}` 적용. (lifecycle=교체예정일순, photos=최신순은 의도된 정렬이라 유지.)
