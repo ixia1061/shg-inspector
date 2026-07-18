@@ -4,6 +4,7 @@ import { Printer, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
+import { LabelCard } from "@/components/admin/LabelCard";
 import { DEFAULT_LABEL_SIZE, LabelSizeControls } from "@/components/admin/LabelSizeControls";
 import { PrintLabelSheet } from "@/components/admin/PrintLabelSheet";
 import { Button } from "@/components/ui/button";
@@ -153,6 +154,25 @@ export function QrBulkPrint({
 
         {/* 라벨 크기/내용 옵션 (공용) */}
         <LabelSizeControls onChange={setLabelSize} />
+
+        {/* 실제 라벨 미리보기 (선택 첫 항목) */}
+        {selectedRows.length > 0 && (
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-muted-foreground text-xs">
+              미리보기 (선택 {selectedRows.length}개 중 첫 항목)
+            </p>
+            <div className="inline-block rounded-md border bg-white p-1 shadow-sm">
+              <LabelCard
+                url={buildInspectionUrl(selectedRows[0].asset_code)}
+                code={selectedRows[0].asset_code}
+                location={formatShortLocation(selectedRows[0])}
+                widthMm={labelSize.widthMm}
+                heightMm={labelSize.heightMm}
+                showLocation={labelSize.showLocation}
+              />
+            </div>
+          </div>
+        )}
 
         {/* 선택 목록 */}
         <div className="max-h-[480px] overflow-y-auto rounded-md border">
