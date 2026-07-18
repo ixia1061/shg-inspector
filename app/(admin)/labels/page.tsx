@@ -16,7 +16,7 @@ export default async function LabelsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold">QR 코드 관리</h1>
+        <h1 className="text-2xl font-bold">QR Code 관리</h1>
         <p className="text-muted-foreground text-sm">
           필요한 소화기를 검색·선택해 QR 라벨을 한 번에 인쇄합니다.
         </p>
