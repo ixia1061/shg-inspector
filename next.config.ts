@@ -12,8 +12,8 @@ const nextConfig: NextConfig = {
     // 클라이언트 캐시에서 즉시 표시한다. 기본값 dynamic=0(캐시 안 함)을 늘린다.
     // 관리자 모니터링 화면이라 짧은 캐시로 인한 최신성 저하는 허용 범위.
     staleTimes: {
-      dynamic: 30, // 프리페치 안 된 동적 페이지 캐시 유지(초)
-      static: 180, // 완전 프리페치(prefetch={true})된 페이지 캐시 유지(초)
+      dynamic: 90, // 프리페치 안 된 동적 페이지 캐시 유지(초)
+      static: 300, // 완전 프리페치(prefetch={true})된 페이지 캐시 유지(초)
     },
   },
 };
