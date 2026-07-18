@@ -193,7 +193,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
-- **2026-07-19** — **관리대장 Excel을 표지+사업장별 시트 구조로 개편.** ① **표지 시트**: 제목 + **점검일자·점검자 수기 기입란**(빈 테두리 셀) + **보유현황표**(사업장×종류 교차표, 종류별/사업장별 소계 + 총계). ② **사업장별 점검대장 시트**(사업장마다 1개, 이름순): 소화기 1대당 1행. 위치 표기에서 **사업장명 제외**(`formatShortLocation`, 사업장 컬럼도 삭제 — 시트가 이미 사업장별). 종류 컬럼 헤더는 끝의 "소화기" 제거(분말/CO2/…). 종류 순서는 분말 우선+가나다순. `buildCoverSheet`/`buildLedgerSheet`로 분리.
+- **2026-07-19** — **관리대장 Excel을 사업장별 개별 파일로 분리 + 표지 동·층별 보유현황.** 점검현황 상단에 **사업장별 다운로드 버튼**(`LedgerDownloadButtons`, 사업장마다 1개) → `GET /api/ledger/download?site=<siteId>`가 그 사업장만 담은 파일 생성(파일명 `소화기관리대장_{사업장}_{날짜}.xlsx`). 표지 보유현황표를 **동·층별 종류/수량 교차표**로 개편(건물 세로 병합, 층별 행, 종류별 총계 + 총계 행; 차량은 층 "차량"). 점검대장 시트 **위치 컬럼 폭 40→58**(위치 전체 표시), 위치 셀 좌측 정렬. `buildCoverSheet`/`buildLedgerSheet` 분리.
 - **2026-07-18** — **소화기 관리대장 Excel(.xlsx) 다운로드 추가.** 점검현황 페이지 상단 "관리대장 다운로드" 버튼 → `GET /api/ledger/download`(관리자 전용, RLS로 담당 사업장만 포함). 소화기 1대당 1행, `v_extinguisher_overview` 기반에 관리번호·위치·종류·용량·제조일·제조번호·내용연수·교체예정일·내용연수상태·**최근점검일·점검결과·점검자·이번달점검(O/X)**을 담음. 관리번호 자연정렬(`sortByAssetCode`), 최근 점검자 이름은 `profiles`에서 매핑. `exceljs` 의존성 추가(헤더 고정행·테두리 스타일). 신규: `app/api/ledger/download/route.ts`, `components/admin/LedgerDownloadButton.tsx`.
 - **2026-07-18** — **대시보드 건물별 점검률을 건물명 가나다순 정렬.** `fn_inspection_rate`는 `group by`만 하고 정렬을 안 줘서 순서가 불규칙했음 → 대시보드 페이지에서 `group_name`(건물명) 기준 `localeCompare(...,"ko")`로 정렬해 `InspectionRateChart`에 전달. (점검현황은 건물번호 순, 대시보드는 가나다순.)
 - **2026-07-18** — **점검현황 건물별 점검률을 사업장별 버튼 + 건물번호 순 정렬로 변경.** 상단 사업장 버튼으로 전환, 건물번호 오름차순 정렬. `fn_inspection_rate`는 site_id/building_no를 안 줘서, 페이지가 `v_extinguisher_overview`를 한 번만 불러와 미점검 목록 + 건물별 점검률을 클라이언트에서 집계(`InspectionRateBySite`). (기존 3쿼리 → 1쿼리.)
