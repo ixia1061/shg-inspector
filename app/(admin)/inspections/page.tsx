@@ -1,4 +1,5 @@
 import { InspectionRateBySite } from "@/components/admin/InspectionRateBySite";
+import { LedgerDownloadButton } from "@/components/admin/LedgerDownloadButton";
 import { UninspectedList } from "@/components/admin/UninspectedList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,7 +22,10 @@ export default async function InspectionsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">점검현황</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold">점검현황</h1>
+        <LedgerDownloadButton />
+      </div>
 
       <Card>
         <CardHeader>
