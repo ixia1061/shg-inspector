@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { InspectionRateChart } from "@/components/admin/InspectionRateChart";
+import { LedgerDownloadButton } from "@/components/admin/LedgerDownloadButton";
 import { Button } from "@/components/ui/button";
 import type { ExtinguisherOverview, InspectionRateRow, Site } from "@/types/domain";
 
@@ -49,19 +50,24 @@ export function InspectionRateBySite({
       }));
   }, [extinguishers, siteId]);
 
+  const selectedSite = sites.find((s) => s.id === siteId);
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
-        {sites.map((s) => (
-          <Button
-            key={s.id}
-            variant={s.id === siteId ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSiteId(s.id)}
-          >
-            {s.name}
-          </Button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {sites.map((s) => (
+            <Button
+              key={s.id}
+              variant={s.id === siteId ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSiteId(s.id)}
+            >
+              {s.name}
+            </Button>
+          ))}
+        </div>
+        {selectedSite ? <LedgerDownloadButton site={selectedSite} /> : null}
       </div>
       <InspectionRateChart rows={rows} />
     </div>

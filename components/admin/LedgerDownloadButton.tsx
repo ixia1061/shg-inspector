@@ -7,12 +7,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Site } from "@/types/domain";
 
-/** 사업장별 소화기 관리대장(.xlsx)을 각각 내려받는 버튼 묶음. RLS로 담당 사업장만 조회된다. */
-export function LedgerDownloadButtons({ sites }: { sites: Site[] }) {
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+/** 선택된 사업장의 소화기 관리대장(.xlsx)을 내려받는 버튼. RLS로 담당 사업장만 조회된다. */
+export function LedgerDownloadButton({ site }: { site: Site }) {
+  const [downloading, setDownloading] = useState(false);
 
-  async function handleDownload(site: Site) {
-    setDownloadingId(site.id);
+  async function handleDownload() {
+    setDownloading(true);
     try {
       const res = await fetch(`/api/ledger/download?site=${encodeURIComponent(site.id)}`);
       if (!res.ok) {
@@ -30,26 +30,14 @@ export function LedgerDownloadButtons({ sites }: { sites: Site[] }) {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "다운로드에 실패했습니다");
     } finally {
-      setDownloadingId(null);
+      setDownloading(false);
     }
   }
 
-  if (sites.length === 0) return null;
-
   return (
-    <div className="flex flex-wrap gap-2">
-      {sites.map((site) => (
-        <Button
-          key={site.id}
-          variant="outline"
-          size="sm"
-          onClick={() => handleDownload(site)}
-          disabled={downloadingId !== null}
-        >
-          <Download className="size-4" />
-          {downloadingId === site.id ? "생성 중..." : `관리대장 · ${site.name}`}
-        </Button>
-      ))}
-    </div>
+    <Button variant="outline" size="sm" onClick={handleDownload} disabled={downloading}>
+      <Download className="size-4" />
+      {downloading ? "생성 중..." : `${site.name} 관리대장`}
+    </Button>
   );
 }
