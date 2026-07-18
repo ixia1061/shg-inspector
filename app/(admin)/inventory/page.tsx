@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase/server";
-import type { ExtinguisherOverview } from "@/types/domain";
+import type { ExtinguisherListItem } from "@/types/domain";
 
 interface PivotRow {
   key: string;
@@ -21,7 +21,7 @@ interface PivotRow {
 
 /** 건물 단위 행으로 묶고, 종류별 열 개수를 집계한 피벗 데이터를 만든다.
  *  차량 소화기도 소속 건물의 수량에 포함된다. */
-function buildPivot(rows: ExtinguisherOverview[]) {
+function buildPivot(rows: ExtinguisherListItem[]) {
   const typeNames = [...new Set(rows.map((r) => r.extinguisher_type_name))].sort((a, b) =>
     a.localeCompare(b, "ko")
   );
@@ -60,7 +60,7 @@ export default async function InventoryPage() {
   const supabase = await createClient();
 
   const { data: extinguishers } = await supabase
-    .from("v_extinguisher_overview")
+    .from("v_extinguisher_list")
     .select("*")
     .eq("status", "active");
 

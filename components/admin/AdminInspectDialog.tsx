@@ -48,7 +48,8 @@ export function AdminInspectDialog({
   extinguisher,
   variant = "row",
 }: {
-  extinguisher: ExtinguisherOverview;
+  // 점검 저장에는 id·asset_code만 필요하므로, 경량 목록 뷰(ExtinguisherListItem)에서도 쓸 수 있게 좁힌다.
+  extinguisher: Pick<ExtinguisherOverview, "id" | "asset_code">;
   variant?: "row" | "detail";
 }) {
   const router = useRouter();
