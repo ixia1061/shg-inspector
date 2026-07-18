@@ -6,6 +6,7 @@ import { ExtinguisherStatusRow } from "@/components/inspector/ExtinguisherStatus
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBuildingLabel } from "@/lib/utils/location";
 import { isAdminRole } from "@/lib/utils/roles";
+import { sortByAssetCode } from "@/lib/utils/sort";
 import { createClient } from "@/lib/supabase/server";
 import type { ExtinguisherOverview } from "@/types/domain";
 
@@ -46,7 +47,7 @@ export default async function BuildingStatusPage({
     .eq("building_id", buildingId)
     .order("asset_code");
 
-  const rows = extinguishers ?? [];
+  const rows = sortByAssetCode(extinguishers ?? []);
 
   // 건물명은 소화기가 없어도 표시할 수 있게 건물 테이블에서 조회 (RLS로 접근 검증 겸용)
   const { data: building } = await supabase

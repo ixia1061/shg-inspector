@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatLocationPath } from "@/lib/utils/location";
+import { sortByAssetCode } from "@/lib/utils/sort";
 import { createClient } from "@/lib/supabase/server";
 import type { ExtinguisherOverview } from "@/types/domain";
 
@@ -53,7 +54,7 @@ function UninspectedTable({ rows }: { rows: ExtinguisherOverview[] }) {
 export default async function InspectionsPage() {
   const supabase = await createClient();
 
-  const [{ data: notTodayRows }, { data: notMonthRows }, { data: buildingRate }, { data: floorRate }] =
+  const [{ data: notTodayRows }, { data: notMonthRows }, { data: buildingRate }] =
     await Promise.all([
       supabase.from("v_extinguisher_overview").select("*").eq("inspected_today", false).order("asset_code"),
       supabase
@@ -62,31 +63,20 @@ export default async function InspectionsPage() {
         .eq("inspected_this_month", false)
         .order("asset_code"),
       supabase.rpc("fn_inspection_rate", { p_group_by: "building", p_period: "month" }),
-      supabase.rpc("fn_inspection_rate", { p_group_by: "floor", p_period: "month" }),
     ]);
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold">점검현황</h1>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>건물별 이번달 점검률</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <InspectionRateChart rows={buildingRate ?? []} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>층별 이번달 점검률</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <InspectionRateChart rows={floorRate ?? []} />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>건물별 이번달 점검률</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <InspectionRateChart rows={buildingRate ?? []} />
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="today">
         <TabsList>
@@ -94,10 +84,10 @@ export default async function InspectionsPage() {
           <TabsTrigger value="month">이번달 미점검 ({notMonthRows?.length ?? 0})</TabsTrigger>
         </TabsList>
         <TabsContent value="today">
-          <UninspectedTable rows={notTodayRows ?? []} />
+          <UninspectedTable rows={sortByAssetCode(notTodayRows ?? [])} />
         </TabsContent>
         <TabsContent value="month">
-          <UninspectedTable rows={notMonthRows ?? []} />
+          <UninspectedTable rows={sortByAssetCode(notMonthRows ?? [])} />
         </TabsContent>
       </Tabs>
     </div>

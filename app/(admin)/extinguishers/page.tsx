@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatShortLocation } from "@/lib/utils/location";
+import { sortByAssetCode } from "@/lib/utils/sort";
 import { createClient } from "@/lib/supabase/server";
 import type { LifecycleStatus } from "@/types/domain";
 
@@ -34,6 +35,9 @@ export default async function ExtinguishersPage({
     query,
     supabase.from("sites").select("*").order("name"),
   ]);
+
+  // 관리번호 자연 정렬(공사-2 < 공사-15, ...-1-1-2 < ...-1-1-10)
+  const sortedExtinguishers = sortByAssetCode(extinguishers ?? []);
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,8 +62,8 @@ export default async function ExtinguishersPage({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {extinguishers?.length ? (
-            extinguishers.map((e) => (
+          {sortedExtinguishers.length ? (
+            sortedExtinguishers.map((e) => (
               <TableRow key={e.id}>
                 <TableCell>
                   <Link href={`/extinguishers/${e.id}`} className="font-mono font-medium hover:underline">
