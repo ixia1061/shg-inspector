@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { CheckCircle2, Download, TriangleAlert, X } from "lucide-react";
+import { Camera, CheckCircle2, Download, TriangleAlert, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -52,6 +52,9 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
   // 페이지 이동 대신 이 화면 안에서 완료 상태로 전환한다.
   // (개발/터널 환경에서 라우터 전환이 멈추는 문제 + 오프라인에서 완료 페이지 이동 실패 문제 방지)
   const [completed, setCompleted] = useState<"normal" | "abnormal" | null>(null);
+
+  // 숨긴 파일 입력을 카메라 버튼으로 트리거하기 위한 참조
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 언마운트 시 미리보기 URL 해제를 위한 최신 상태 참조
   const photosRef = useRef<StampedPhoto[]>([]);
@@ -263,13 +266,15 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
             사진 (선택, 최대 {MAX_INSPECTION_PHOTOS}장 · 전·후 촬영){" "}
             {photos.length > 0 ? `— ${photos.length}/${MAX_INSPECTION_PHOTOS}` : ""}
           </FieldLabel>
+          {/* 실제 파일 입력은 숨기고, 아래 카메라 버튼으로 촬영을 연다 */}
           <input
             id="photos"
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             capture="environment"
             multiple
-            className="text-sm"
+            className="sr-only"
             disabled={photos.length >= MAX_INSPECTION_PHOTOS}
             onChange={(e) => {
               // 같은 카메라로 다시 찍어도 onChange가 다시 발생하도록 입력값을 비운다(누적 촬영).
@@ -277,6 +282,17 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
               e.target.value = "";
             }}
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            disabled={photos.length >= MAX_INSPECTION_PHOTOS || processingPhotos}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Camera className="size-4" />
+            {photos.length > 0 ? "사진 추가 촬영" : "사진 촬영"}
+          </Button>
           {processingPhotos && (
             <p className="text-muted-foreground text-xs">사진에 관리번호를 새기는 중...</p>
           )}
