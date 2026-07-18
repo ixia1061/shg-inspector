@@ -13,9 +13,11 @@ export default async function InspectorLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
+  // 성능: getUser(인증서버 왕복) 대신 getSession(쿠키 로컬). 미들웨어 세션 검증 + RLS로 보안 유지.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   if (!user) {
     redirect("/login");
