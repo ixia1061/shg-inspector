@@ -5,11 +5,10 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { FloorFormDialog } from "@/components/admin/FloorFormDialog";
-import { ZoneFormDialog } from "@/components/admin/ZoneFormDialog";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import type { Floor, Zone } from "@/types/domain";
+import type { Floor } from "@/types/domain";
 
 /**
  * 층 목록 + 선택 기반 순서 변경.
@@ -20,11 +19,9 @@ import type { Floor, Zone } from "@/types/domain";
 export function FloorList({
   buildingId,
   floors,
-  zonesByFloor,
 }: {
   buildingId: string;
   floors: Floor[];
-  zonesByFloor: Record<string, Zone[]>;
 }) {
   const [orderedFloors, setOrderedFloors] = useState(floors);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -113,25 +110,12 @@ export function FloorList({
             floor.id === selectedId && "bg-accent ring-primary/40 ring-1"
           )}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <span className="text-sm font-medium">
-                {floor.name} <span className="text-muted-foreground">[{floor.floor_code}]</span>
-              </span>
-              <FloorFormDialog buildingId={buildingId} floor={floor} />
-            </div>
-            <ZoneFormDialog floorId={floor.id} />
+          <div className="flex items-center gap-1">
+            <span className="text-sm font-medium">
+              {floor.name} <span className="text-muted-foreground">[{floor.floor_code}]</span>
+            </span>
+            <FloorFormDialog buildingId={buildingId} floor={floor} />
           </div>
-          {(zonesByFloor[floor.id] ?? []).length > 0 && (
-            <ul className="text-muted-foreground mt-1 flex flex-wrap gap-2 pb-1 text-xs">
-              {(zonesByFloor[floor.id] ?? []).map((zone) => (
-                <li key={zone.id} className="bg-muted flex items-center gap-1 rounded px-2 py-1">
-                  {zone.name}
-                  <ZoneFormDialog floorId={floor.id} zone={zone} />
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       ))}
       {orderedFloors.length === 0 && (
