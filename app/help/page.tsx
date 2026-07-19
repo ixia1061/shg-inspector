@@ -40,7 +40,7 @@ export default async function HelpPage() {
       {isAdmin ? <AdminHelp /> : <InspectorHelp />}
 
       <p className="text-muted-foreground text-center text-xs">
-        소화기 점검 관리 시스템 · 버전 {APP_VERSION}
+        소화기 점검 관리 시스템 · Ver {APP_VERSION}
       </p>
     </div>
   );

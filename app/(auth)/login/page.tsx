@@ -11,7 +11,7 @@ export default function LoginPage() {
         </p>
       </div>
       <LoginForm />
-      <p className="text-muted-foreground text-xs">버전 {APP_VERSION}</p>
+      <p className="text-muted-foreground text-xs">Ver {APP_VERSION}</p>
     </div>
   );
 }
