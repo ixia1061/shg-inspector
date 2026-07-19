@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { LoginForm } from "@/components/shared/LoginForm";
 import { APP_VERSION } from "@/lib/version";
 
@@ -13,12 +11,7 @@ export default function LoginPage() {
         </p>
       </div>
       <LoginForm />
-      <div className="flex flex-col items-center gap-1">
-        <Link href="/help" className="text-muted-foreground text-sm underline underline-offset-4">
-          도움말 · 사용 안내
-        </Link>
-        <p className="text-muted-foreground text-xs">버전 {APP_VERSION}</p>
-      </div>
+      <p className="text-muted-foreground text-xs">버전 {APP_VERSION}</p>
     </div>
   );
 }

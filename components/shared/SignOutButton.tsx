@@ -7,7 +7,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
-export function SignOutButton() {
+/** iconOnly=true면 아이콘만(모바일 헤더 정렬용), 아니면 아이콘+글자. */
+export function SignOutButton({ iconOnly = false }: { iconOnly?: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -17,6 +18,21 @@ export function SignOutButton() {
     await supabase.auth.signOut();
     router.replace("/login");
     router.refresh();
+  }
+
+  if (iconOnly) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="로그아웃"
+        className="text-muted-foreground"
+        onClick={handleSignOut}
+        disabled={loading}
+      >
+        <LogOut className="size-5" />
+      </Button>
+    );
   }
 
   return (
