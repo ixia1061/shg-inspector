@@ -61,7 +61,12 @@ export function ExtinguisherListClient({
       .filter((e) => {
         if (siteId !== "all" && e.site_id !== siteId) return false;
         if (status !== "all" && e.lifecycle_status !== (status as LifecycleStatus)) return false;
-        if (kw && !e.asset_code.toLowerCase().includes(kw)) return false;
+        if (
+          kw &&
+          !e.asset_code.toLowerCase().includes(kw) &&
+          !(e.serial_no ?? "").toLowerCase().includes(kw)
+        )
+          return false;
         return true;
       })
       .sort((a, b) => compareAssetCode(a.asset_code, b.asset_code));
@@ -80,7 +85,7 @@ export function ExtinguisherListClient({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          placeholder="소화기 관리번호 검색"
+          placeholder="관리번호·제조번호 검색"
           value={search}
           className="w-48"
           onChange={(e) => {
@@ -151,6 +156,9 @@ export function ExtinguisherListClient({
                   <Link href={`/extinguishers/${e.id}`} className="font-mono font-medium hover:underline">
                     {e.asset_code}
                   </Link>
+                  {e.serial_no ? (
+                    <div className="text-muted-foreground text-xs">제조번호 {e.serial_no}</div>
+                  ) : null}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">{formatShortLocation(e)}</TableCell>
                 <TableCell>
