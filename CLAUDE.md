@@ -193,6 +193,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
+- **2026-07-19** — **통계 "이번달 점검자별 실적"의 이번달 경계 UTC 버그 수정.** `startOfMonth`를 서버(UTC) `new Date()`로 잡아 KST 1일 00:00~09:00 점검이 이번달 실적/이상비율에서 누락되던 문제. `toLocaleDateString("en-CA",{timeZone:"Asia/Seoul"})`로 KST 연·월을 구해 `{YYYY-MM}-01T00:00:00+09:00`의 UTC ISO를 하한으로 사용. (점검 초기화 기준인 `v_extinguisher_overview.inspected_this_month`·`fn_dashboard_summary`·`fn_inspection_rate`는 이미 `at time zone 'Asia/Seoul'` 기반이라 매월 1일 KST 초기화 정상 — 이 통계 카드만 JS 계산이라 어긋나 있었음.)
 - **2026-07-19** — **소화기 제조일 입력을 연·월(YYYY-MM)만 받도록 변경 + 해당 월 1일로 저장.** 명판에 제조년월까지만(예: 2026.12) 찍혀 있어 일(day) 입력을 없앰. 신규 `MonthInput` 컴포넌트(월 선택기, `202612`→`2026-12` 자동 포맷), Zod `manufacture_date` 정규식 `^\d{4}-\d{2}$`로 변경, 폼 제출 시 `-01`을 붙여 **매월 1일 기준**으로 DB 저장(교체예정일 계산도 이 기준). 수정 화면은 기존 날짜의 앞 7자리(연·월)만 노출. `ExtinguisherForm`·`extinguisher.schema.ts`. (`DateInput`은 다른 곳에서 계속 사용, 보존.)
 - **2026-07-19** — **건물/층 관리에서 구역(zone) 추가 UI 제거.** 구역을 실제로 쓰지 않으므로 `FloorList`의 층별 "구역 추가" 버튼과 구역 표시 목록(`ZoneFormDialog`)을 제거, 상위 `sites/[siteId]` 페이지의 zones 조회·`zonesByFloor` prop도 정리. **zones 테이블/데이터·`ZoneFormDialog` 컴포넌트 파일은 보존**(기존 데이터 유지, 현재 미사용).
 - **2026-07-19** — **통계 "구역별 이번달 점검률" → "건물별"로 수정(버그).** 소화기 등록에서 구역(zone) 입력을 제거해 대부분 소화기의 `zone_id`가 비어 있는데, 통계 페이지만 `fn_inspection_rate`를 `group_by:"zone"`으로 호출해 **이름 없는 한 덩어리(group_name=null)로 뭉쳐 빈 막대처럼 표시**되던 문제. 대시보드·점검현황과 동일하게 `group_by:"building"`으로 바꾸고, 이름 있는 건물만 가나다순 정렬. `app/(admin)/stats/page.tsx`.
