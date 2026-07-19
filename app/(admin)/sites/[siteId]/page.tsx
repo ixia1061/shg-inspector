@@ -9,7 +9,7 @@ import { VehicleFormDialog } from "@/components/admin/VehicleFormDialog";
 import { getCurrentUserRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isSuperAdminRole } from "@/lib/utils/roles";
-import type { Floor, Vehicle, Zone } from "@/types/domain";
+import type { Floor, Vehicle } from "@/types/domain";
 
 export default async function SiteDetailPage({
   params,
@@ -48,15 +48,8 @@ export default async function SiteDetailPage({
     ? await supabase.from("vehicles").select("*").in("building_id", buildingIds).order("vehicle_no")
     : { data: [] as Vehicle[] };
 
-  const floorIds = (floors ?? []).map((f) => f.id);
-
-  const { data: zones } = floorIds.length
-    ? await supabase.from("zones").select("*").in("floor_id", floorIds).order("name")
-    : { data: [] as Zone[] };
-
   const floorsByBuilding = groupBy(floors ?? [], "building_id");
   const vehiclesByBuilding = groupBy(vehicles ?? [], "building_id");
-  const zonesByFloor = groupBy(zones ?? [], "floor_id");
 
   const nextBuildingNo = (buildings ?? []).reduce((max, b) => Math.max(max, b.building_no), 0) + 1;
 
@@ -105,7 +98,6 @@ export default async function SiteDetailPage({
                 key={(floorsByBuilding[building.id] ?? []).map((f) => f.id).join("|")}
                 buildingId={building.id}
                 floors={floorsByBuilding[building.id] ?? []}
-                zonesByFloor={zonesByFloor}
               />
 
               {buildingVehicles.length > 0 && (
