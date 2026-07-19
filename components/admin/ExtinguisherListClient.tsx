@@ -64,7 +64,9 @@ export function ExtinguisherListClient({
         if (
           kw &&
           !e.asset_code.toLowerCase().includes(kw) &&
-          !(e.serial_no ?? "").toLowerCase().includes(kw)
+          !(e.serial_no ?? "").toLowerCase().includes(kw) &&
+          // 위치도 한글로 검색 (건물명/층/설치위치, 차량은 번호판/차종/부서)
+          !formatShortLocation(e).toLowerCase().includes(kw)
         )
           return false;
         return true;
@@ -85,9 +87,9 @@ export function ExtinguisherListClient({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          placeholder="관리번호·제조번호 검색"
+          placeholder="관리번호·제조번호·위치 검색"
           value={search}
-          className="w-48"
+          className="w-56"
           onChange={(e) => {
             setSearch(e.target.value);
             resetPage();
