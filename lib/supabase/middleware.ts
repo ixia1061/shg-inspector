@@ -3,8 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import type { Database } from "@/types/database.types";
 
-// 로그인 전에도 볼 수 있는 경로. 도움말은 로그인이 막힌 사용자도 읽을 수 있어야 하므로 공개.
-const PUBLIC_PATHS = ["/login", "/help"];
+const PUBLIC_PATHS = ["/login"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -37,33 +37,39 @@ export default async function InspectorLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b px-3">
         <span className="text-base font-bold">소화기 점검</span>
-        <div className="flex items-center gap-1">
+        <nav className="flex items-center gap-0.5">
           <Link
             href="/scan"
-            className="text-muted-foreground flex items-center gap-1 p-2 text-sm"
             aria-label="QR 스캔"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent flex size-9 items-center justify-center rounded-md"
           >
             <QrCode className="size-5" />
-            스캔
           </Link>
           <Link
             href="/status"
-            className="text-muted-foreground flex items-center gap-1 p-2 text-sm"
             aria-label="점검 현황"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent flex size-9 items-center justify-center rounded-md"
           >
             <ClipboardList className="size-5" />
-            현황
           </Link>
-          <Link href="/help" className="text-muted-foreground p-2" aria-label="도움말">
+          <Link
+            href="/help"
+            aria-label="도움말"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent flex size-9 items-center justify-center rounded-md"
+          >
             <HelpCircle className="size-5" />
           </Link>
-          <Link href="/account" className="text-muted-foreground p-2" aria-label="내 계정">
+          <Link
+            href="/account"
+            aria-label="내 계정"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent flex size-9 items-center justify-center rounded-md"
+          >
             <UserRound className="size-5" />
           </Link>
-          <SignOutButton />
-        </div>
+          <SignOutButton iconOnly />
+        </nav>
       </header>
       <SyncStatusBanner />
       <main className="flex flex-1 flex-col">{children}</main>
