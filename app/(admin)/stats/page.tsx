@@ -9,13 +9,19 @@ export default async function StatsPage() {
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const [{ data: zoneRate }, { data: monthInspections }] = await Promise.all([
-    supabase.rpc("fn_inspection_rate", { p_group_by: "zone", p_period: "month" }),
+  const [{ data: buildingRate }, { data: monthInspections }] = await Promise.all([
+    // 구역(zone)은 실데이터에 거의 없어 건물 단위로 집계한다. (대시보드·점검현황과 동일)
+    supabase.rpc("fn_inspection_rate", { p_group_by: "building", p_period: "month" }),
     supabase
       .from("inspections")
       .select("inspector_id, overall_result")
       .gte("inspected_at", startOfMonth.toISOString()),
   ]);
+
+  // 이름 있는 건물만, 건물명 가나다순 정렬
+  const rateRows = [...(buildingRate ?? [])]
+    .filter((r) => r.group_name)
+    .sort((a, b) => (a.group_name ?? "").localeCompare(b.group_name ?? "", "ko"));
 
   const inspectorIds = [...new Set((monthInspections ?? []).map((i) => i.inspector_id))];
   const { data: inspectors } = inspectorIds.length
@@ -39,10 +45,10 @@ export default async function StatsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>구역별 이번달 점검률</CardTitle>
+            <CardTitle>건물별 이번달 점검률</CardTitle>
           </CardHeader>
           <CardContent>
-            <InspectionRateChart rows={zoneRate ?? []} />
+            <InspectionRateChart rows={rateRows} />
           </CardContent>
         </Card>
 
