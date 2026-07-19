@@ -51,12 +51,12 @@ export default function HelpPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>QR이 손상됐을 때</CardTitle>
+          <CardTitle>QR이 안 잡힐 때</CardTitle>
         </CardHeader>
         <CardContent className="text-sm">
-          QR 스캔 화면에서 <b>[QR이 손상됐나요? 관리번호 직접 입력]</b> 을 누르고, 라벨에 적힌
-          관리번호(예: 공사-1-1-1)를 입력한 뒤 <b>[점검 시작]</b> 을 누르면 스캔한 것과 똑같이
-          점검할 수 있습니다.
+          휴대폰을 소화기에서 10~20cm 떨어뜨리고 밝은 곳에서 QR을 사각형 안에 비춥니다.
+          <b>[다시 시도]</b> 를 누르거나 앱을 껐다 켜 보세요. QR 라벨이 손상·오염됐다면 관리자에게
+          라벨 재발급을 요청하세요.
         </CardContent>
       </Card>
 
@@ -95,7 +95,7 @@ export default function HelpPage() {
         <CardContent className="text-sm">
           <ul className="ml-4 flex list-disc flex-col gap-1">
             <li><b>로그인 실패</b>: 이메일·비밀번호 확인 → 안 되면 시스템관리자에게 계정 상태 문의.</li>
-            <li><b>QR 안 잡힘</b>: 10~20cm 거리, 밝은 곳. 손상됐으면 <b>관리번호 직접 입력</b>.</li>
+            <li><b>QR 안 잡힘</b>: 10~20cm 거리, 밝은 곳. 라벨이 손상됐으면 관리자에게 재발급 요청.</li>
             <li><b>카메라 권한</b>: 브라우저/휴대폰 설정에서 카메라 허용 후 앱 재실행. (아이폰은 사파리)</li>
             <li><b>사진 저장 실패</b>: 사진을 빼고 먼저 <b>[점검완료]</b> → 점검은 사진 없이도 저장됨.</li>
             <li><b>최신 반영 안 됨</b>: 화면 <b>새로고침</b> 또는 앱 재실행.</li>
