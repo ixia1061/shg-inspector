@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AdminInspectDialog } from "@/components/admin/AdminInspectDialog";
+import { DeleteExtinguisherButton } from "@/components/admin/DeleteExtinguisherButton";
 import { ExtinguisherForm } from "@/components/admin/ExtinguisherForm";
 import { InspectionHistoryTimeline } from "@/components/admin/InspectionHistoryTimeline";
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
@@ -107,6 +108,11 @@ export default async function ExtinguisherDetailPage({
           >
             QR/라벨
           </Button>
+          <DeleteExtinguisherButton
+            id={id}
+            assetCode={overview.asset_code}
+            hasHistory={(inspections?.length ?? 0) > 0}
+          />
         </div>
       </div>
 
