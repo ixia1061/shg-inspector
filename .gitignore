@@ -40,6 +40,11 @@ yarn-error.log*
 recovery-codes.txt
 *recovery*.txt
 
+# 작업용 임시 파일 (커밋 메시지·DB 스크립트 등, 비밀 포함 가능 → 커밋 금지)
+_commit_msg.txt
+_tmp*
+
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
