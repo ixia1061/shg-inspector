@@ -193,6 +193,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
+- **2026-07-19** — **QR 손상 시 관리번호 직접 입력 점검 추가.** 점검자 `/scan` 화면 카메라 아래 "QR이 손상됐나요? 관리번호 직접 입력" → 관리번호 입력 후 "점검 시작"이 **스캔과 동일하게** 동작(입력값을 스캔 페이지 `handleScan`에 그대로 넘겨 `setScanPass` 발급 + `/inspect/{code}` 이동). 신규 `components/inspector/ManualCodeEntry.tsx`. 라벨의 관리번호는 소화기 앞에서 읽어야 하므로 현장 확인 전제는 유지. 매뉴얼(사용자매뉴얼·FAQ·테스트체크리스트·스크린샷목록)에도 반영.
 - **2026-07-19** — **사용자 매뉴얼 문서 추가(`manual/`).** 설치가이드/사용자매뉴얼(점검자)/관리자매뉴얼/FAQ/테스트체크리스트 + `images/스크린샷목록.md`(넣을 스크린샷 파일명 목록)·`README.md`. 실제 메뉴명·버튼·화면 흐름을 소스에서 확인해 작성(존재하지 않는 기능은 배제, 비밀번호찾기·화면내 백업/복원 등 미구현은 명시). 초보자용 서술·주의/팁 박스·스크린샷 삽입 위치 표기. 코드 변경 아님(문서).
 - **2026-07-19** — **소화기 관리 검색에 위치(한글) 추가.** 관리번호·제조번호에 더해 **위치 문자열(`formatShortLocation`: 건물명/층/설치위치, 차량은 번호판/차종/부서)**도 부분 매칭. 목록에 이미 쓰던 함수를 검색 필터에 재사용(추가 조회 없음). placeholder를 "관리번호·제조번호·위치 검색"으로. `ExtinguisherListClient`.
 - **2026-07-19** — **통계 "이번달 점검자별 실적"의 이번달 경계 UTC 버그 수정.** `startOfMonth`를 서버(UTC) `new Date()`로 잡아 KST 1일 00:00~09:00 점검이 이번달 실적/이상비율에서 누락되던 문제. `toLocaleDateString("en-CA",{timeZone:"Asia/Seoul"})`로 KST 연·월을 구해 `{YYYY-MM}-01T00:00:00+09:00`의 UTC ISO를 하한으로 사용. (점검 초기화 기준인 `v_extinguisher_overview.inspected_this_month`·`fn_dashboard_summary`·`fn_inspection_rate`는 이미 `at time zone 'Asia/Seoul'` 기반이라 매월 1일 KST 초기화 정상 — 이 통계 카드만 JS 계산이라 어긋나 있었음.)

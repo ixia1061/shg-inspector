@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { ManualCodeEntry } from "@/components/inspector/ManualCodeEntry";
 import { QRScanner } from "@/components/inspector/QRScanner";
 import { Button } from "@/components/ui/button";
 import { prewarmExtinguisherCache } from "@/lib/offline/prewarm";
@@ -48,6 +49,10 @@ export default function ScanPage() {
         </p>
       </div>
       <QRScanner onScan={handleScan} />
+
+      {/* QR이 손상됐을 때: 관리번호를 직접 입력해 스캔과 동일하게 점검 시작 */}
+      <ManualCodeEntry onSubmit={handleScan} />
+
       <Button
         variant="outline"
         size="lg"
