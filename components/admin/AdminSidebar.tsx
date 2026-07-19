@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { navItemsForRole } from "./adminNav";
 import { ROLE_LABELS } from "@/lib/utils/roles";
+import { APP_VERSION } from "@/lib/version";
 
 /** 데스크톱(lg 이상) 전용 고정 사이드바. 모바일에서는 숨기고 AdminMobileNav(햄버거)가 대신한다. */
 export function AdminSidebar({ role }: { role: string }) {
@@ -39,6 +40,7 @@ export function AdminSidebar({ role }: { role: string }) {
           </Link>
         );
       })}
+      <p className="text-muted-foreground mt-auto px-2 pt-3 text-xs">버전 {APP_VERSION}</p>
     </nav>
   );
 }
