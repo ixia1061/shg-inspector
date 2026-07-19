@@ -5,9 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 export default async function StatsPage() {
   const supabase = await createClient();
 
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
+  // 이번달(KST) 시작 시각을 UTC ISO로 계산한다. 서버(UTC)에서 new Date()로 월초를 잡으면
+  // 경계가 9시간 어긋나 KST 1일 00:00~09:00 점검이 이번달에서 누락된다.
+  const kstToday = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" }); // YYYY-MM-DD
+  const startOfMonthIso = new Date(`${kstToday.slice(0, 7)}-01T00:00:00+09:00`).toISOString();
 
   const [{ data: buildingRate }, { data: monthInspections }] = await Promise.all([
     // 구역(zone)은 실데이터에 거의 없어 건물 단위로 집계한다. (대시보드·점검현황과 동일)
@@ -15,7 +16,7 @@ export default async function StatsPage() {
     supabase
       .from("inspections")
       .select("inspector_id, overall_result")
-      .gte("inspected_at", startOfMonth.toISOString()),
+      .gte("inspected_at", startOfMonthIso),
   ]);
 
   // 이름 있는 건물만, 건물명 가나다순 정렬
