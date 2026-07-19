@@ -142,7 +142,7 @@ export function ExtinguisherListClient({
           <TableRow>
             <TableHead>관리번호</TableHead>
             <TableHead>위치</TableHead>
-            <TableHead>종류</TableHead>
+            <TableHead>종류/제조번호</TableHead>
             <TableHead>내용연수 상태</TableHead>
             <TableHead>최근 점검</TableHead>
             <TableHead className="text-right">점검</TableHead>
@@ -156,14 +156,14 @@ export function ExtinguisherListClient({
                   <Link href={`/extinguishers/${e.id}`} className="font-mono font-medium hover:underline">
                     {e.asset_code}
                   </Link>
-                  {e.serial_no ? (
-                    <div className="text-muted-foreground text-xs">제조번호 {e.serial_no}</div>
-                  ) : null}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">{formatShortLocation(e)}</TableCell>
                 <TableCell>
                   {e.extinguisher_type_name}
                   {e.capacity ? ` (${e.capacity})` : ""}
+                  {e.serial_no ? (
+                    <div className="text-muted-foreground text-xs">제조번호 {e.serial_no}</div>
+                  ) : null}
                 </TableCell>
                 <TableCell>
                   <LifecycleStatusBadge status={e.lifecycle_status} />
