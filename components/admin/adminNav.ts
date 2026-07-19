@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardList,
   Gauge,
+  HelpCircle,
   Images,
   LayoutDashboard,
   Printer,
@@ -31,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/stats", label: "통계", icon: Gauge },
   { href: "/labels", label: "QR Code 관리", icon: Printer },
   { href: "/users", label: "사용자 관리", icon: Users, superAdminOnly: true },
+  { href: "/help", label: "도움말", icon: HelpCircle },
 ];
 
 /** 역할에 따라 볼 수 있는 네비게이션 항목만 남긴다. */

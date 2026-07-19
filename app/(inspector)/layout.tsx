@@ -1,4 +1,4 @@
-import { ClipboardList, QrCode, UserRound } from "lucide-react";
+import { ClipboardList, HelpCircle, QrCode, UserRound } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -55,6 +55,9 @@ export default async function InspectorLayout({
           >
             <ClipboardList className="size-5" />
             현황
+          </Link>
+          <Link href="/help" className="text-muted-foreground p-2" aria-label="도움말">
+            <HelpCircle className="size-5" />
           </Link>
           <Link href="/account" className="text-muted-foreground p-2" aria-label="내 계정">
             <UserRound className="size-5" />
