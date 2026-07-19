@@ -15,13 +15,14 @@ export const extinguisherSchema = z
       .max(9999)
       .optional(),
     extinguisher_type_id: z.string().uuid("소화기 종류를 선택하세요"),
+    // 명판에 제조년월까지만 있어 연·월만 입력받고, 저장 시 해당 월 1일로 처리한다.
     manufacture_date: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "제조일을 YYYY-MM-DD 형식으로 입력하세요")
+      .regex(/^\d{4}-\d{2}$/, "제조년월을 YYYY-MM(연.월) 형식으로 입력하세요")
       .refine((v) => {
-        const d = new Date(v);
-        return !Number.isNaN(d.getTime()) && v === d.toISOString().slice(0, 10);
-      }, "올바른 날짜가 아닙니다"),
+        const month = Number(v.slice(5, 7));
+        return month >= 1 && month <= 12;
+      }, "올바른 월이 아닙니다"),
     // null = 내용연수 없음 (이산화탄소·할론 등)
     useful_life_years: z
       .number({ message: "내용연수를 입력하거나 '내용연수 없음'을 선택하세요" })

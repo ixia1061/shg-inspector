@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { ExtinguisherTypeFormDialog } from "@/components/admin/ExtinguisherTypeFormDialog";
-import { DateInput } from "@/components/shared/DateInput";
+import { MonthInput } from "@/components/shared/MonthInput";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -84,7 +84,8 @@ export function ExtinguisherForm({
       vehicle_id: extinguisher?.vehicle_id ?? undefined,
       extinguisher_no: extinguisher?.extinguisher_no ?? undefined,
       extinguisher_type_id: extinguisher?.extinguisher_type_id ?? "",
-      manufacture_date: extinguisher?.manufacture_date ?? "",
+      // DB엔 YYYY-MM-DD로 저장되지만 입력은 연·월만 → 앞 7자리만 사용
+      manufacture_date: (extinguisher?.manufacture_date ?? "").slice(0, 7),
       // null은 '내용연수 없음'이므로 ?? 로 덮어쓰면 안 된다
       useful_life_years: extinguisher ? extinguisher.useful_life_years : 10,
       capacity: extinguisher?.capacity ?? "",
@@ -143,6 +144,9 @@ export function ExtinguisherForm({
     setSubmitting(true);
     const supabase = createClient();
 
+    // 입력은 연·월(YYYY-MM)만 받으므로 저장은 해당 월 1일로 고정한다.
+    const manufactureDate = `${values.manufacture_date}-01`;
+
     const payload: Database["public"]["Tables"]["extinguishers"]["Insert"] =
       values.location_type === "BUILDING"
         ? {
@@ -151,7 +155,7 @@ export function ExtinguisherForm({
             zone_id: values.zone_id || null,
             vehicle_id: null,
             extinguisher_type_id: values.extinguisher_type_id,
-            manufacture_date: values.manufacture_date,
+            manufacture_date: manufactureDate,
             useful_life_years: values.useful_life_years,
             capacity: values.capacity,
             install_note: values.install_note,
@@ -163,7 +167,7 @@ export function ExtinguisherForm({
             zone_id: null,
             vehicle_id: values.vehicle_id,
             extinguisher_type_id: values.extinguisher_type_id,
-            manufacture_date: values.manufacture_date,
+            manufacture_date: manufactureDate,
             useful_life_years: values.useful_life_years,
             capacity: values.capacity,
             install_note: values.install_note,
@@ -392,8 +396,8 @@ export function ExtinguisherForm({
         </Field>
 
         <Field data-invalid={!!errors.manufacture_date}>
-          <FieldLabel htmlFor="manufacture_date">제조일</FieldLabel>
-          <DateInput
+          <FieldLabel htmlFor="manufacture_date">제조년월 (연.월)</FieldLabel>
+          <MonthInput
             id="manufacture_date"
             value={watch("manufacture_date")}
             onChange={(v) => setValue("manufacture_date", v, { shouldValidate: !!errors.manufacture_date })}
