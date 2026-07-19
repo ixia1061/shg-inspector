@@ -40,7 +40,7 @@ export function AdminSidebar({ role }: { role: string }) {
           </Link>
         );
       })}
-      <p className="text-muted-foreground mt-auto px-2 pt-3 text-xs">버전 {APP_VERSION}</p>
+      <p className="text-muted-foreground mt-auto px-2 pt-3 text-xs">Ver {APP_VERSION}</p>
     </nav>
   );
 }
