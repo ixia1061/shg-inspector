@@ -18,15 +18,25 @@ const SCAN_CONFIG = {
   aspectRatio: 1.0,
 };
 
-// 후면 카메라 + 연속 자동초점 + 고해상도. 가까이 붙이지 않아도(초점 흐려짐 방지)
+// 안드로이드 크롬 등은 네이티브 BarcodeDetector를 지원해 고해상도도 빠르게 처리 → 먼 거리 인식에 유리.
+// 아이폰 사파리는 BarcodeDetector 미지원 → JS 디코더로 폴백되는데, 이땐 해상도가 높을수록
+// 프레임당 디코딩이 느려지므로 해상도를 낮춰 반응속도를 지킨다.
+function hasNativeBarcodeDetector(): boolean {
+  return typeof window !== "undefined" && "BarcodeDetector" in window;
+}
+
+// 후면 카메라 + 연속 자동초점 + (기기에 맞춘) 해상도. 가까이 붙이지 않아도(초점 흐려짐 방지)
 // 조금 떨어진 거리에서 선명하게 인식되도록 한다. focusMode는 표준 타입에 없어 캐스팅한다.
-const REAR_CAMERA_CONSTRAINTS = {
-  facingMode: "environment",
-  width: { ideal: 1920 },
-  height: { ideal: 1080 },
-  focusMode: "continuous",
-  advanced: [{ focusMode: "continuous" }],
-} as unknown as MediaTrackConstraints;
+function buildRearCameraConstraints(): MediaTrackConstraints {
+  const idealWidth = hasNativeBarcodeDetector() ? 1920 : 1280;
+  return {
+    facingMode: "environment",
+    width: { ideal: idealWidth },
+    height: { ideal: Math.round((idealWidth * 9) / 16) },
+    focusMode: "continuous",
+    advanced: [{ focusMode: "continuous" }],
+  } as unknown as MediaTrackConstraints;
+}
 
 type ScannerState = "idle" | "starting" | "running" | "error";
 
@@ -80,8 +90,8 @@ export function QRScanner({ onScan }: { onScan: (decodedText: string) => void })
       scannerRef.current = scanner;
 
       try {
-        // 우선 후면 카메라 시도 (휴대폰) — 연속 자동초점/고해상도 제약 적용
-        await scanner.start(REAR_CAMERA_CONSTRAINTS, SCAN_CONFIG, handleDecoded, undefined);
+        // 우선 후면 카메라 시도 (휴대폰) — 연속 자동초점 + 기기별 해상도 제약 적용
+        await scanner.start(buildRearCameraConstraints(), SCAN_CONFIG, handleDecoded, undefined);
       } catch (err) {
         // 후면 카메라가 없으면(노트북 등) 아무 카메라로 폴백
         const cameras = await Html5Qrcode.getCameras();
