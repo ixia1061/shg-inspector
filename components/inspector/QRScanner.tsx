@@ -25,30 +25,34 @@ function hasNativeBarcodeDetector(): boolean {
   return typeof window !== "undefined" && "BarcodeDetector" in window;
 }
 
-// 후면 카메라 제약 후보들을 "선호 → 호환" 순으로 만든다.
-// iOS 사파리는 focusMode/해상도 같은 제약을 못 받아들이면 그냥 무시하지 않고 시작을 거부(OverconstrainedError)하는
-// 경우가 있어, 상위 제약이 실패하면 아래 단계로 자동 폴백해 반드시 카메라가 켜지게 한다.
-// (focusMode는 표준 MediaTrackConstraints 타입에 없어 캐스팅한다.)
-function buildRearCameraCandidates(): MediaTrackConstraints[] {
+// 후면 카메라 시작 제약. iOS 사파리에서 start()가 거부되면 라이브러리가 "전환 중" 상태에 갇혀
+// 재시도가 모두 막히므로(cannot transition to new state), start()는 딱 한 번만 부른다.
+// 그래서 여기서는 "거부될 위험이 없는" 제약만 쓴다 — facingMode + 해상도는 모두 ideal(선호)이라
+// 지원 안 하면 무시될 뿐 실패하지 않는다. 연속 자동초점은 카메라가 켜진 뒤 별도로 적용한다.
+function buildStartConstraints(): MediaTrackConstraints {
   const idealWidth = hasNativeBarcodeDetector() ? 1920 : 1280;
-  const idealHeight = Math.round((idealWidth * 9) / 16);
-  return [
-    // 1) 해상도 + 연속 자동초점 (가장 선호)
-    {
-      facingMode: "environment",
-      width: { ideal: idealWidth },
-      height: { ideal: idealHeight },
+  return {
+    facingMode: "environment",
+    width: { ideal: idealWidth },
+    height: { ideal: Math.round((idealWidth * 9) / 16) },
+  };
+}
+
+// 카메라가 켜진 뒤 연속 자동초점을 best-effort로 적용한다(가까이 대도 초점이 흐려지지 않게).
+// 지원하지 않는 기기(대부분의 iOS 등)에서는 조용히 무시하고 기본 자동초점에 맡긴다.
+async function applyContinuousFocus() {
+  try {
+    const video = document.getElementById(SCANNER_ELEMENT_ID)?.querySelector("video");
+    const stream = video?.srcObject;
+    if (!(stream instanceof MediaStream)) return;
+    const track = stream.getVideoTracks()[0];
+    if (!track) return;
+    await track.applyConstraints({
       advanced: [{ focusMode: "continuous" }],
-    } as unknown as MediaTrackConstraints,
-    // 2) 해상도만 (focusMode 제약에서 거부되는 기기 대비)
-    {
-      facingMode: "environment",
-      width: { ideal: idealWidth },
-      height: { ideal: idealHeight },
-    },
-    // 3) 최소 제약 (호환성 최우선 — 예전에 동작하던 방식)
-    { facingMode: "environment" },
-  ];
+    } as unknown as MediaTrackConstraints);
+  } catch {
+    // 초점 제약 미지원 — 무시
+  }
 }
 
 type ScannerState = "idle" | "starting" | "running" | "error";
@@ -131,29 +135,13 @@ export function QRScanner({ onScan }: { onScan: (decodedText: string) => void })
         });
       scannerRef.current = scanner;
 
-      // 후면 카메라 제약을 상위 → 하위로 시도하고, 모두 실패하면 사용 가능한 아무 카메라로 폴백.
-      let started = false;
-      let lastErr: unknown;
-      for (const constraints of buildRearCameraCandidates()) {
-        try {
-          await scanner.start(constraints, SCAN_CONFIG, handleDecoded, undefined);
-          started = true;
-          break;
-        } catch (err) {
-          lastErr = err;
-          // 권한 거부는 재시도해도 소용없으므로 즉시 중단
-          if (err instanceof Error && err.name === "NotAllowedError") throw err;
-        }
-      }
-
-      if (!started) {
-        // 후면 카메라 제약이 모두 실패(노트북 등 후면 없음) → 아무 카메라로 폴백
-        const cameras = await Html5Qrcode.getCameras();
-        if (!cameras.length) throw lastErr ?? new Error("사용 가능한 카메라 없음");
-        await scanner.start(cameras[0].id, SCAN_CONFIG, handleDecoded, undefined);
-      }
+      // start()는 단 한 번만 호출한다(재시도 시 라이브러리가 전환 상태에 갇히는 iOS 버그 회피).
+      // ideal 제약만 쓰므로 후면 카메라가 없으면 전면으로 자동 대체될 뿐 실패하지 않는다.
+      await scanner.start(buildStartConstraints(), SCAN_CONFIG, handleDecoded, undefined);
 
       setState("running");
+      // 카메라가 켜진 뒤 연속 자동초점 적용(지원 기기에서만, 실패해도 무시).
+      void applyContinuousFocus();
     } catch (err) {
       console.error("QR scanner start failed:", err);
       setState("error");
