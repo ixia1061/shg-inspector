@@ -6,7 +6,27 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const SCANNER_ELEMENT_ID = "qr-scanner-region";
-const SCAN_CONFIG = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+// 스캔 영역을 뷰파인더의 70%로 크게 잡아, 조금 떨어진 거리에서도 QR이 박스 안에 들어오게 한다.
+// (박스가 작으면 QR을 카메라에 바짝 붙여야 해서 초점이 흐려짐)
+const SCAN_CONFIG = {
+  fps: 15,
+  qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+    const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7);
+    return { width: size, height: size };
+  },
+  aspectRatio: 1.0,
+};
+
+// 후면 카메라 + 연속 자동초점 + 고해상도. 가까이 붙이지 않아도(초점 흐려짐 방지)
+// 조금 떨어진 거리에서 선명하게 인식되도록 한다. focusMode는 표준 타입에 없어 캐스팅한다.
+const REAR_CAMERA_CONSTRAINTS = {
+  facingMode: "environment",
+  width: { ideal: 1920 },
+  height: { ideal: 1080 },
+  focusMode: "continuous",
+  advanced: [{ focusMode: "continuous" }],
+} as unknown as MediaTrackConstraints;
 
 type ScannerState = "idle" | "starting" | "running" | "error";
 
@@ -47,13 +67,21 @@ export function QRScanner({ onScan }: { onScan: (decodedText: string) => void })
     setErrorMessage("");
 
     try {
-      const { Html5Qrcode } = await import("html5-qrcode");
-      const scanner = scannerRef.current ?? new Html5Qrcode(SCANNER_ELEMENT_ID);
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
+      const scanner =
+        scannerRef.current ??
+        new Html5Qrcode(SCANNER_ELEMENT_ID, {
+          // 네이티브 BarcodeDetector(안드로이드 크롬 등 지원 기기)를 쓰면 인식이 훨씬 빠르다.
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          // QR만 디코딩해 불필요한 바코드 포맷 탐색을 없앤다(속도 향상).
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          verbose: false,
+        });
       scannerRef.current = scanner;
 
       try {
-        // 우선 후면 카메라 시도 (휴대폰)
-        await scanner.start({ facingMode: "environment" }, SCAN_CONFIG, handleDecoded, undefined);
+        // 우선 후면 카메라 시도 (휴대폰) — 연속 자동초점/고해상도 제약 적용
+        await scanner.start(REAR_CAMERA_CONSTRAINTS, SCAN_CONFIG, handleDecoded, undefined);
       } catch (err) {
         // 후면 카메라가 없으면(노트북 등) 아무 카메라로 폴백
         const cameras = await Html5Qrcode.getCameras();
