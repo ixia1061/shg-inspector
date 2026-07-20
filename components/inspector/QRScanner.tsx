@@ -25,11 +25,11 @@ function hasNativeBarcodeDetector(): boolean {
   return typeof window !== "undefined" && "BarcodeDetector" in window;
 }
 
-// 후면 카메라 시작 제약. iOS 사파리에서 start()가 거부되면 라이브러리가 "전환 중" 상태에 갇혀
-// 재시도가 모두 막히므로(cannot transition to new state), start()는 딱 한 번만 부른다.
-// 그래서 여기서는 "거부될 위험이 없는" 제약만 쓴다 — facingMode + 해상도는 모두 ideal(선호)이라
-// 지원 안 하면 무시될 뿐 실패하지 않는다. 연속 자동초점은 카메라가 켜진 뒤 별도로 적용한다.
-function buildStartConstraints(): MediaTrackConstraints {
+// 카메라 상세 제약. html5-qrcode의 start() 첫 인자는 키가 정확히 1개인 객체(예: {facingMode})만
+// 허용하므로, 해상도 등 상세 제약은 config.videoConstraints로 넘긴다(라이브러리가 이 경우 1-key 검증을 건너뜀).
+// facingMode/해상도는 모두 ideal(선호)이라 지원 안 하면 무시될 뿐 start()가 거부되지 않는다.
+// 연속 자동초점은 거부 위험을 피하려 여기 넣지 않고 카메라가 켜진 뒤 별도로 적용한다.
+function buildVideoConstraints(): MediaTrackConstraints {
   const idealWidth = hasNativeBarcodeDetector() ? 1920 : 1280;
   return {
     facingMode: "environment",
@@ -135,15 +135,19 @@ export function QRScanner({ onScan }: { onScan: (decodedText: string) => void })
         });
       scannerRef.current = scanner;
 
-      // start()는 단 한 번만 호출한다(재시도 시 라이브러리가 전환 상태에 갇히는 iOS 버그 회피).
-      // ideal 제약만 쓰므로 후면 카메라가 없으면 전면으로 자동 대체될 뿐 실패하지 않는다.
-      await scanner.start(buildStartConstraints(), SCAN_CONFIG, handleDecoded, undefined);
+      // 상세 제약(해상도)은 config.videoConstraints로 전달한다. 첫 인자는 1-key 객체여야 하며
+      // videoConstraints가 있으면 이 값이 실제 getUserMedia 제약으로 쓰인다.
+      const config = { ...SCAN_CONFIG, videoConstraints: buildVideoConstraints() };
+      await scanner.start({ facingMode: "environment" }, config, handleDecoded, undefined);
 
       setState("running");
       // 카메라가 켜진 뒤 연속 자동초점 적용(지원 기기에서만, 실패해도 무시).
       void applyContinuousFocus();
     } catch (err) {
       console.error("QR scanner start failed:", err);
+      // start() 실패 시 인스턴스가 "전환 중" 상태에 갇힐 수 있어, 다음 "다시 시도"가 같은 오류로 막힌다.
+      // → 인스턴스를 버려 재시도 때 새로 만들게 한다.
+      scannerRef.current = null;
       setState("error");
       setErrorMessage(describeCameraError(err));
     }
