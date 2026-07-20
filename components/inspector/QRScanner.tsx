@@ -25,17 +25,30 @@ function hasNativeBarcodeDetector(): boolean {
   return typeof window !== "undefined" && "BarcodeDetector" in window;
 }
 
-// 후면 카메라 + 연속 자동초점 + (기기에 맞춘) 해상도. 가까이 붙이지 않아도(초점 흐려짐 방지)
-// 조금 떨어진 거리에서 선명하게 인식되도록 한다. focusMode는 표준 타입에 없어 캐스팅한다.
-function buildRearCameraConstraints(): MediaTrackConstraints {
+// 후면 카메라 제약 후보들을 "선호 → 호환" 순으로 만든다.
+// iOS 사파리는 focusMode/해상도 같은 제약을 못 받아들이면 그냥 무시하지 않고 시작을 거부(OverconstrainedError)하는
+// 경우가 있어, 상위 제약이 실패하면 아래 단계로 자동 폴백해 반드시 카메라가 켜지게 한다.
+// (focusMode는 표준 MediaTrackConstraints 타입에 없어 캐스팅한다.)
+function buildRearCameraCandidates(): MediaTrackConstraints[] {
   const idealWidth = hasNativeBarcodeDetector() ? 1920 : 1280;
-  return {
-    facingMode: "environment",
-    width: { ideal: idealWidth },
-    height: { ideal: Math.round((idealWidth * 9) / 16) },
-    focusMode: "continuous",
-    advanced: [{ focusMode: "continuous" }],
-  } as unknown as MediaTrackConstraints;
+  const idealHeight = Math.round((idealWidth * 9) / 16);
+  return [
+    // 1) 해상도 + 연속 자동초점 (가장 선호)
+    {
+      facingMode: "environment",
+      width: { ideal: idealWidth },
+      height: { ideal: idealHeight },
+      advanced: [{ focusMode: "continuous" }],
+    } as unknown as MediaTrackConstraints,
+    // 2) 해상도만 (focusMode 제약에서 거부되는 기기 대비)
+    {
+      facingMode: "environment",
+      width: { ideal: idealWidth },
+      height: { ideal: idealHeight },
+    },
+    // 3) 최소 제약 (호환성 최우선 — 예전에 동작하던 방식)
+    { facingMode: "environment" },
+  ];
 }
 
 type ScannerState = "idle" | "starting" | "running" | "error";
@@ -89,13 +102,25 @@ export function QRScanner({ onScan }: { onScan: (decodedText: string) => void })
         });
       scannerRef.current = scanner;
 
-      try {
-        // 우선 후면 카메라 시도 (휴대폰) — 연속 자동초점 + 기기별 해상도 제약 적용
-        await scanner.start(buildRearCameraConstraints(), SCAN_CONFIG, handleDecoded, undefined);
-      } catch (err) {
-        // 후면 카메라가 없으면(노트북 등) 아무 카메라로 폴백
+      // 후면 카메라 제약을 상위 → 하위로 시도하고, 모두 실패하면 사용 가능한 아무 카메라로 폴백.
+      let started = false;
+      let lastErr: unknown;
+      for (const constraints of buildRearCameraCandidates()) {
+        try {
+          await scanner.start(constraints, SCAN_CONFIG, handleDecoded, undefined);
+          started = true;
+          break;
+        } catch (err) {
+          lastErr = err;
+          // 권한 거부는 재시도해도 소용없으므로 즉시 중단
+          if (err instanceof Error && err.name === "NotAllowedError") throw err;
+        }
+      }
+
+      if (!started) {
+        // 후면 카메라 제약이 모두 실패(노트북 등 후면 없음) → 아무 카메라로 폴백
         const cameras = await Html5Qrcode.getCameras();
-        if (!cameras.length) throw err;
+        if (!cameras.length) throw lastErr ?? new Error("사용 가능한 카메라 없음");
         await scanner.start(cameras[0].id, SCAN_CONFIG, handleDecoded, undefined);
       }
 
