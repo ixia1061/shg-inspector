@@ -53,20 +53,41 @@ function buildRearCameraCandidates(): MediaTrackConstraints[] {
 
 type ScannerState = "idle" | "starting" | "running" | "error";
 
+/**
+ * 카메라를 아예 쓸 수 없는 환경인지 미리 확인한다(제약 문제가 아니라 브라우저/연결 문제).
+ * iOS에서 가장 흔한 실패 원인: 카카오톡·인스타 등 "앱 안의 브라우저"는 카메라 API를 막는다.
+ * 문제 없으면 null.
+ */
+function cameraUnavailableReason(): string | null {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return null;
+
+  if (!window.isSecureContext) {
+    return "보안 연결(HTTPS)이 아니어서 카메라를 쓸 수 없습니다. 주소가 https:// 로 시작하는지 확인하세요.";
+  }
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+    return "이 브라우저에서는 카메라를 쓸 수 없습니다. 카카오톡·인스타그램·네이버 등 '앱 안의 브라우저'로 열었다면, 우측 상단 메뉴에서 사파리(또는 크롬)로 연 뒤 다시 시도하세요.";
+  }
+  return null;
+}
+
 function describeCameraError(err: unknown): string {
   const name = err instanceof Error ? err.name : "";
   const message = err instanceof Error ? err.message : String(err);
 
   if (name === "NotAllowedError" || /permission/i.test(message)) {
-    return "카메라 권한이 거부되었습니다. 브라우저 설정에서 이 사이트의 카메라 권한을 허용한 뒤 다시 시도하세요.";
+    return "카메라 권한이 거부되었습니다. 아이폰: 설정 > 사파리 > 카메라를 '허용'으로, 또는 주소창 왼쪽 'ㄱ가' 메뉴 > 웹사이트 설정에서 카메라를 허용한 뒤 다시 시도하세요.";
   }
   if (name === "NotFoundError" || /not found|no camera/i.test(message)) {
     return "사용 가능한 카메라를 찾을 수 없습니다. 카메라가 있는 기기(휴대폰)에서 시도하세요.";
   }
-  if (name === "NotReadableError") {
-    return "다른 앱이 카메라를 사용 중입니다. 다른 앱을 닫고 다시 시도하세요.";
+  if (name === "NotReadableError" || name === "AbortError") {
+    return "다른 앱이 카메라를 사용 중입니다. 카메라를 쓰는 다른 앱을 완전히 닫고 다시 시도하세요.";
   }
-  return `카메라를 시작할 수 없습니다: ${message}`;
+  if (name === "OverconstrainedError" || name === "ConstraintNotSatisfiedError") {
+    return "이 기기의 카메라가 요청한 설정을 지원하지 않습니다. 브라우저를 최신으로 업데이트한 뒤 다시 시도하세요.";
+  }
+  // 원인 분류가 안 되면 오류 이름을 함께 노출해 진단할 수 있게 한다.
+  return `카메라를 시작할 수 없습니다${name ? ` (${name})` : ""}: ${message}`;
 }
 
 /**
@@ -88,6 +109,14 @@ export function QRScanner({ onScan }: { onScan: (decodedText: string) => void })
   async function startCamera() {
     setState("starting");
     setErrorMessage("");
+
+    // 카메라 API 자체가 없는 환경(인앱 브라우저/비보안 연결)은 먼저 안내하고 중단.
+    const envReason = cameraUnavailableReason();
+    if (envReason) {
+      setState("error");
+      setErrorMessage(envReason);
+      return;
+    }
 
     try {
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
