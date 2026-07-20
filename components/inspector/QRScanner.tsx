@@ -12,11 +12,47 @@ const SCANNER_ELEMENT_ID = "qr-scanner-region";
 const SCAN_CONFIG = {
   fps: 15,
   qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-    const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7);
+    const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.8);
     return { width: size, height: size };
   },
   aspectRatio: 1.0,
 };
+
+// 아이폰 사파리는 네이티브 BarcodeDetector가 없어 html5-qrcode가 느린 JS 디코더로 폴백한다.
+// ZXing-C++(WASM) 기반 폴리필을 window.BarcodeDetector로 주입하면 인식 속도·거리(작은/원거리 QR)가
+// 크게 개선된다. WASM은 앱에 포함(public/zxing_reader.wasm)해 CDN 의존 없이 동작한다.
+// 안전장치: WASM이 실제로 로드된 경우에만 폴리필을 설치한다. 실패(오프라인/로드오류) 시 조용히
+// 기존 JS 디코더로 폴백하므로 스캐너가 깨지지 않는다. 여러 번 호출돼도 1회만 로드(싱글턴).
+let barcodeDetectorReadyPromise: Promise<void> | null = null;
+function ensureFastBarcodeDetector(): Promise<void> {
+  if (barcodeDetectorReadyPromise) return barcodeDetectorReadyPromise;
+  barcodeDetectorReadyPromise = (async () => {
+    if (typeof window === "undefined") return;
+    if ("BarcodeDetector" in window) return; // 네이티브 존재(안드로이드 등) → 그대로 사용
+    try {
+      const { BarcodeDetector, setZXingModuleOverrides } = await import(
+        "barcode-detector/ponyfill"
+      );
+      // 번들에 포함한 로컬 WASM을 쓰도록 경로 지정(CDN 미사용).
+      setZXingModuleOverrides({
+        locateFile: (path: string, prefix: string) =>
+          path.endsWith(".wasm") ? "/zxing_reader.wasm" : prefix + path,
+      });
+      // 워밍업: 빈 캔버스로 detect를 한 번 돌려 WASM 로드를 확인한다(바코드 없으면 빈 배열 반환).
+      const warmup = new BarcodeDetector({ formats: ["qr_code"] });
+      const canvas = document.createElement("canvas");
+      canvas.width = 8;
+      canvas.height = 8;
+      await warmup.detect(canvas);
+      // 여기까지 왔으면 WASM 정상 → 전역에 설치(html5-qrcode가 이 디코더를 사용).
+      (window as unknown as { BarcodeDetector: typeof BarcodeDetector }).BarcodeDetector =
+        BarcodeDetector;
+    } catch {
+      // WASM 로드 실패 — 폴리필 미설치, 기본 JS 디코더 유지
+    }
+  })();
+  return barcodeDetectorReadyPromise;
+}
 
 // 안드로이드 크롬 등은 네이티브 BarcodeDetector를 지원해 고해상도도 빠르게 처리 → 먼 거리 인식에 유리.
 // 아이폰 사파리는 BarcodeDetector 미지원 → JS 디코더로 폴백되는데, 이땐 해상도가 높을수록
@@ -122,6 +158,9 @@ export function QRScanner({ onScan }: { onScan: (decodedText: string) => void })
       return;
     }
 
+    // 고속 WASM 디코더 준비를 기다린다(마운트 시 미리 시작해 두므로 보통 즉시 통과).
+    await ensureFastBarcodeDetector();
+
     try {
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
       const scanner =
@@ -154,6 +193,9 @@ export function QRScanner({ onScan }: { onScan: (decodedText: string) => void })
   }
 
   useEffect(() => {
+    // 화면 진입 시 고속 디코더를 미리 준비(사용자가 '카메라 시작'을 누를 때쯤 로드 완료).
+    void ensureFastBarcodeDetector();
+
     return () => {
       const scanner = scannerRef.current;
       if (scanner && scanner.isScanning) {
@@ -169,7 +211,7 @@ export function QRScanner({ onScan }: { onScan: (decodedText: string) => void })
     <div className="flex w-full flex-col items-center gap-4">
       <div
         id={SCANNER_ELEMENT_ID}
-        className="w-full max-w-sm overflow-hidden rounded-lg [&_video]:rounded-lg"
+        className="w-full max-w-md overflow-hidden rounded-lg [&_video]:rounded-lg"
       />
 
       {state === "idle" && (
