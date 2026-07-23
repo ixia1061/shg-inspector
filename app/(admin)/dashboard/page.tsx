@@ -1,8 +1,9 @@
 import { ActionRequiredList } from "@/components/admin/ActionRequiredList";
 import { DashboardCards } from "@/components/admin/DashboardCards";
 import { InspectionRateChart } from "@/components/admin/InspectionRateChart";
+import { ResolvedActionList } from "@/components/admin/ResolvedActionList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isActionNeeded } from "@/lib/utils/inspection";
+import { isActionNeeded, isActionResolved } from "@/lib/utils/inspection";
 import { createClient } from "@/lib/supabase/server";
 import { sortByAssetCode } from "@/lib/utils/sort";
 
@@ -20,8 +21,9 @@ export default async function DashboardPage() {
     (a.group_name ?? "").localeCompare(b.group_name ?? "", "ko"),
   );
 
-  // 조치필요(이상+미조치) 소화기 목록
+  // 조치필요(이상+미조치) / 조치완료(이번달 조치됨) 소화기 목록
   const actionNeeded = sortByAssetCode((overviewRows ?? []).filter((r) => isActionNeeded(r)));
+  const actionResolved = sortByAssetCode((overviewRows ?? []).filter((r) => isActionResolved(r)));
 
   const summary = summaryRows?.[0] ?? {
     total_extinguishers: 0,
@@ -57,6 +59,15 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>조치완료 소화기 ({actionResolved.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResolvedActionList rows={actionResolved} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
