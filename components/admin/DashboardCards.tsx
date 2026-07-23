@@ -1,4 +1,12 @@
-import { AlertTriangle, CalendarCheck, ClipboardX, PackageSearch, ShieldAlert, Siren } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarCheck,
+  ClipboardX,
+  PackageSearch,
+  ShieldAlert,
+  Siren,
+  Wrench,
+} from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DashboardSummary } from "@/types/domain";
@@ -10,8 +18,9 @@ const CARD_DEFS: {
   tone?: "default" | "warning" | "destructive";
 }[] = [
   { key: "total_extinguishers", label: "총 소화기", icon: PackageSearch },
-  { key: "inspected_this_month", label: "이번달 점검", icon: CalendarCheck },
+  { key: "inspected_this_month", label: "이번달 점검완료", icon: CalendarCheck },
   { key: "not_inspected_this_month", label: "이번달 미점검", icon: ClipboardX, tone: "warning" },
+  { key: "action_required", label: "조치 필요", icon: Wrench, tone: "destructive" },
   { key: "due_soon", label: "교체예정", icon: ShieldAlert, tone: "warning" },
   { key: "expired", label: "내용연수 만료", icon: AlertTriangle, tone: "destructive" },
   { key: "recent_abnormal", label: "최근 이상점검 (30일)", icon: Siren, tone: "destructive" },
@@ -25,7 +34,7 @@ const TONE_CLASS: Record<string, string> = {
 
 export function DashboardCards({ summary }: { summary: DashboardSummary }) {
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
       {CARD_DEFS.map(({ key, label, icon: Icon, tone = "default" }) => (
         <Card key={key}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

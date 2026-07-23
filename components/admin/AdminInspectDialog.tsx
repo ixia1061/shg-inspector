@@ -28,6 +28,7 @@ const CHECK_ITEMS = [
   { key: "seal_ok", label: "봉인 정상" },
   { key: "appearance_ok", label: "외관 정상" },
   { key: "installation_ok", label: "설치상태 정상" },
+  { key: "etc_ok", label: "기타사항 정상" },
 ] as const;
 
 const MAX_PHOTOS = 5;
@@ -38,6 +39,7 @@ const ALL_OK: Checks = {
   seal_ok: true,
   appearance_ok: true,
   installation_ok: true,
+  etc_ok: true,
 };
 
 /**
@@ -113,6 +115,7 @@ export function AdminInspectDialog({
           seal_ok: checks.seal_ok,
           appearance_ok: checks.appearance_ok,
           installation_ok: checks.installation_ok,
+          etc_ok: checks.etc_ok,
           overall_result,
           memo: memo || null,
           inspected_at,
@@ -180,7 +183,7 @@ export function AdminInspectDialog({
             </Field>
           ))}
           <Field>
-            <FieldLabel htmlFor="ai-memo">비고 (선택)</FieldLabel>
+            <FieldLabel htmlFor="ai-memo">이상(불량) 내용 (선택)</FieldLabel>
             <Textarea
               id="ai-memo"
               rows={2}

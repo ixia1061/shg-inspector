@@ -7,6 +7,7 @@ export interface EnqueueInspectionInput {
   seal_ok: boolean;
   appearance_ok: boolean;
   installation_ok: boolean;
+  etc_ok: boolean;
   overall_result: InspectionResult;
   memo: string | null;
   inspected_at: string;

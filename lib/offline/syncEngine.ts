@@ -64,6 +64,7 @@ async function submitOne(
       seal_ok: item.seal_ok,
       appearance_ok: item.appearance_ok,
       installation_ok: item.installation_ok,
+      etc_ok: item.etc_ok,
       overall_result: item.overall_result,
       memo: item.memo,
       inspected_at: item.inspected_at,
