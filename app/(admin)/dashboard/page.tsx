@@ -50,24 +50,26 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>조치 필요 소화기 ({actionNeeded.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ActionRequiredList rows={actionNeeded} />
-          </CardContent>
-        </Card>
-      </div>
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>조치 필요 소화기 ({actionNeeded.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ActionRequiredList rows={actionNeeded} />
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>조치완료 소화기 ({actionResolved.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResolvedActionList rows={actionResolved} />
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>조치완료 소화기 ({actionResolved.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResolvedActionList rows={actionResolved} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
