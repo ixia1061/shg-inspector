@@ -5,11 +5,12 @@ import { useMemo, useState } from "react";
 import { ActionRequiredList } from "@/components/admin/ActionRequiredList";
 import { InspectionRateChart } from "@/components/admin/InspectionRateChart";
 import { LedgerDownloadButton } from "@/components/admin/LedgerDownloadButton";
+import { ResolvedActionList } from "@/components/admin/ResolvedActionList";
 import { UninspectedList } from "@/components/admin/UninspectedList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isActionNeeded, isMonthDone } from "@/lib/utils/inspection";
+import { isActionNeeded, isActionResolved, isMonthDone, isNormalDone } from "@/lib/utils/inspection";
 import { sortByAssetCode } from "@/lib/utils/sort";
 import type { ExtinguisherOverview, InspectionRateRow, Site } from "@/types/domain";
 
@@ -73,8 +74,13 @@ export function InspectionStatusClient({
     () => sortByAssetCode(siteRows.filter((r) => isActionNeeded(r))),
     [siteRows],
   );
+  const actionResolved = useMemo(
+    () => sortByAssetCode(siteRows.filter((r) => isActionResolved(r))),
+    [siteRows],
+  );
+  // 점검완료 탭은 "정상 점검완료"만(조치완료는 별도 탭). 점검률(isMonthDone)은 둘 다 완료로 집계.
   const doneMonth = useMemo(
-    () => sortByAssetCode(siteRows.filter((r) => isMonthDone(r))),
+    () => sortByAssetCode(siteRows.filter((r) => isNormalDone(r))),
     [siteRows],
   );
 
@@ -111,6 +117,7 @@ export function InspectionStatusClient({
         <TabsList>
           <TabsTrigger value="month">이번달 미점검 ({notMonth.length})</TabsTrigger>
           <TabsTrigger value="action">조치필요 ({actionNeeded.length})</TabsTrigger>
+          <TabsTrigger value="resolved">조치완료 ({actionResolved.length})</TabsTrigger>
           <TabsTrigger value="done">점검완료 ({doneMonth.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="month">
@@ -119,8 +126,11 @@ export function InspectionStatusClient({
         <TabsContent value="action">
           <ActionRequiredList rows={actionNeeded} />
         </TabsContent>
+        <TabsContent value="resolved">
+          <ResolvedActionList rows={actionResolved} />
+        </TabsContent>
         <TabsContent value="done">
-          <UninspectedList rows={doneMonth} emptyMessage="이번달 점검완료된 소화기가 없습니다." />
+          <UninspectedList rows={doneMonth} emptyMessage="이번달 정상 점검완료된 소화기가 없습니다." />
         </TabsContent>
       </Tabs>
     </div>
