@@ -205,6 +205,7 @@ export interface Database {
           seal_ok: boolean;
           appearance_ok: boolean;
           installation_ok: boolean;
+          etc_ok: boolean;
           overall_result: InspectionResult;
           memo: string | null;
           inspected_at: string;
@@ -219,6 +220,7 @@ export interface Database {
           seal_ok: boolean;
           appearance_ok: boolean;
           installation_ok: boolean;
+          etc_ok?: boolean;
           overall_result: InspectionResult;
           memo?: string | null;
           inspected_at: string;
@@ -311,6 +313,7 @@ export interface Database {
           last_inspection_id: string | null;
           last_action_note: string | null;
           last_action_resolved_at: string | null;
+          last_etc_ok: boolean | null;
         };
         Relationships: [];
       };

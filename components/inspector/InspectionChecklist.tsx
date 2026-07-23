@@ -27,6 +27,7 @@ interface ChecklistValues {
   seal_ok: boolean;
   appearance_ok: boolean;
   installation_ok: boolean;
+  etc_ok: boolean;
   memo: string;
 }
 
@@ -40,6 +41,7 @@ const CHECK_ITEMS: { key: keyof Omit<ChecklistValues, "memo">; label: string }[]
   { key: "seal_ok", label: "봉인 정상" },
   { key: "appearance_ok", label: "외관 정상" },
   { key: "installation_ok", label: "설치상태 정상" },
+  { key: "etc_ok", label: "기타사항 정상" },
 ];
 
 /** 점검 1회당 첨부 가능한 사진 수 (전·후 사진 등) */
@@ -69,6 +71,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
       seal_ok: true,
       appearance_ok: true,
       installation_ok: true,
+      etc_ok: true,
       memo: "",
     },
   });
@@ -156,6 +159,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
             seal_ok: values.seal_ok,
             appearance_ok: values.appearance_ok,
             installation_ok: values.installation_ok,
+            etc_ok: values.etc_ok,
             overall_result,
             memo: values.memo || null,
             inspected_at,
@@ -175,6 +179,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
           seal_ok: values.seal_ok,
           appearance_ok: values.appearance_ok,
           installation_ok: values.installation_ok,
+          etc_ok: values.etc_ok,
           overall_result,
           memo: values.memo || null,
           inspected_at,

@@ -7,6 +7,7 @@ export function defectItemList(e: ExtinguisherOverview): string[] {
   if (e.last_seal_ok === false) failed.push("봉인 불량");
   if (e.last_appearance_ok === false) failed.push("외관 불량");
   if (e.last_installation_ok === false) failed.push("설치 불량");
+  if (e.last_etc_ok === false) failed.push("기타 불량");
   return failed;
 }
 
