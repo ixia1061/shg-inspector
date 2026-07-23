@@ -242,6 +242,28 @@ export interface Database {
         Update: Record<string, never>;
         Relationships: [];
       };
+      inspection_actions: {
+        Row: {
+          id: string;
+          inspection_id: string;
+          extinguisher_id: string;
+          action_note: string;
+          resolved_by: string;
+          resolved_at: string;
+        };
+        Insert: {
+          id?: string;
+          inspection_id: string;
+          extinguisher_id: string;
+          action_note: string;
+          resolved_by: string;
+          resolved_at?: string;
+        };
+        Update: {
+          action_note?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       v_extinguisher_overview: {
@@ -286,6 +308,9 @@ export interface Database {
           last_seal_ok: boolean | null;
           last_appearance_ok: boolean | null;
           last_installation_ok: boolean | null;
+          last_inspection_id: string | null;
+          last_action_note: string | null;
+          last_action_resolved_at: string | null;
         };
         Relationships: [];
       };
@@ -341,6 +366,7 @@ export interface Database {
           total_extinguishers: number;
           inspected_this_month: number;
           not_inspected_this_month: number;
+          action_required: number;
           due_soon: number;
           expired: number;
           recent_abnormal: number;

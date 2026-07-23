@@ -99,6 +99,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 | `asset_code_history` | 관리번호 변경 이력 (QR 재발급 없이 옛 코드→최신 소화기 연결) |
 | `inspections` | 점검 기록. **append-only**. `inspector_id`, 4개 체크항목, `overall_result`, `inspected_at` |
 | `inspection_photos` | 점검 사진 메타. 소화기당 최신 5장만 유지 |
+| `inspection_actions` | 이상 점검 조치 기록(append). `inspection_id`(UNIQUE), `action_note`(조치내용), `resolved_by`, `resolved_at`. 관리자 전용. 조치완료해야 이번달 점검완료로 집계 |
 
 **주요 뷰/함수**
 - `v_extinguisher_overview` — 소화기 + 최근 점검 + 계산된 상태 + 전체 위치경로. 목록/대시보드 대부분이 이걸 사용.
@@ -123,8 +124,8 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 ## Supabase 구조
 
-- **프로젝트 ref**: `nppqfmcrjvipjlcqjajv` / URL `https://nppqfmcrjvipjlcqjajv.supabase.co`
-- **리전**: `ap-south-1`(뭄바이) — ⚠️ 한국과 멀어 지연이 있음. [TODO](#앞으로-구현할-기능-todo)의 리전 이전 참고.
+- **프로젝트 ref**: `zbdvuxzoahusdrpniuwz` / URL `https://zbdvuxzoahusdrpniuwz.supabase.co` (`.env.local`·Vercel이 가리키는 **실제 운영 DB**)
+- **리전**: `ap-northeast-2`(서울) — 속도 개선 위해 뭄바이에서 이전 완료(2026-07). ⚠️ 옛 뭄바이 프로젝트 `nppqfmcrjvipjlcqjajv`(ap-south-1)는 **초기 MVP 시절 데이터만 있는 죽은 DB** — 마이그레이션/스크립트를 **절대 여기 적용하지 말 것**. 접속 대상은 항상 `.env.local`의 `NEXT_PUBLIC_SUPABASE_URL` ref로 확인.
 - **Auth**: 이메일/비밀번호, **공개 회원가입 없음**. 계정은 시스템관리자가 발급. `handle_new_user` 트리거가 가입 시 profile 자동 생성.
 - **Storage**: `inspection-photos` 버킷(점검 사진). 경로에 소화기 id 포함, 소화기당 최신 5장 유지.
 - **RLS**: 모든 테이블에 적용. `is_admin()`(admin+super_admin) / `is_super_admin()` / `has_site_access()` 보안 정의자 함수로 판별. `profiles`·`user_sites` 쓰기는 **시스템관리자만**(일반 관리자가 API로 자기 역할을 올리는 것 차단).
@@ -133,7 +134,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
   - `admin`(관리자): **배정된 담당 사업장 범위 내에서만** 건물/층/구역/차량/소화기·점검·대시보드·통계 관리. 사업장 등록/수정/삭제와 사용자 관리는 불가. QR 없이 목록에서 점검 가능(관리자 영역 모달).
   - `inspector`(점검자): 배정된 사업장만 조회. **QR 스캔을 통해서만** 점검. (관리자의 QR 없는 점검도 점검자에게 완료로 반영.)
   - **스코핑 원리**: `has_site_access(site) = is_super_admin() OR user_sites 배정`. 뷰/RPC가 모두 `security invoker`라 이 함수만으로 대시보드·목록·재고까지 배정 사업장으로 자동 한정됨.
-- **직접 DB 접속**(마이그레이션/스크립트): 직접 호스트는 IPv6 전용이라 접속 불가할 수 있음 → **Session Pooler**(`aws-1-ap-south-1.pooler.supabase.com:5432`, user `postgres.nppqfmcrjvipjlcqjajv`) 사용.
+- **직접 DB 접속**(마이그레이션/스크립트): 직접 호스트는 IPv6 전용이라 접속 불가할 수 있음 → **Session Pooler**(`aws-1-ap-northeast-2.pooler.supabase.com:5432`, user `postgres.zbdvuxzoahusdrpniuwz`, database `postgres`, `ssl.rejectUnauthorized=false`) 사용. DDL(테이블/뷰/함수 생성)은 service_role(REST)로는 불가 → 반드시 이 pooler로 접속. DB 비밀번호는 문서에 적지 않음(사용 시 사용자에게 요청).
 
 ## Vercel 배포 정보
 
@@ -182,7 +183,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 ## 앞으로 구현할 기능 (TODO)
 
-- [ ] **Supabase 리전 이전** (뭄바이 ap-south-1 → 서울 ap-northeast-2) — 로그인/조회 지연 개선. 데이터 이관 필요한 큰 작업.
+- [x] ~~**Supabase 리전 이전** (뭄바이 ap-south-1 → 서울 ap-northeast-2)~~ — 완료(2026-07, 프로젝트 `zbdvuxzoahusdrpniuwz`).
 - [ ] **비밀번호 찾기(재설정) 플로우** — 로그인 화면에 "비밀번호를 잊으셨나요?" + 이메일 재설정. (현재는 시스템관리자/Supabase 대시보드로만 복구 가능)
 - [ ] **Zebra 라벨 프린터 연동** — BrowserPrint(ZPL) 직접 출력 + PDF 폴백. (`app/api/labels` 자리 마련됨)
 - [ ] **알림** — 미점검/만료 임박 이메일·푸시 (pg_cron + Edge Function). MVP 제외 항목.
@@ -193,6 +194,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
+- **2026-07-23** — **이상사항 조치(조치필요→조치완료) 워크플로우 + 대장 불량내용/조치내용 분리.** ① 대장 Excel에서 비고(memo)가 "조치내용"으로 나가 혼동되던 것을 바로잡음 — 비고=**불량내용**으로 정착하고, 대장에 `불량항목`·`불량내용`(비고)·`조치내용`(별도)을 분리, `이번달점검(O/X)`을 `이번달상태(미점검/조치필요/완료)`로 변경. ② 이상으로 기록된 소화기는 **점검현황·대시보드에 "조치필요"** 로 분류되고, 관리자가 **조치내용을 입력하고 "조치완료"** 를 눌러야 이번달 **점검완료**로 집계(점검률·대시보드 완료 카운트 반영). 조치필요는 미완료로 취급 → `미점검/조치필요/점검완료` 3분류. 점검 기록은 append-only 유지, 조치는 별도 `inspection_actions` 테이블에 append(관리자 전용 RLS, 담당 사업장 범위 한정). 신규: 마이그레이션 `20260723090000_inspection_actions.sql`(테이블 + 뷰/`fn_dashboard_summary`/`fn_inspection_rate` 갱신), `app/actions/inspectionActions.ts`(`resolveInspectionAction`), `lib/utils/inspection.ts`(불량항목/완료판정 공용), `components/admin/ResolveActionDialog.tsx`·`ActionRequiredList.tsx`. 점검 입력의 "비고" 라벨을 "이상(불량) 내용"으로 명확화. **서울 운영 DB(`zbdvuxzoahusdrpniuwz`) 적용 완료.** (작업 중 CLAUDE.md의 옛 뭄바이 ref가 낡아 있던 것을 서울 DB로 정정.)
 - **2026-07-21** — **앱 아이콘·파비콘을 소화기 그림으로 교체.** 기존 임시 빨간 원 대신 소화기 일러스트(빨간 본체·검정 손잡이·호스·노즐)를 적용. `public/icons/icon-192.png`·`icon-512.png`(흰 배경, 여백 14%), `icon-maskable-512.png`(런처가 원형으로 잘라내므로 **안전영역 62%**로 축소 배치), `app/favicon.ico`(투명 배경, **16/32/48/64/128/256px 6종** — 브라우저가 만드는 바탕화면 바로가기는 파비콘을 확대해 쓰므로 큰 사이즈 필요. Next.js는 ICO **첫 엔트리**로 `sizes`를 정하고 너비 바이트 `0`을 256으로 해석하므로 256px를 맨 앞에 배치 → `sizes="256x256"`). 원본 PNG의 배경은 테두리에서 플러드필로 제거해 소화기만 추출(안쪽 흰 라벨은 보존). **iOS 대응**: 사파리는 "홈 화면에 추가" 시 `apple-touch-icon`을 우선 사용하는데 링크가 없어 스크린샷/흐린 파비콘이 잡힐 수 있었음 → `app/apple-icon.png`(180×180, **불투명 흰 배경** — iOS는 투명도 미지원, 자체 라운드 마스크 적용) 추가해 Next.js가 링크를 자동 생성하도록 함. 부수: 바탕화면 바로가기용 `extinguisher.ico`(16~256px 6종)를 `%LOCALAPPDATA%\shg-inspector\`에 생성하고 `.url` 바로가기에 연결(로컬 작업, 저장소 무관).
 - **2026-07-20** — **점검자 QR 스캐너 아이폰 속도·거리 대폭 개선(ZXing-C++ WASM 디코더 주입).** 아이폰 사파리는 네이티브 `BarcodeDetector`가 없어 html5-qrcode가 느린 순수 JS 디코더(zxing)로 폴백 → 인식 느리고 원거리/작은 QR 취약. 라이브러리 소스 분석 결과 **해상도를 올려도 거리 개선 안 됨**(디코딩 캔버스가 화면 표시 크기로 다운스케일되어 상쇄). 해결: **`barcode-detector`(ZXing-C++ WASM) 폴리필을 `window.BarcodeDetector`로 주입** → html5-qrcode가 이 고속 디코더 사용(iOS도 안드로이드급). WASM은 `public/zxing_reader.wasm`으로 **앱에 포함(CDN 미의존)**, `setZXingModuleOverrides.locateFile`로 로컬 경로 지정. **안전장치**: 마운트 시 빈 캔버스로 워밍업 detect를 돌려 **WASM이 실제 로드된 경우에만 폴리필 설치** — 실패(오프라인/로드오류) 시 조용히 기존 JS 디코더로 폴백해 스캐너가 깨지지 않음(싱글턴 1회 로드). 부수: qrbox 0.7→0.8, 스캐너 뷰 `max-w-sm`→`max-w-md`로 확대(디코딩 픽셀↑). `components/inspector/QRScanner.tsx`, 의존성 `barcode-detector` 추가.
 - **2026-07-20** — **점검자 QR 스캐너 인식률·속도 개선(안드로이드/아이폰 공통).** ① 카메라 제약에 **연속 자동초점(`focusMode: continuous`, top-level + `advanced`)**을 요청해 가까이 붙였을 때 초점이 흐려지는 문제 완화. ② **스캔 박스(qrbox)를 고정 250×250 → 뷰파인더의 70% 비례 크기**로 확대해 조금 떨어진 거리에서도 QR이 박스 안에 들어오게 함(멀면 인식 안 되던 문제). ③ **`experimentalFeatures.useBarCodeDetectorIfSupported`**로 네이티브 BarcodeDetector(안드로이드 크롬 등) 사용 + **`formatsToSupport`를 QR로 제한**해 디코딩 속도 향상, `fps` 10→15. ④ **iOS 대응**: 아이폰 사파리는 BarcodeDetector 미지원으로 JS 디코더(zxing) 폴백 시 고해상도일수록 느려지므로, **네이티브 감지 지원 여부로 해상도 분기**(지원=1920, 미지원(iOS 등)=1280). `components/inspector/QRScanner.tsx`.

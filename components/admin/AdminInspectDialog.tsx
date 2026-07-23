@@ -180,7 +180,7 @@ export function AdminInspectDialog({
             </Field>
           ))}
           <Field>
-            <FieldLabel htmlFor="ai-memo">비고 (선택)</FieldLabel>
+            <FieldLabel htmlFor="ai-memo">이상(불량) 내용 (선택)</FieldLabel>
             <Textarea
               id="ai-memo"
               rows={2}

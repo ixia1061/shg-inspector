@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { defectItemsText, isActionNeeded } from "@/lib/utils/inspection";
 import { LIFECYCLE_STATUS_LABEL } from "@/lib/utils/lifecycle";
 import { formatShortLocation } from "@/lib/utils/location";
 import { isAdminRole } from "@/lib/utils/roles";
@@ -38,19 +39,21 @@ const resultLabel = (r: string | null): string =>
 /** 종류+용량 조합 컬럼 정의 */
 type Combo = { key: string; type: string; capacity: string; header: string };
 
-/** 최근 점검에서 불량으로 체크된 항목 목록. 정상/미점검이면 빈 문자열. */
-function defectItems(e: ExtinguisherOverview): string {
-  const failed: string[] = [];
-  if (e.last_pressure_ok === false) failed.push("압력 불량");
-  if (e.last_seal_ok === false) failed.push("봉인 불량");
-  if (e.last_appearance_ok === false) failed.push("외관 불량");
-  if (e.last_installation_ok === false) failed.push("설치 불량");
-  return failed.join(", ");
+/** 최근 점검의 비고 = 불량 내용. 없으면 빈 문자열. */
+function defectNote(e: ExtinguisherOverview): string {
+  return e.last_inspection_memo ?? "";
 }
 
-/** 최근 점검의 비고(조치 내용 등). 없으면 빈 문자열. */
-function actionNote(e: ExtinguisherOverview): string {
-  return e.last_inspection_memo ?? "";
+/** 조치완료 시 입력된 조치 내용. 없으면 빈 문자열. */
+function resolvedActionNote(e: ExtinguisherOverview): string {
+  return e.last_action_note ?? "";
+}
+
+/** 이번달 점검 상태: 미점검 / 조치필요 / 완료 */
+function monthStatus(e: ExtinguisherOverview): string {
+  if (!e.inspected_this_month) return "미점검";
+  if (isActionNeeded(e)) return "조치필요";
+  return "완료";
 }
 
 /** timestamptz(UTC ISO)를 KST 기준 'YYYY-MM-DD'로. (UTC로 자르면 최대 9시간 하루 오차) */
@@ -356,10 +359,11 @@ function buildLedgerSheet(
     { header: "내용연수상태", key: "lifecycle", width: 14 },
     { header: "최근점검일", key: "last_inspected", width: 12 },
     { header: "점검결과", key: "result", width: 10 },
-    { header: "불량항목", key: "defect", width: 20 },
+    { header: "불량항목", key: "defect", width: 18 },
+    { header: "불량내용", key: "defect_note", width: 24 },
     { header: "조치내용", key: "action", width: 28 },
     { header: "점검자", key: "inspector", width: 12 },
-    { header: "이번달점검", key: "month", width: 10 },
+    { header: "이번달상태", key: "month", width: 11 },
   ];
 
   const headerRow = sheet.getRow(1);
@@ -383,15 +387,17 @@ function buildLedgerSheet(
       lifecycle: LIFECYCLE_STATUS_LABEL[e.lifecycle_status as LifecycleStatus] ?? "",
       last_inspected: kstDate(e.last_inspected_at),
       result: resultLabel(e.last_inspection_result),
-      defect: defectItems(e),
-      action: actionNote(e),
+      defect: defectItemsText(e),
+      defect_note: defectNote(e),
+      action: resolvedActionNote(e),
       inspector: e.last_inspector_id ? (nameById.get(e.last_inspector_id) ?? "") : "",
-      month: e.inspected_this_month ? "O" : "X",
+      month: monthStatus(e),
     });
-    // 위치(2)·불량항목(12)·조치내용(13) 셀은 왼쪽 정렬로 전체가 보이게
+    // 위치(2)·불량항목(12)·불량내용(13)·조치내용(14) 셀은 왼쪽 정렬로 전체가 보이게
     row.getCell(2).alignment = { vertical: "middle", horizontal: "left" };
     row.getCell(12).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
     row.getCell(13).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+    row.getCell(14).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
   }
 
   sheet.eachRow({ includeEmpty: false }, (row) => {

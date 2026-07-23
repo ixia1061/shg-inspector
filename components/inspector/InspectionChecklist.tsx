@@ -258,7 +258,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
           </Field>
         ))}
         <Field>
-          <FieldLabel htmlFor="memo">비고 (선택)</FieldLabel>
+          <FieldLabel htmlFor="memo">이상(불량) 내용 (선택)</FieldLabel>
           <Textarea id="memo" rows={2} placeholder="이상사항이 있으면 입력하세요" {...register("memo")} />
         </Field>
         <Field>

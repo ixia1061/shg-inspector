@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 
+import { ActionRequiredList } from "@/components/admin/ActionRequiredList";
 import { InspectionRateChart } from "@/components/admin/InspectionRateChart";
 import { LedgerDownloadButton } from "@/components/admin/LedgerDownloadButton";
 import { UninspectedList } from "@/components/admin/UninspectedList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isActionNeeded, isMonthDone } from "@/lib/utils/inspection";
 import { sortByAssetCode } from "@/lib/utils/sort";
 import type { ExtinguisherOverview, InspectionRateRow, Site } from "@/types/domain";
 
@@ -49,7 +51,8 @@ export function InspectionStatusClient({
         map.set(key, g);
       }
       g.total++;
-      if (e.inspected_this_month) g.inspected++;
+      // 조치필요(이상+미조치)는 미완료로 집계 → 완료만 카운트
+      if (isMonthDone(e)) g.inspected++;
     }
     return [...map.values()]
       .sort((a, b) => a.building_no - b.building_no)
@@ -66,8 +69,12 @@ export function InspectionStatusClient({
     () => sortByAssetCode(siteRows.filter((r) => !r.inspected_this_month)),
     [siteRows],
   );
+  const actionNeeded = useMemo(
+    () => sortByAssetCode(siteRows.filter((r) => isActionNeeded(r))),
+    [siteRows],
+  );
   const doneMonth = useMemo(
-    () => sortByAssetCode(siteRows.filter((r) => r.inspected_this_month)),
+    () => sortByAssetCode(siteRows.filter((r) => isMonthDone(r))),
     [siteRows],
   );
 
@@ -103,10 +110,14 @@ export function InspectionStatusClient({
       <Tabs defaultValue="month">
         <TabsList>
           <TabsTrigger value="month">이번달 미점검 ({notMonth.length})</TabsTrigger>
+          <TabsTrigger value="action">조치필요 ({actionNeeded.length})</TabsTrigger>
           <TabsTrigger value="done">점검완료 ({doneMonth.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="month">
           <UninspectedList rows={notMonth} />
+        </TabsContent>
+        <TabsContent value="action">
+          <ActionRequiredList rows={actionNeeded} />
         </TabsContent>
         <TabsContent value="done">
           <UninspectedList rows={doneMonth} emptyMessage="이번달 점검완료된 소화기가 없습니다." />

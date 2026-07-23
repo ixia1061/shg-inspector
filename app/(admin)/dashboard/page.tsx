@@ -1,32 +1,33 @@
+import { ActionRequiredList } from "@/components/admin/ActionRequiredList";
 import { DashboardCards } from "@/components/admin/DashboardCards";
 import { InspectionRateChart } from "@/components/admin/InspectionRateChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { isActionNeeded } from "@/lib/utils/inspection";
 import { createClient } from "@/lib/supabase/server";
+import { sortByAssetCode } from "@/lib/utils/sort";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [{ data: summaryRows }, { data: rateRows }, { data: abnormalInspections }] =
-    await Promise.all([
-      supabase.rpc("fn_dashboard_summary"),
-      supabase.rpc("fn_inspection_rate", { p_group_by: "building", p_period: "month" }),
-      supabase
-        .from("inspections")
-        .select("id, inspected_at, memo, extinguishers(asset_code)")
-        .eq("overall_result", "abnormal")
-        .order("inspected_at", { ascending: false })
-        .limit(5),
-    ]);
+  const [{ data: summaryRows }, { data: rateRows }, { data: overviewRows }] = await Promise.all([
+    supabase.rpc("fn_dashboard_summary"),
+    supabase.rpc("fn_inspection_rate", { p_group_by: "building", p_period: "month" }),
+    supabase.from("v_extinguisher_overview").select("*").eq("status", "active"),
+  ]);
 
   // 건물별 점검률은 건물명 가나다순으로 정렬해 표시한다.
   const rateRowsSorted = [...(rateRows ?? [])].sort((a, b) =>
     (a.group_name ?? "").localeCompare(b.group_name ?? "", "ko"),
   );
 
+  // 조치필요(이상+미조치) 소화기 목록
+  const actionNeeded = sortByAssetCode((overviewRows ?? []).filter((r) => isActionNeeded(r)));
+
   const summary = summaryRows?.[0] ?? {
     total_extinguishers: 0,
     inspected_this_month: 0,
     not_inspected_this_month: 0,
+    action_required: 0,
     due_soon: 0,
     expired: 0,
     recent_abnormal: 0,
@@ -49,26 +50,10 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>최근 이상점검</CardTitle>
+            <CardTitle>조치 필요 소화기 ({actionNeeded.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            {!abnormalInspections || abnormalInspections.length === 0 ? (
-              <p className="text-muted-foreground text-sm">최근 이상점검 이력이 없습니다.</p>
-            ) : (
-              <ul className="flex flex-col gap-2 text-sm">
-                {abnormalInspections.map((row) => (
-                  <li key={row.id} className="flex flex-col border-b pb-2 last:border-0">
-                    <span className="font-mono font-medium">
-                      {(row.extinguishers as unknown as { asset_code: string } | null)?.asset_code ?? "-"}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {new Date(row.inspected_at).toLocaleString("ko-KR")}
-                      {row.memo ? ` · ${row.memo}` : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ActionRequiredList rows={actionNeeded} />
           </CardContent>
         </Card>
       </div>
