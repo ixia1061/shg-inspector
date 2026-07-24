@@ -38,6 +38,12 @@ export interface Database {
         Update: Partial<{ user_id: string; site_id: string }>;
         Relationships: [];
       };
+      user_parts: {
+        Row: { user_id: string; part_id: string };
+        Insert: { user_id: string; part_id: string };
+        Update: Partial<{ user_id: string; part_id: string }>;
+        Relationships: [];
+      };
       sites: {
         Row: {
           id: string;
@@ -428,6 +434,7 @@ export interface Database {
       };
       is_admin: { Args: Record<string, never>; Returns: boolean };
       has_site_access: { Args: { p_site_id: string }; Returns: boolean };
+      has_part_access: { Args: { p_part_id: string }; Returns: boolean };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
