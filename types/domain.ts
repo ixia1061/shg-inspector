@@ -14,6 +14,7 @@ export type Building = Database["public"]["Tables"]["buildings"]["Row"];
 export type Floor = Database["public"]["Tables"]["floors"]["Row"];
 export type Zone = Database["public"]["Tables"]["zones"]["Row"];
 export type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
+export type ManagementPart = Database["public"]["Tables"]["management_parts"]["Row"];
 export type ExtinguisherType = Database["public"]["Tables"]["extinguisher_types"]["Row"];
 export type Extinguisher = Database["public"]["Tables"]["extinguishers"]["Row"];
 export type AssetCodeHistoryEntry = Database["public"]["Tables"]["asset_code_history"]["Row"];

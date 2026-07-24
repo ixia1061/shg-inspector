@@ -6,12 +6,14 @@ export default async function NewExtinguisherPage() {
 
   const [
     { data: sites },
+    { data: parts },
     { data: buildings },
     { data: floors },
     { data: vehicles },
     { data: types },
   ] = await Promise.all([
     supabase.from("sites").select("*").order("name"),
+    supabase.from("management_parts").select("*").order("order_index"),
     supabase.from("buildings").select("*").order("building_no"),
     supabase.from("floors").select("*").order("order_index"),
     supabase.from("vehicles").select("*").order("vehicle_no"),
@@ -23,6 +25,7 @@ export default async function NewExtinguisherPage() {
       <h1 className="text-2xl font-bold">소화기 등록</h1>
       <ExtinguisherForm
         sites={sites ?? []}
+        parts={parts ?? []}
         buildings={buildings ?? []}
         floors={floors ?? []}
         vehicles={vehicles ?? []}

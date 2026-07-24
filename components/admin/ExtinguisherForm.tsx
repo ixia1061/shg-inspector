@@ -31,6 +31,7 @@ import type {
   Extinguisher,
   ExtinguisherType,
   Floor,
+  ManagementPart,
   Site,
   Vehicle,
 } from "@/types/domain";
@@ -38,6 +39,7 @@ import type { Database } from "@/types/database.types";
 
 interface ExtinguisherFormProps {
   sites: Site[];
+  parts: ManagementPart[];
   buildings: Building[];
   floors: Floor[];
   vehicles: Vehicle[];
@@ -47,6 +49,7 @@ interface ExtinguisherFormProps {
 
 export function ExtinguisherForm({
   sites,
+  parts,
   buildings,
   floors,
   vehicles,
@@ -79,6 +82,7 @@ export function ExtinguisherForm({
     resolver: zodResolver(extinguisherSchema),
     defaultValues: {
       location_type: extinguisher?.location_type ?? "BUILDING",
+      part_id: extinguisher?.part_id ?? "",
       floor_id: extinguisher?.floor_id ?? undefined,
       zone_id: extinguisher?.zone_id ?? undefined,
       vehicle_id: extinguisher?.vehicle_id ?? undefined,
@@ -97,6 +101,10 @@ export function ExtinguisherForm({
   const locationType = watch("location_type");
   const noUsefulLife = watch("useful_life_years") === null;
 
+  const filteredParts = useMemo(
+    () => parts.filter((p) => p.site_id === siteId),
+    [parts, siteId]
+  );
   const filteredBuildings = useMemo(
     () => buildings.filter((b) => b.site_id === siteId),
     [buildings, siteId]
@@ -112,8 +120,12 @@ export function ExtinguisherForm({
 
   // Base UI Select는 items를 명시적으로 줘야 트리거에 라벨을 보여준다(안 주면 원시 value가 보임).
   const siteItems = useMemo(
-    () => sites.map((s) => ({ value: s.id, label: `${s.org_code} — ${s.name}` })),
+    () => sites.map((s) => ({ value: s.id, label: s.name })),
     [sites]
+  );
+  const partItems = useMemo(
+    () => filteredParts.map((p) => ({ value: p.id, label: `${p.name} (${p.code})` })),
+    [filteredParts]
   );
   const buildingItems = useMemo(
     () =>
@@ -151,6 +163,7 @@ export function ExtinguisherForm({
       values.location_type === "BUILDING"
         ? {
             location_type: "BUILDING",
+            part_id: values.part_id,
             floor_id: values.floor_id,
             zone_id: values.zone_id || null,
             vehicle_id: null,
@@ -163,6 +176,7 @@ export function ExtinguisherForm({
           }
         : {
             location_type: "VEHICLE",
+            part_id: values.part_id,
             floor_id: null,
             zone_id: null,
             vehicle_id: values.vehicle_id,
@@ -233,6 +247,7 @@ export function ExtinguisherForm({
               if (!v) return;
               setSiteId(v);
               setBuildingId("");
+              setValue("part_id", "");
               setValue("floor_id", undefined);
               setValue("zone_id", undefined);
               setValue("vehicle_id", undefined);
@@ -244,11 +259,37 @@ export function ExtinguisherForm({
             <SelectContent>
               {sites.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
-                  {s.org_code} — {s.name}
+                  {s.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+        </Field>
+
+        <Field data-invalid={!!errors.part_id}>
+          <FieldLabel>관리파트</FieldLabel>
+          <Select
+            items={partItems}
+            value={watch("part_id") ?? ""}
+            onValueChange={(v) => v && setValue("part_id", v, { shouldValidate: !!errors.part_id })}
+            disabled={!siteId}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={siteId ? "관리파트 선택" : "사업장을 먼저 선택"} />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredParts.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name} ({p.code})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs">
+            관리번호 앞자리가 됩니다(예: {filteredParts[0]?.code ?? "공사"}-1-1-1). 파트가 없으면
+            사업장 관리에서 먼저 추가하세요.
+          </p>
+          <FieldError errors={errors.part_id ? [errors.part_id] : undefined} />
         </Field>
 
         <Field>

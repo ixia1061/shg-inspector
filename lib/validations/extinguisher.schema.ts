@@ -5,6 +5,8 @@ import { z } from "zod";
 export const extinguisherSchema = z
   .object({
     location_type: z.enum(["BUILDING", "VEHICLE"]),
+    // 관리번호 prefix를 결정하는 관리파트. 필수.
+    part_id: z.string().uuid("관리파트를 선택하세요"),
     floor_id: z.string().uuid().optional().nullable(),
     zone_id: z.string().uuid().optional().nullable(),
     vehicle_id: z.string().uuid().optional().nullable(),
