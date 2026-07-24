@@ -49,6 +49,17 @@ export function PartFormDialog({
   });
 
   async function onSubmit(values: PartFormValues) {
+    // 코드를 실제로 바꾸면 이 파트 소속 소화기의 관리번호가 일괄 재계산되므로,
+    // QR 재출력 안내 후 한 번 더 확인받는다. (이름만 바꾸는 경우는 관리번호 불변이라 그냥 저장)
+    if (part && values.code !== part.code) {
+      const ok = confirm(
+        `파트 코드를 '${part.code}' → '${values.code}'(으)로 변경하면\n` +
+          `이 파트에 속한 모든 소화기의 관리번호가 '${values.code}-...'로 일괄 변경됩니다.\n\n` +
+          `이미 부착된 QR 라벨을 다시 출력해야 합니다. 계속하시겠습니까?`
+      );
+      if (!ok) return;
+    }
+
     setSubmitting(true);
     const supabase = createClient();
     const { error } = isEdit
