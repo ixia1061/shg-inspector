@@ -8,6 +8,7 @@ import { InspectionHistoryTimeline } from "@/components/admin/InspectionHistoryT
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getWritablePartIds } from "@/lib/auth";
 import { formatShortLocation } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,6 +41,7 @@ export default async function ExtinguisherDetailPage({
     { data: floors },
     { data: vehicles },
     { data: types },
+    writableParts,
   ] = await Promise.all([
     supabase.from("sites").select("*").order("name"),
     supabase.from("management_parts").select("*").order("order_index"),
@@ -47,7 +49,13 @@ export default async function ExtinguisherDetailPage({
     supabase.from("floors").select("*").order("order_index"),
     supabase.from("vehicles").select("*").order("vehicle_no"),
     supabase.from("extinguisher_types").select("*").order("name"),
+    getWritablePartIds(),
   ]);
+
+  // 권한 범위 파트만 노출하되, 현재 소화기의 파트는 항상 포함(수정 화면에서 선택 유지).
+  const visibleParts = writableParts
+    ? (parts ?? []).filter((p) => writableParts.has(p.id) || p.id === extinguisher?.part_id)
+    : (parts ?? []);
 
   const { data: inspections } = await supabase
     .from("inspections")
@@ -127,7 +135,7 @@ export default async function ExtinguisherDetailPage({
             {extinguisher && (
               <ExtinguisherForm
                 sites={sites ?? []}
-                parts={parts ?? []}
+                parts={visibleParts}
                 buildings={buildings ?? []}
                 floors={floors ?? []}
                 vehicles={vehicles ?? []}
