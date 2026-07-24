@@ -38,10 +38,17 @@ export interface Database {
         Update: Partial<{ user_id: string; site_id: string }>;
         Relationships: [];
       };
+      user_parts: {
+        Row: { user_id: string; part_id: string };
+        Insert: { user_id: string; part_id: string };
+        Update: Partial<{ user_id: string; part_id: string }>;
+        Relationships: [];
+      };
       sites: {
         Row: {
           id: string;
-          org_code: string;
+          // 관리번호 prefix는 관리파트(management_parts)로 이전됨. 기존 데이터 호환용으로 보존(신규 사업장은 null).
+          org_code: string | null;
           name: string;
           address: string | null;
           manager_name: string | null;
@@ -51,13 +58,32 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          org_code: string;
+          org_code?: string | null;
           name: string;
           address?: string | null;
           manager_name?: string | null;
           manager_phone?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["sites"]["Insert"]>;
+        Relationships: [];
+      };
+      management_parts: {
+        Row: {
+          id: string;
+          site_id: string;
+          code: string;
+          name: string;
+          order_index: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          site_id: string;
+          code: string;
+          name: string;
+          order_index?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["management_parts"]["Insert"]>;
         Relationships: [];
       };
       buildings: {
@@ -154,6 +180,8 @@ export interface Database {
           vehicle_id: string | null;
           extinguisher_no: number;
           asset_code: string;
+          // 트리거가 비어 있으면 기본 파트로 채우므로 실제로는 항상 채워진다(전환기 nullable).
+          part_id: string | null;
           extinguisher_type_id: string;
           manufacture_date: string;
           useful_life_years: number | null;
@@ -174,6 +202,8 @@ export interface Database {
           extinguisher_no?: number;
           // 서버(트리거)가 항상 재계산하므로 클라이언트에서 지정할 필요 없음.
           asset_code?: string;
+          // 관리번호 prefix를 결정하는 관리파트. 비우면 트리거가 사업장 기본 파트로 채운다.
+          part_id?: string | null;
           extinguisher_type_id: string;
           manufacture_date: string;
           useful_life_years: number | null;
@@ -285,7 +315,7 @@ export interface Database {
           extinguisher_type_name: string;
           site_id: string;
           site_name: string;
-          org_code: string;
+          org_code: string | null;
           building_id: string | null;
           building_name: string | null;
           building_no: number | null;
@@ -314,6 +344,9 @@ export interface Database {
           last_action_note: string | null;
           last_action_resolved_at: string | null;
           last_etc_ok: boolean | null;
+          part_id: string;
+          part_code: string;
+          part_name: string;
         };
         Relationships: [];
       };
@@ -336,7 +369,7 @@ export interface Database {
           extinguisher_type_name: string;
           site_id: string;
           site_name: string;
-          org_code: string;
+          org_code: string | null;
           building_id: string | null;
           building_name: string | null;
           building_no: number | null;
@@ -354,6 +387,9 @@ export interface Database {
           last_inspector_id: string | null;
           vehicle_department: string | null;
           serial_no: string | null;
+          part_id: string;
+          part_code: string;
+          part_name: string;
         };
         Relationships: [];
       };
@@ -398,6 +434,7 @@ export interface Database {
       };
       is_admin: { Args: Record<string, never>; Returns: boolean };
       has_site_access: { Args: { p_site_id: string }; Returns: boolean };
+      has_part_access: { Args: { p_part_id: string }; Returns: boolean };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

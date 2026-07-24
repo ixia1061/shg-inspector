@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { BuildingFormDialog } from "@/components/admin/BuildingFormDialog";
 import { FloorFormDialog } from "@/components/admin/FloorFormDialog";
 import { FloorList } from "@/components/admin/FloorList";
+import { PartFormDialog } from "@/components/admin/PartFormDialog";
 import { SiteFormDialog } from "@/components/admin/SiteFormDialog";
 import { VehicleFormDialog } from "@/components/admin/VehicleFormDialog";
 import { getCurrentUserRole } from "@/lib/auth";
@@ -24,6 +25,12 @@ export default async function SiteDetailPage({
 
   // 사업장 수정/삭제는 시스템관리자만. 건물 이하는 일반 관리자도 가능.
   const canManageSite = isSuperAdminRole(await getCurrentUserRole());
+
+  const { data: parts } = await supabase
+    .from("management_parts")
+    .select("*")
+    .eq("site_id", siteId)
+    .order("order_index");
 
   const { data: buildings } = await supabase
     .from("buildings")
@@ -57,15 +64,45 @@ export default async function SiteDetailPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">
-            {site.name} <span className="text-muted-foreground text-base font-normal">({site.org_code})</span>
-          </h1>
+          <h1 className="text-2xl font-bold">{site.name}</h1>
           <p className="text-muted-foreground text-sm">{site.address}</p>
         </div>
         <div className="flex gap-2">
           {canManageSite && <SiteFormDialog site={site} />}
           <BuildingFormDialog siteId={site.id} nextBuildingNo={nextBuildingNo} />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-lg border p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">관리파트</h2>
+            <p className="text-muted-foreground text-sm">
+              관리번호 앞자리(예: 공사-1-1-1)를 결정합니다. 소화기 등록 시 파트를 선택합니다.
+            </p>
+          </div>
+          {canManageSite && (
+            <PartFormDialog siteId={site.id} nextOrderIndex={(parts ?? []).length} />
+          )}
+        </div>
+        {(parts ?? []).length ? (
+          <ul className="flex flex-wrap gap-2">
+            {(parts ?? []).map((part) => (
+              <li
+                key={part.id}
+                className="bg-muted flex items-center gap-1 rounded px-3 py-2 text-sm"
+              >
+                <span className="font-medium">{part.name}</span>
+                <span className="text-muted-foreground font-mono text-xs">({part.code})</span>
+                {canManageSite && <PartFormDialog siteId={site.id} part={part} />}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            등록된 관리파트가 없습니다. {canManageSite ? "'관리파트 추가'로 만들어주세요." : ""}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-4">

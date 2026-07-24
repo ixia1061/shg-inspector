@@ -15,11 +15,17 @@ import { isSuperAdminRole } from "@/lib/utils/roles";
 
 export default async function SitesPage() {
   const supabase = await createClient();
-  const [{ data: sites }, role] = await Promise.all([
+  const [{ data: sites }, { data: parts }, role] = await Promise.all([
     supabase.from("sites").select("*").order("name"),
+    supabase.from("management_parts").select("site_id, code, name").order("order_index"),
     getCurrentUserRole(),
   ]);
   const canManageSites = isSuperAdminRole(role);
+
+  const partCodesBySite = (parts ?? []).reduce<Record<string, string[]>>((acc, p) => {
+    (acc[p.site_id] ??= []).push(p.code);
+    return acc;
+  }, {});
 
   return (
     <div className="flex flex-col gap-6">
@@ -35,8 +41,8 @@ export default async function SitesPage() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>코드</TableHead>
             <TableHead>사업장명</TableHead>
+            <TableHead>관리파트</TableHead>
             <TableHead>주소</TableHead>
             <TableHead>담당자</TableHead>
             <TableHead>연락처</TableHead>
@@ -46,11 +52,13 @@ export default async function SitesPage() {
           {sites?.length ? (
             sites.map((site) => (
               <TableRow key={site.id}>
-                <TableCell className="text-muted-foreground">{site.org_code}</TableCell>
                 <TableCell>
                   <Link href={`/sites/${site.id}`} className="font-medium hover:underline">
                     {site.name}
                   </Link>
+                </TableCell>
+                <TableCell className="text-muted-foreground font-mono text-xs">
+                  {(partCodesBySite[site.id] ?? []).join(", ") || "-"}
                 </TableCell>
                 <TableCell>{site.address ?? "-"}</TableCell>
                 <TableCell>{site.manager_name ?? "-"}</TableCell>

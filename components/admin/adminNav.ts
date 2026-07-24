@@ -9,6 +9,7 @@ import {
   Printer,
   QrCode,
   ShieldAlert,
+  UserCheck,
   Users,
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/photos", label: "사진 관리", icon: Images },
   { href: "/stats", label: "통계", icon: Gauge },
   { href: "/labels", label: "QR Code 관리", icon: Printer },
+  { href: "/assignments", label: "점검자 배정", icon: UserCheck },
   { href: "/users", label: "사용자 관리", icon: Users, superAdminOnly: true },
   { href: "/help", label: "도움말", icon: HelpCircle },
 ];

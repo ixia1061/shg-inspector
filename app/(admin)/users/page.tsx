@@ -26,22 +26,41 @@ export default async function UsersPage() {
     redirect("/dashboard");
   }
 
-  const [{ data: profiles }, { data: sites }, { data: userSites }] = await Promise.all([
-    supabase.from("profiles").select("*").order("created_at"),
-    supabase.from("sites").select("*").order("name"),
-    supabase.from("user_sites").select("user_id, site_id"),
-  ]);
+  const [{ data: profiles }, { data: sites }, { data: parts }, { data: userSites }, { data: userParts }] =
+    await Promise.all([
+      supabase.from("profiles").select("*").order("created_at"),
+      supabase.from("sites").select("*").order("name"),
+      supabase.from("management_parts").select("*").order("order_index"),
+      supabase.from("user_sites").select("user_id, site_id"),
+      supabase.from("user_parts").select("user_id, part_id"),
+    ]);
 
   const siteNameById = new Map((sites ?? []).map((s) => [s.id, s.name]));
-  const siteNamesByUser = (userSites ?? []).reduce<Record<string, string[]>>((acc, us) => {
-    const name = siteNameById.get(us.site_id);
-    if (name) (acc[us.user_id] ??= []).push(name);
-    return acc;
-  }, {});
+  const partById = new Map((parts ?? []).map((p) => [p.id, p]));
+
+  // 사업장 "전체" 배정
   const siteIdsByUser = (userSites ?? []).reduce<Record<string, string[]>>((acc, us) => {
     (acc[us.user_id] ??= []).push(us.site_id);
     return acc;
   }, {});
+  // 특정 파트 배정
+  const partIdsByUser = (userParts ?? []).reduce<Record<string, string[]>>((acc, up) => {
+    (acc[up.user_id] ??= []).push(up.part_id);
+    return acc;
+  }, {});
+
+  // 화면 표기: "무안공항 전체", "상주업체 기상(기상)" 등
+  function scopeLabelsFor(userId: string): string[] {
+    const labels: string[] = [];
+    for (const siteId of siteIdsByUser[userId] ?? []) {
+      labels.push(`${siteNameById.get(siteId) ?? "?"} 전체`);
+    }
+    for (const partId of partIdsByUser[userId] ?? []) {
+      const part = partById.get(partId);
+      if (part) labels.push(`${siteNameById.get(part.site_id) ?? "?"} ${part.name}`);
+    }
+    return labels;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -68,9 +87,11 @@ export default async function UsersPage() {
                 name={p.name}
                 role={p.role}
                 isActive={p.is_active}
-                siteNames={siteNamesByUser[p.id] ?? []}
+                scopeLabels={scopeLabelsFor(p.id)}
                 sites={sites ?? []}
+                parts={parts ?? []}
                 assignedSiteIds={siteIdsByUser[p.id] ?? []}
+                assignedPartIds={partIdsByUser[p.id] ?? []}
               />
             ))
           ) : (

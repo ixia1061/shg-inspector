@@ -45,7 +45,7 @@ app/
   (auth)/login/            로그인
   (admin)/                 관리자 (사이드바 레이아웃, role=admin/super_admin 가드)
     dashboard/             대시보드 (월간 점검 집계)
-    sites/[siteId]/        사업장·건물·층·구역·차량 관리
+    sites/[siteId]/        사업장·관리파트·건물·층·구역·차량 관리
     extinguishers/         소화기 목록/등록/상세/라벨
     labels/                QR Code 관리 (검색·다중선택·일괄 인쇄, force-dynamic)
     inventory/             수량 현황 (건물×종류 교차표)
@@ -53,7 +53,8 @@ app/
     lifecycle/             내용연수 관리
     photos/                점검 사진 관리 (조회·삭제·ZIP 다운로드)
     stats/                 통계
-    users/                 사용자 관리 (시스템관리자 전용)
+    assignments/           점검자 배정 (관리자가 자기 파트를 점검자에게 부여)
+    users/                 사용자 관리 (시스템관리자 전용, 사업장 전체/파트 배정)
   (inspector)/             점검자 (모바일 레이아웃)
     scan/                  QR 스캐너 (첫 화면)
     inspect/[assetCode]/   점검 체크리스트 (QR 스캔 통과 필요)
@@ -88,14 +89,16 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 | 테이블 | 요약 |
 |---|---|
 | `profiles` | auth.users 확장. `role`(super_admin/admin/inspector), `is_active`, `name` |
-| `user_sites` | 점검자–사업장 배정 (담당 사업장만 접근) |
-| `sites` | 사업장. `org_code`(관리기관 코드) |
-| `buildings` | 건물. `site_id`, `building_no` |
-| `floors` | 층. `building_id`, `floor_code`, `order_index` |
+| `user_sites` | 사용자–**사업장 전체** 배정 (그 사업장의 현재·미래 모든 파트 접근) |
+| `user_parts` | 사용자–**특정 관리파트** 배정 (그 파트만 접근). 관리자가 점검자에게 부여 가능 |
+| `sites` | 사업장. `org_code`(nullable, **레거시**: 관리번호 prefix는 이제 `management_parts`로 이전) |
+| `management_parts` | **관리파트**. `site_id`, `code`(관리번호 앞자리, **전체 유일**), `name`, `order_index`. 사업장 하위, 소화기 등록 시 선택 |
+| `buildings` | 건물. `site_id`, `building_no`. **파트 공용** |
+| `floors` | 층. `building_id`, `floor_code`, `order_index`. **파트 공용** |
 | `zones` | 구역(선택). `floor_id` |
 | `vehicles` | 차량. **건물 소속**(`building_id`), `plate_no`(번호판) |
 | `extinguisher_types` | 소화기 종류. `default_useful_life_years`(nullable — CO2/할론 등 내용연수 없음) |
-| `extinguishers` | 소화기. `location_type`(BUILDING/VEHICLE), `asset_code`(UNIQUE, 자동생성), `manufacture_date`, `useful_life_years`(nullable), `status` |
+| `extinguishers` | 소화기. `location_type`(BUILDING/VEHICLE), **`part_id`**(관리파트 → 관리번호 prefix), `asset_code`(UNIQUE, 자동생성), `manufacture_date`, `useful_life_years`(nullable), `status` |
 | `asset_code_history` | 관리번호 변경 이력 (QR 재발급 없이 옛 코드→최신 소화기 연결) |
 | `inspections` | 점검 기록. **append-only**. `inspector_id`, 4개 체크항목, `overall_result`, `inspected_at` |
 | `inspection_photos` | 점검 사진 메타. 소화기당 최신 5장만 유지 |
@@ -108,16 +111,17 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 - `fn_submit_inspection(jsonb)` — 점검+사진 원자적 저장 (온라인/오프라인 동기화 공용).
 - `fn_find_extinguisher_id_by_code(text)` — 관리번호(현재/과거)로 소화기 id 조회.
 - `fn_extinguisher_status`, `fn_kst_today()` — 내용연수 상태(KST 기준) 계산.
-- `is_admin()`, `is_super_admin()`, `has_site_access()` — RLS 보안 정의자 헬퍼.
+- `is_admin()`, `is_super_admin()`, `has_site_access()`, `has_part_access()`, `fn_extinguisher_part_id()` — RLS 보안 정의자 헬퍼. **소화기·점검은 파트 스코프(`has_part_access`), 건물/층 등 구조는 사업장 스코프(`has_site_access`).**
 
 **날짜는 항상 KST(Asia/Seoul) 기준** — `fn_kst_today()`를 쓴다. (UTC로 계산하면 00:00~09:00 사이 하루 오차 발생.)
 
 ## QR 관리번호 규칙
 
-- **건물 소화기**: `{관리기관}-{건물번호}-{층코드}-{소화기번호}` (예: `공사-1-1-1`)
-- **차량 소화기**: `{관리기관}-{건물번호}-차-{일련번호}` (예: `공사-1-차-1`) — 차량은 건물 소속, 층 대신 `차` 사용
-- `asset_code`는 **UNIQUE**, 컴포넌트 컬럼(org_code/building_no/floor_code/extinguisher_no)과 함께 저장.
-- 관리번호는 **트리거로 자동 생성**(`pg_advisory_xact_lock`으로 번호 채번 동시성 보장). 상위 코드 변경 시 하위 소화기 번호를 연쇄 재계산.
+- **건물 소화기**: `{관리파트코드}-{건물번호}-{층코드}-{소화기번호}` (예: `공사-1-1-1`, `소방-1-1-1`)
+- **차량 소화기**: `{관리파트코드}-{건물번호}-차-{일련번호}` (예: `공사-1-차-1`) — 차량은 건물 소속, 층 대신 `차` 사용
+- **prefix는 사업장이 아니라 `management_parts.code`**(2026-07-25 이전). 건물/층은 파트 공용이고, **파트가 다르면 소화기 번호는 1부터 독립 채번**(스코프 = 층+파트 / 건물+파트). `asset_code`는 **UNIQUE**.
+- 소화기 등록 시 `part_id` 선택. **비우면 트리거가 사업장 기본 파트로 채움**(구버전 코드 전환 안전).
+- 관리번호는 **트리거로 자동 생성**(`pg_advisory_xact_lock`으로 번호 채번 동시성 보장). **파트 코드 변경 시** 소속 소화기 관리번호를 연쇄 재계산(파트 이동도 동일).
 - **QR은 재발급하지 않는다.** 위치 이동 등으로 관리번호가 바뀌면 옛 코드를 `asset_code_history`에 남겨 옛 QR도 최신 소화기로 연결.
 - **층코드는 확장 가능**: 0=지하, R=옥상 등. `차`는 차량 전용 예약어(층 테이블에서 사용 금지).
 - QR에는 `asset_code`(또는 `/inspect/{asset_code}` URL)를 인코딩한다.
@@ -133,7 +137,8 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
   - `super_admin`(시스템관리자): 전체 권한. **사업장 등록·사용자 추가·역할 변경·담당 사업장 배정 독점**. 삭제·강등·비활성 불가(보호). 모든 사업장 접근.
   - `admin`(관리자): **배정된 담당 사업장 범위 내에서만** 건물/층/구역/차량/소화기·점검·대시보드·통계 관리. 사업장 등록/수정/삭제와 사용자 관리는 불가. QR 없이 목록에서 점검 가능(관리자 영역 모달).
   - `inspector`(점검자): 배정된 사업장만 조회. **QR 스캔을 통해서만** 점검. (관리자의 QR 없는 점검도 점검자에게 완료로 반영.)
-  - **스코핑 원리**: `has_site_access(site) = is_super_admin() OR user_sites 배정`. 뷰/RPC가 모두 `security invoker`라 이 함수만으로 대시보드·목록·재고까지 배정 사업장으로 자동 한정됨.
+  - **스코핑 원리**: `has_site_access(site) = is_super_admin() OR user_sites(site) OR user_parts 중 그 site 파트`. `has_part_access(part) = is_super_admin() OR user_sites(part.site) OR user_parts(part)`. 소화기/점검 RLS는 `has_part_access(part_id)`, 건물/층 등 구조는 `has_site_access`. 뷰/RPC가 모두 `security invoker`라 자동 한정. **파트 배정(user_parts)이 없으면 user_sites로 귀결돼 사업장 단위와 동일.**
+  - **권한 배정**: 시스템관리자는 사용자에게 **사업장 전체(user_sites) 또는 특정 파트(user_parts)** 배정(사용자 관리). 관리자는 **자기 맡은 파트**를 점검자에게 부여(`/assignments`, RLS로 경계 강제).
 - **직접 DB 접속**(마이그레이션/스크립트): 직접 호스트는 IPv6 전용이라 접속 불가할 수 있음 → **Session Pooler**(`aws-1-ap-northeast-2.pooler.supabase.com:5432`, user `postgres.zbdvuxzoahusdrpniuwz`, database `postgres`, `ssl.rejectUnauthorized=false`) 사용. DDL(테이블/뷰/함수 생성)은 service_role(REST)로는 불가 → 반드시 이 pooler로 접속. DB 비밀번호는 문서에 적지 않음(사용 시 사용자에게 요청).
 
 ## Vercel 배포 정보
@@ -194,6 +199,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
+- **2026-07-25** — **관리파트(management_parts) 도입 — 관리번호 prefix·권한을 사업장에서 분리(2단계).** 한 사업장에서 소화기를 관리하는 조직이 여러 개(무안=공사/소방, 상주=기상/AQ/생명푸드/프리존/코드, 남부공항서비스=기계/전기/통신 예정)로 늘 수 있게, 관리번호 앞자리를 사업장(`org_code`)이 아닌 **사업장 하위 "관리파트"의 `code`**로 옮김. 건물/층은 파트 공용, **파트가 다르면 소화기 번호는 1부터 독립 채번**(스코프=층+파트/건물+파트). **1단계**(`20260725090000`): `management_parts` 테이블, `extinguishers.part_id`(등록 폼에서 선택, 비우면 트리거가 사업장 기본 파트로 채움), 트리거 재작성(파트 코드·채번), 파트 코드 변경 캐스케이드, 뷰에 `part_id/part_code/part_name`, 사업장 상세에 관리파트 CRUD(`PartFormDialog`), 사업장 폼에서 관리기관 코드 제거(`sites.org_code` nullable). **기존 소화기 479개는 각 사업장 org_code(공사/상주)를 기본 파트로 전환 → 관리번호(부착 QR) 불변.** **2단계**(`20260725100000`): `user_parts`(특정 파트 배정) + `has_part_access`/`fn_extinguisher_part_id`, `has_site_access`에 파트 배정 포함. 소화기/점검/사진/이력/조치 RLS를 **파트 스코프**로 교체(파트 배정 없으면 user_sites로 귀결돼 하위호환). 시스템관리자 권한 배정(`UserSitesDialog`)에 **사업장 전체/특정 파트** 선택, 관리자→점검자 **파트별 점검권한 부여** 페이지 `/assignments`(`updateInspectorPartAction`, RLS로 관리자 경계·대상=점검자 강제). **서울 운영 DB 적용 완료.** 두 마이그레이션 모두 구버전 코드와 호환(트리거 기본 파트 채움 + `select("*")` 여분 컬럼 무시).
 - **2026-07-23** — **점검 체크항목에 "기타사항 정상"(etc_ok) 추가(5번째).** 압력/봉인/외관/설치로 분류되지 않는 그 외 이상을 표시할 곳이 없어 추가. 체크 해제 시 이상(불량) 내용에 상세 기입 → 불량항목에 "기타 불량"으로 표기(대장·조치필요/완료 목록 공용). `inspections.etc_ok`(not null default true) + `fn_submit_inspection`(오프라인 큐 대비 `coalesce(...,true)`) + 뷰 `last_etc_ok` 노출(마이그레이션 `20260723100000`, 서울 운영 DB 적용 완료). `computeOverallResult` 5개 항목으로 확장, 오프라인 Outbox(`OutboxInspection`)·양쪽 점검 화면(`InspectionChecklist`·`AdminInspectDialog`)에 반영. 기존 점검은 기타사항 정상으로 간주.
 - **2026-07-23** — **점검현황에 "조치완료" 탭 추가(이번달 조치 내역 확인).** 조치필요 소화기를 조치완료하면 이제 별도 **조치완료** 탭에서 불량항목·불량내용·**조치내용**·조치일을 확인할 수 있음(읽기 전용, `ResolvedActionList`). 점검완료 탭은 **정상 점검완료만**(`isNormalDone`)으로 분리 → 탭이 `미점검/조치필요/조치완료/점검완료` 4개. **매달 1일 초기화는 자동** — 목록을 `inspected_this_month`(최근 점검이 이번달)로 gate하므로, 새 달에 점검이 시작되면 지난달 조치는 자연히 빠지고 그달 조치만 표시(DB 기록은 감사용으로 보존). `lib/utils/inspection.ts`에 `isActionResolved`/`isNormalDone` 추가. (점검률 집계 `isMonthDone`=정상+조치완료는 유지.)
 - **2026-07-23** — **이상사항 조치(조치필요→조치완료) 워크플로우 + 대장 불량내용/조치내용 분리.** ① 대장 Excel에서 비고(memo)가 "조치내용"으로 나가 혼동되던 것을 바로잡음 — 비고=**불량내용**으로 정착하고, 대장에 `불량항목`·`불량내용`(비고)·`조치내용`(별도)을 분리, `이번달점검(O/X)`을 `이번달상태(미점검/조치필요/완료)`로 변경. ② 이상으로 기록된 소화기는 **점검현황·대시보드에 "조치필요"** 로 분류되고, 관리자가 **조치내용을 입력하고 "조치완료"** 를 눌러야 이번달 **점검완료**로 집계(점검률·대시보드 완료 카운트 반영). 조치필요는 미완료로 취급 → `미점검/조치필요/점검완료` 3분류. 점검 기록은 append-only 유지, 조치는 별도 `inspection_actions` 테이블에 append(관리자 전용 RLS, 담당 사업장 범위 한정). 신규: 마이그레이션 `20260723090000_inspection_actions.sql`(테이블 + 뷰/`fn_dashboard_summary`/`fn_inspection_rate` 갱신), `app/actions/inspectionActions.ts`(`resolveInspectionAction`), `lib/utils/inspection.ts`(불량항목/완료판정 공용), `components/admin/ResolveActionDialog.tsx`·`ActionRequiredList.tsx`. 점검 입력의 "비고" 라벨을 "이상(불량) 내용"으로 명확화. **서울 운영 DB(`zbdvuxzoahusdrpniuwz`) 적용 완료.** (작업 중 CLAUDE.md의 옛 뭄바이 ref가 낡아 있던 것을 서울 DB로 정정.)

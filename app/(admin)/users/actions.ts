@@ -75,7 +75,11 @@ export async function updateUserRoleAction(userId: string, role: UserRole) {
   revalidatePath("/users");
 }
 
-export async function updateUserSitesAction(userId: string, siteIds: string[]) {
+export async function updateUserSitesAction(
+  userId: string,
+  siteIds: string[],
+  partIds: string[] = []
+) {
   await assertSuperAdmin();
   const admin = createAdminClient();
 
@@ -84,12 +88,34 @@ export async function updateUserSitesAction(userId: string, siteIds: string[]) {
     throw new Error("시스템관리자는 모든 사업장에 접근하므로 배정이 필요 없습니다");
   }
 
+  // 사업장 "전체" 배정(user_sites)과 특정 파트 배정(user_parts)을 함께 교체한다.
+  // 전체 배정된 사업장의 파트는 중복이므로 제거한다.
+  let effectiveParts: string[] = [];
+  if (partIds.length > 0 && siteIds.length > 0) {
+    const { data: parts } = await admin
+      .from("management_parts")
+      .select("id, site_id")
+      .in("id", partIds);
+    const wholeSites = new Set(siteIds);
+    effectiveParts = (parts ?? [])
+      .filter((p) => !wholeSites.has(p.site_id))
+      .map((p) => p.id);
+  } else {
+    effectiveParts = partIds;
+  }
+
   // 기존 배정을 전량 교체
   await admin.from("user_sites").delete().eq("user_id", userId);
+  await admin.from("user_parts").delete().eq("user_id", userId);
   if (siteIds.length > 0) {
     await admin
       .from("user_sites")
       .insert(siteIds.map((site_id) => ({ user_id: userId, site_id })));
+  }
+  if (effectiveParts.length > 0) {
+    await admin
+      .from("user_parts")
+      .insert(effectiveParts.map((part_id) => ({ user_id: userId, part_id })));
   }
   revalidatePath("/users");
 }

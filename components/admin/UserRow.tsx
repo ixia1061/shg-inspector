@@ -20,24 +20,28 @@ import {
 import { TableCell, TableRow } from "@/components/ui/table";
 import { UserSitesDialog } from "@/components/admin/UserSitesDialog";
 import { ASSIGNABLE_ROLE_ITEMS, ROLE_LABELS } from "@/lib/utils/roles";
-import type { Site, UserRole } from "@/types/domain";
+import type { ManagementPart, Site, UserRole } from "@/types/domain";
 
 export function UserRow({
   id,
   name,
   role,
   isActive,
-  siteNames,
+  scopeLabels,
   sites,
+  parts,
   assignedSiteIds,
+  assignedPartIds,
 }: {
   id: string;
   name: string;
   role: UserRole;
   isActive: boolean;
-  siteNames: string[];
+  scopeLabels: string[];
   sites: Site[];
+  parts: ManagementPart[];
   assignedSiteIds: string[];
+  assignedPartIds: string[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -120,12 +124,14 @@ export function UserRow({
           <span>전체 (시스템관리자)</span>
         ) : (
           <div className="flex flex-col items-start gap-1">
-            <span>{siteNames.length ? siteNames.join(", ") : "미배정"}</span>
+            <span>{scopeLabels.length ? scopeLabels.join(", ") : "미배정"}</span>
             <UserSitesDialog
               userId={id}
               userName={name}
               sites={sites}
+              parts={parts}
               assignedSiteIds={assignedSiteIds}
+              assignedPartIds={assignedPartIds}
             />
           </div>
         )}

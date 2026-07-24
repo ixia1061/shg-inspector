@@ -37,7 +37,6 @@ export function SiteFormDialog({ site }: { site?: Site }) {
   } = useForm<SiteFormValues>({
     resolver: zodResolver(siteSchema),
     defaultValues: {
-      org_code: site?.org_code ?? "",
       name: site?.name ?? "",
       address: site?.address ?? "",
       manager_name: site?.manager_name ?? "",
@@ -99,21 +98,14 @@ export function SiteFormDialog({ site }: { site?: Site }) {
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
-            <Field data-invalid={!!errors.org_code}>
-              <FieldLabel htmlFor="org_code">관리기관 코드</FieldLabel>
-              <Input id="org_code" placeholder="예: 공사, 남부" {...register("org_code")} />
-              <FieldError errors={errors.org_code ? [errors.org_code] : undefined} />
-              {isEdit && (
-                <p className="text-muted-foreground text-xs">
-                  코드를 바꾸면 소속 소화기의 관리번호가 자동으로 갱신됩니다. 이미 부착된 QR
-                  라벨은 계속 사용할 수 있습니다.
-                </p>
-              )}
-            </Field>
             <Field data-invalid={!!errors.name}>
               <FieldLabel htmlFor="name">사업장명</FieldLabel>
               <Input id="name" {...register("name")} />
               <FieldError errors={errors.name ? [errors.name] : undefined} />
+              <p className="text-muted-foreground text-xs">
+                관리번호 앞자리는 사업장이 아니라 '관리파트'에서 설정합니다(사업장 등록 후 상세
+                화면에서 추가).
+              </p>
             </Field>
             <Field>
               <FieldLabel htmlFor="address">주소</FieldLabel>
