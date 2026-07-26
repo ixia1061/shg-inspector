@@ -52,6 +52,34 @@ export default async function AssignmentsPage() {
     return acc;
   }, {});
 
+  // 관리자가 다른 팀(자기 담당 범위 밖 사업장) 소속 점검자까지 이 화면에서 보고 권한을
+  // 줄 수 있던 문제를 막는다: 점검자 목록을 "이미 내 담당 범위와 겹치는 배정이 있거나,
+  // 아직 아무 데도 배정되지 않은(신규) 점검자"로만 좁힌다. 시스템관리자는 전체를 본다.
+  let visibleInspectors = inspectors ?? [];
+  if (!isSuper) {
+    const grantableSiteIds = new Set(grantableParts.map((p) => p.site_id));
+    const partSiteById = new Map((parts ?? []).map((p) => [p.id, p.site_id]));
+
+    const assignedSiteIdsByInspector = new Map<string, Set<string>>();
+    const addAssignment = (inspectorId: string, siteId: string | undefined) => {
+      if (!siteId) return;
+      let set = assignedSiteIdsByInspector.get(inspectorId);
+      if (!set) {
+        set = new Set();
+        assignedSiteIdsByInspector.set(inspectorId, set);
+      }
+      set.add(siteId);
+    };
+    for (const us of inspectorSites ?? []) addAssignment(us.user_id, us.site_id);
+    for (const up of userParts ?? []) addAssignment(up.user_id, partSiteById.get(up.part_id));
+
+    visibleInspectors = (inspectors ?? []).filter((ins) => {
+      const assignedSiteIds = assignedSiteIdsByInspector.get(ins.id);
+      if (!assignedSiteIds || assignedSiteIds.size === 0) return true; // 아직 미배정 → 누구나 배정 가능
+      return [...assignedSiteIds].some((id) => grantableSiteIds.has(id));
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -64,7 +92,7 @@ export default async function AssignmentsPage() {
       </div>
 
       <InspectorPartAssignments
-        inspectors={inspectors ?? []}
+        inspectors={visibleInspectors}
         grantableParts={grantableParts.map((p) => ({
           id: p.id,
           code: p.code,
