@@ -57,8 +57,9 @@ export default async function AssignmentsPage() {
       <div>
         <h1 className="text-2xl font-bold">점검자 배정</h1>
         <p className="text-muted-foreground text-sm">
-          점검자에게 내가 맡은 관리파트의 점검 권한을 부여합니다. 부여된 파트의 소화기만 그
-          점검자가 스캔·점검할 수 있습니다.
+          점검자에게 사업장 단위로 점검 권한을 부여합니다. 사업장을 체크하면 내가 맡은 그
+          사업장의 관리파트 전체가 한 번에 부여되어, 그 사업장 소화기를 점검자가 스캔·점검할
+          수 있습니다.
         </p>
       </div>
 
