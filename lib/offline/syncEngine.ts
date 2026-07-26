@@ -7,6 +7,7 @@ import {
   removeFromOutbox,
 } from "@/lib/offline/outbox";
 import type { OutboxInspection } from "@/lib/offline/db";
+import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 
 const PHOTO_BUCKET = "inspection-photos";
 
@@ -31,7 +32,7 @@ export async function flushOutbox(): Promise<{ synced: number; failed: number }>
         await removeFromOutbox(item.localId);
         synced += 1;
       } catch (err) {
-        await markFailed(item.localId, err instanceof Error ? err.message : String(err));
+        await markFailed(item.localId, friendlyErrorMessage(err));
         failed += 1;
       }
     }

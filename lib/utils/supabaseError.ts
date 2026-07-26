@@ -10,22 +10,30 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
     "이미 사용 중인 관리번호입니다. 관리번호 끝자리를 비우면 자동으로 다음 번호가 부여됩니다.",
 };
 
-export function friendlyErrorMessage(error: {
-  code?: string;
-  message: string;
-  details?: string | null;
-}): string {
-  if (error.code === "23505") {
+export function friendlyErrorMessage(error: unknown): string {
+  if (!error || typeof error !== "object") {
+    return String(error);
+  }
+  const err = error as { code?: string; message?: string; details?: string | null };
+
+  if (err.code === "23505") {
     for (const [constraint, message] of Object.entries(UNIQUE_CONSTRAINT_MESSAGES)) {
-      if (error.message.includes(constraint) || error.details?.includes(constraint)) {
+      if (err.message?.includes(constraint) || err.details?.includes(constraint)) {
         return message;
       }
     }
     return "이미 사용 중인 값입니다. 다른 값을 입력하세요.";
   }
-  if (error.code === "23503") {
+  if (err.code === "23503") {
     // extinguishers.floor_id / vehicle_id는 on delete restrict — 소화기가 남아있으면 삭제 불가
     return "이 항목에 소속된 소화기가 있어 삭제할 수 없습니다. 소화기를 먼저 이동하거나 삭제하세요.";
   }
-  return error.message;
+  if (err.code === "42501") {
+    // RLS 정책 위반 — 점검자/관리자가 배정되지 않은 파트의 소화기에 접근한 경우
+    return "이 소화기를 점검할 권한이 없습니다. 관리자에게 관리파트 배정을 요청하세요.";
+  }
+  if (typeof err.message === "string" && err.message) {
+    return err.message;
+  }
+  return "알 수 없는 오류가 발생했습니다.";
 }

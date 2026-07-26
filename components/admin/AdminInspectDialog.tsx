@@ -19,6 +19,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 import { watermarkImage } from "@/lib/utils/watermark";
 import { computeOverallResult } from "@/lib/validations/inspection.schema";
 import type { ExtinguisherOverview } from "@/types/domain";
@@ -138,7 +139,7 @@ export function AdminInspectDialog({
       router.refresh();
     } catch (err) {
       toast.error("점검 저장에 실패했습니다", {
-        description: err instanceof Error ? err.message : String(err),
+        description: friendlyErrorMessage(err),
       });
     } finally {
       setSubmitting(false);
