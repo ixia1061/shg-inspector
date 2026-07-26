@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
 const withSerwist = withSerwistInit({
   swSrc: "app/sw.ts",
   swDest: "public/sw.js",
+  // 자동 등록/업데이트 스크립트를 끄고 ServiceWorkerRegister에서 직접 등록·업데이트
+  // 안내를 제어한다(새 버전 감지 시 "새로고침" 토스트 → SKIP_WAITING → 리로드).
+  register: false,
 });
 
 // Serwist는 아직 Turbopack을 지원하지 않고, withSerwist가 주입하는 webpack 설정이
