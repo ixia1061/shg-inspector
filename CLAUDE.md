@@ -91,6 +91,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 | `profiles` | auth.users 확장. `role`(super_admin/admin/inspector), `is_active`, `name` |
 | `user_sites` | 사용자–**사업장 전체** 배정 (그 사업장의 현재·미래 모든 파트 접근) |
 | `user_parts` | 사용자–**특정 관리파트** 배정 (그 파트만 접근). 관리자가 점검자에게 부여 가능 |
+| `user_site_order` | 관리자 **개인별** 사업장 표시 순서(점검현황·수량현황 상단 버튼). `site_order`(site_id 배열), 본인 행만 RLS로 조작 가능 |
 | `sites` | 사업장. `org_code`(nullable, **레거시**: 관리번호 prefix는 이제 `management_parts`로 이전) |
 | `management_parts` | **관리파트**. `site_id`, `code`(관리번호 앞자리, **전체 유일**), `name`, `order_index`. 사업장 하위, 소화기 등록 시 선택 |
 | `buildings` | 건물. `site_id`, `building_no`. **파트 공용** |
@@ -198,6 +199,8 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 ## 변경 이력 (Changelog)
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
+
+- **2026-07-26** — **점검현황·수량현황 사업장 버튼 순서를 관리자 개인별로 설정 가능하게 추가.** 요청: 관리자 계정마다 원하는 사업장 순서가 다를 수 있음(예: A 관리자는 상주업체를 먼저, B 관리자는 한국공항공사를 먼저) — 전체 공통 순서가 아니라 계정별 개인 설정으로 구현. **신규 테이블** `user_site_order`(`site_order` jsonb 배열, `user_id` PK, RLS `user_id = auth.uid()`로 본인 행만 조작 — `profiles` 쓰기가 시스템관리자 전용이라 그 경계를 안 건드리려고 별도 테이블로 분리, `user_sites`/`user_parts`와 같은 패턴). **내 계정**(`/account`) 화면에 관리자에게만 보이는 **"사업장 표시 순서"** 섹션 추가(`SiteOrderEditor`, `FloorList`의 "선택 후 고정 ▲▼로 이동" UI 재사용, 이동마다 `user_site_order` upsert). `lib/utils/sort.ts`에 `sortSitesByPreference` 추가(설정 없는 사업장은 기존 순서 유지한 채 뒤로, 안정 정렬). `app/(admin)/inspections/page.tsx`·`app/(admin)/inventory/page.tsx`가 로그인한 관리자의 `user_site_order`를 조회해 사업장 버튼 순서에 반영. 마이그레이션 `20260726140000_user_site_order.sql`, **서울 운영 DB 적용 완료**. `tsc --noEmit`·`next build --webpack`·lint 통과.
 
 - **2026-07-26** — **내용연수 관리 2차 정렬(교체예정일 동률 시 관리번호 자연정렬) 추가.** 기존엔 `.order("replace_due_date")`만 걸려 있어 교체예정일이 같은 소화기끼리는 순서가 불규칙(DB 반환 순서 의존)했음. `app/(admin)/lifecycle/page.tsx`에서 조회 후 JS로 재정렬: 1차 교체예정일 오름차순, 동률이면 `compareAssetCode`(`lib/utils/sort.ts`, `localeCompare` numeric)로 관리번호를 가나다+숫자 순번대로 정렬(`공사-1-1-10`이 `...-2`보다 앞서는 문제 방지). `tsc --noEmit`·`next build --webpack`·lint 통과.
 - **2026-07-26** — **버그: 점검 저장 실패 시 "[object Object]" 문구 수정.** 제보: 관리파트 배정이 없는 점검자가 점검완료를 누르면(RLS가 정상적으로 저장을 거부) 오류 문구가 "점검 저장에 실패했습니다 [object Object]"로 떠서 원인을 알 수 없었음. 원인: Supabase 에러(PostgrestError)는 `Error` 인스턴스가 아닌 일반 객체라 `err instanceof Error ? err.message : String(err)` 패턴에서 `String(err)`가 "[object Object]"를 반환. `lib/utils/supabaseError.ts`의 `friendlyErrorMessage`(기존엔 관리자 폼에서만 사용, 유니크/외래키 제약만 처리)를 **`unknown` 입력을 받도록 확장**하고 **RLS 위반(42501) 케이스**를 추가해 "이 소화기를 점검할 권한이 없습니다. 관리자에게 관리파트 배정을 요청하세요."로 안내. 이 유틸을 안 쓰고 있던 `InspectionChecklist.tsx`(점검자 점검 화면)·`AdminInspectDialog.tsx`(관리자 직접 점검)·`lib/offline/syncEngine.ts`(오프라인 동기화 실패 사유 저장)에 적용. `tsc --noEmit`·`next build --webpack`·lint 통과(기존 무관 경고 14건 외 신규 없음).

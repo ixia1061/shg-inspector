@@ -44,6 +44,14 @@ export interface Database {
         Update: Partial<{ user_id: string; part_id: string }>;
         Relationships: [];
       };
+      user_site_order: {
+        // 관리자 개인별 사업장 표시 순서(점검현황·수량현황). site_order는 site_id를
+        // 원하는 순서대로 나열한 배열 — 없는 사업장은 이름순으로 뒤에 붙는다.
+        Row: { user_id: string; site_order: string[]; updated_at: string };
+        Insert: { user_id: string; site_order?: string[] };
+        Update: Partial<{ user_id: string; site_order: string[] }>;
+        Relationships: [];
+      };
       sites: {
         Row: {
           id: string;
