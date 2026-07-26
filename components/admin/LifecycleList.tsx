@@ -18,7 +18,7 @@ import type { ExtinguisherOverview } from "@/types/domain";
 
 const PAGE_SIZE = 50;
 
-/** 내용연수 관리 목록 — 페이지당 50개(교체예정일 순은 서버 정렬 유지). */
+/** 내용연수 관리 목록 — 페이지당 50개(교체예정일 → 관리번호 순 정렬은 서버에서 이미 처리). */
 export function LifecycleList({ rows }: { rows: ExtinguisherOverview[] }) {
   const [page, setPage] = useState(0);
 
