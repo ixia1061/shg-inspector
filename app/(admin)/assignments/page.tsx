@@ -16,12 +16,13 @@ export default async function AssignmentsPage() {
   if (!isAdminRole(me?.role)) redirect("/dashboard");
   const isSuper = isSuperAdminRole(me?.role);
 
-  const [{ data: sites }, { data: parts }, { data: inspectors }, { data: userParts }] =
+  const [{ data: sites }, { data: parts }, { data: inspectors }, { data: userParts }, { data: inspectorSites }] =
     await Promise.all([
       supabase.from("sites").select("id, name").order("name"),
       supabase.from("management_parts").select("*").order("order_index"),
       supabase.from("profiles").select("id, name").eq("role", "inspector").order("name"),
       supabase.from("user_parts").select("user_id, part_id"),
+      supabase.from("user_sites").select("user_id, site_id"),
     ]);
 
   // 현재 관리자가 "부여 가능한" 파트 계산: 전체 배정 사업장의 모든 파트 + 개별 배정 파트.
@@ -42,6 +43,12 @@ export default async function AssignmentsPage() {
   // 점검자별 현재 파트 배정 집합
   const partIdsByInspector = (userParts ?? []).reduce<Record<string, string[]>>((acc, up) => {
     (acc[up.user_id] ??= []).push(up.part_id);
+    return acc;
+  }, {});
+  // 점검자별 "사업장 전체" 배정 집합 — 이 사업장의 파트는 개별 체크와 무관하게 이미 전체 접근권이 있다
+  // (has_part_access가 user_sites만으로도 통과시키므로, 화면에서도 이를 명확히 보여준다).
+  const siteIdsByInspector = (inspectorSites ?? []).reduce<Record<string, string[]>>((acc, us) => {
+    (acc[us.user_id] ??= []).push(us.site_id);
     return acc;
   }, {});
 
@@ -65,6 +72,7 @@ export default async function AssignmentsPage() {
           site_name: siteNameById.get(p.site_id) ?? "?",
         }))}
         partIdsByInspector={partIdsByInspector}
+        siteIdsByInspector={siteIdsByInspector}
       />
     </div>
   );
