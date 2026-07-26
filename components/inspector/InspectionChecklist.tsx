@@ -14,6 +14,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { LIFECYCLE_STATUS_LABEL } from "@/lib/utils/lifecycle";
 import { formatShortLocation } from "@/lib/utils/location";
+import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 import { watermarkImage } from "@/lib/utils/watermark";
 import { trimExtinguisherPhotosAction } from "@/app/actions/photoActions";
 import { enqueueInspection } from "@/lib/offline/outbox";
@@ -191,7 +192,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
       void flushOutbox();
     } catch (err) {
       toast.error("점검 저장에 실패했습니다", {
-        description: err instanceof Error ? err.message : String(err),
+        description: friendlyErrorMessage(err),
       });
     } finally {
       setSubmitting(false);
