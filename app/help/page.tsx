@@ -245,16 +245,12 @@ function AdminHelp() {
 
       <Card>
         <CardHeader>
-          <CardTitle>소화기 검색 · 수정 · 직접 점검</CardTitle>
+          <CardTitle>소화기 검색 · 수정</CardTitle>
         </CardHeader>
         <CardContent className="text-sm">
           <ul className="ml-4 flex list-disc flex-col gap-1">
             <li>목록에서 <b>관리번호·제조번호·위치</b>로 검색하고, 사업장·상태로 필터합니다.</li>
             <li>소화기 상세에서 정보를 수정하거나 점검 이력을 확인합니다.</li>
-            <li>
-              <b>관리자 직접 점검</b>: 목록/상세의 <b>[점검]</b> 버튼으로 QR 없이 점검을 기록할 수
-              있습니다(관리자 전용). 점검자 점검과 동일하게 완료로 반영됩니다.
-            </li>
           </ul>
         </CardContent>
       </Card>
