@@ -1,11 +1,23 @@
 "use server";
 
+import { headers } from "next/headers";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signupSchema } from "@/lib/validations/auth.schema";
 
 /** 가입코드 정규화 — 현장에서 구두로 전달받아 입력하므로 공백·대소문자를 흡수한다. */
 function normalizeJoinCode(raw: string): string {
   return raw.replace(/[\s-]/g, "").toUpperCase();
+}
+
+/** 같은 접속지에서 10분 안에 이만큼 실패하면 잠시 막는다. */
+const MAX_FAILURES = 10;
+const WINDOW_MINUTES = 10;
+
+async function clientIp(): Promise<string> {
+  const h = await headers();
+  // Vercel은 x-forwarded-for 첫 항목이 실제 클라이언트 IP다.
+  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
 
 /**
@@ -27,6 +39,22 @@ export async function submitSignupAction(input: unknown): Promise<{ siteName: st
   const { joinCode, name, email, password } = parsed.data;
 
   const admin = createAdminClient();
+  const ip = await clientIp();
+
+  // 가입코드가 4자리로 짧으므로, 같은 접속지에서 코드를 반복해 찍는 것을 막는다.
+  const since = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000).toISOString();
+  const { count: failures } = await admin
+    .from("signup_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("ip", ip)
+    .eq("success", false)
+    .gte("attempted_at", since);
+
+  if ((failures ?? 0) >= MAX_FAILURES) {
+    throw new Error(
+      `가입 시도가 너무 많습니다. ${WINDOW_MINUTES}분 후에 다시 시도하거나 관리자에게 문의하세요.`
+    );
+  }
 
   // 가입코드 → 사업장. 코드가 틀리면 여기서 끝나므로 계정은 만들어지지 않는다.
   const { data: joinRow } = await admin
@@ -34,6 +62,8 @@ export async function submitSignupAction(input: unknown): Promise<{ siteName: st
     .select("site_id")
     .eq("code", normalizeJoinCode(joinCode))
     .maybeSingle();
+
+  await admin.from("signup_attempts").insert({ ip, success: !!joinRow });
 
   if (!joinRow) {
     throw new Error("가입코드가 올바르지 않습니다. 관리자에게 코드를 다시 확인하세요.");

@@ -52,6 +52,13 @@ export interface Database {
         Update: Partial<{ user_id: string; part_id: string }>;
         Relationships: [];
       };
+      signup_attempts: {
+        // 가입코드 무작위 대입 차단용 시도 기록. 서버 액션(service_role)만 사용.
+        Row: { id: number; ip: string; success: boolean; attempted_at: string };
+        Insert: { ip: string; success: boolean; attempted_at?: string };
+        Update: Partial<{ ip: string; success: boolean }>;
+        Relationships: [];
+      };
       site_join_codes: {
         // 사업장별 가입코드(사업장당 1행). 점검자가 /signup에서 이 코드로 가입 신청한다.
         Row: { site_id: string; code: string; updated_at: string; updated_by: string | null };

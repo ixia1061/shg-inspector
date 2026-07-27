@@ -62,7 +62,7 @@ function InspectorHelp() {
         </CardHeader>
         <CardContent className="text-sm">
           <ol className="ml-4 flex list-decimal flex-col gap-1">
-            <li>관리자에게 사업장 <b>가입코드</b>를 받습니다.</li>
+            <li>관리자에게 사업장 <b>가입코드</b>(영문·숫자 4자리)를 받습니다.</li>
             <li>로그인 화면 아래 <b>[점검자이신가요? 가입 신청]</b> 을 누릅니다.</li>
             <li>가입코드·이름·이메일·비밀번호를 입력하고 <b>[가입 신청]</b>.</li>
             <li>
@@ -324,9 +324,10 @@ function AdminHelp() {
         <CardContent className="text-sm">
           <ul className="ml-4 flex list-disc flex-col gap-1">
             <li>
-              점검자는 <b>사업장 가입코드</b>로 직접 가입 신청합니다. 코드는 시스템관리자가
-              <b>사업장/건물 관리 → 사업장 상세</b>에서 발급하며, 유출되면 <b>재발급</b>으로 옛
-              코드를 무효화할 수 있습니다.
+              점검자는 <b>사업장 가입코드</b>(영문·숫자 4자리)로 직접 가입 신청합니다. 코드는
+              <b>사업장/건물 관리 → 사업장 상세</b> 맨 위에 있습니다. 담당 관리자는 코드를 보고
+              복사할 수 있고, <b>발급·재발급은 시스템관리자</b>가 합니다(재발급하면 옛 코드는 즉시
+              무효).
             </li>
             <li>
               신청이 들어오면 <b>사용자 관리 → 가입 승인 대기</b>에 나타납니다. <b>승인</b>을 누르고
