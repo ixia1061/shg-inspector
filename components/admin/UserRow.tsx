@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { InspectorScopeDialog } from "@/components/admin/InspectorScopeDialog";
 import { UserSitesDialog } from "@/components/admin/UserSitesDialog";
 import { ASSIGNABLE_ROLE_ITEMS, ROLE_LABELS } from "@/lib/utils/roles";
 import type { ManagementPart, Site, UserRole } from "@/types/domain";
@@ -33,6 +34,8 @@ export function UserRow({
   parts,
   assignedSiteIds,
   assignedPartIds,
+  scopeSiteIds,
+  grantableSites,
   canManage,
   canToggleActive,
 }: {
@@ -46,6 +49,10 @@ export function UserRow({
   parts: ManagementPart[];
   assignedSiteIds: string[];
   assignedPartIds: string[];
+  /** 현재 점검 가능한 사업장(사업장 전체 배정 + 파트 배정을 사업장으로 환산) */
+  scopeSiteIds: string[];
+  /** 내가 부여할 수 있는 사업장(범위 변경 다이얼로그에 보이는 목록) */
+  grantableSites: Site[];
   /** 역할 변경·배정·삭제 가능 여부(시스템관리자만) */
   canManage: boolean;
   /** 활성/비활성 토글 가능 여부. 관리자도 자기 범위 점검자는 켜고 끌 수 있다. */
@@ -136,7 +143,8 @@ export function UserRow({
         ) : (
           <div className="flex flex-col items-start gap-1">
             <span>{scopeLabels.length ? scopeLabels.join(", ") : "미배정"}</span>
-            {canManage && (
+            {canManage ? (
+              // 시스템관리자는 사업장 전체/특정 파트까지 세밀하게 지정할 수 있다.
               <UserSitesDialog
                 userId={id}
                 userName={name}
@@ -145,6 +153,17 @@ export function UserRow({
                 assignedSiteIds={assignedSiteIds}
                 assignedPartIds={assignedPartIds}
               />
+            ) : (
+              // 일반 관리자는 자기 담당 사업장 단위로 점검자 범위를 바꾼다.
+              role === "inspector" && (
+                <InspectorScopeDialog
+                  inspectorId={id}
+                  inspectorName={name}
+                  sites={grantableSites}
+                  assignedSiteIds={scopeSiteIds}
+                  wholeSiteIds={assignedSiteIds}
+                />
+              )
             )}
           </div>
         )}

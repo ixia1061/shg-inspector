@@ -9,7 +9,6 @@ import {
   Printer,
   QrCode,
   ShieldAlert,
-  UserCheck,
   Users,
 } from "lucide-react";
 
@@ -32,8 +31,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/photos", label: "사진 관리", icon: Images },
   { href: "/stats", label: "통계", icon: Gauge },
   { href: "/labels", label: "QR Code 관리", icon: Printer },
-  { href: "/assignments", label: "점검자 배정", icon: UserCheck },
-  // 관리자도 자기 사업장 점검자 조회·생성과 가입 승인을 할 수 있다(보이는 범위는 화면에서 한정).
+  // 점검자 계정 관리(생성·가입승인·점검범위·활성)를 한 화면에 모았다.
+  // 예전에는 점검 범위만 /assignments에서 따로 체크했는데, 같은 일을 두 화면에서 하게 돼 통합.
   { href: "/users", label: "사용자 관리", icon: Users },
   { href: "/help", label: "도움말", icon: HelpCircle },
 ];

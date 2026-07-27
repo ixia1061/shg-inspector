@@ -20,7 +20,7 @@ import type { ManagementPart } from "@/types/domain";
 /**
  * 가입 신청 1건. 승인하면 신청한 **사업장 전체**의 점검 권한을 준다.
  * (DB 배정은 파트 단위지만, 파트가 많아 하나씩 고르기 번거로우므로 사업장으로 묶는다 —
- *  점검자 배정 화면과 같은 방식이고, 내가 맡은 파트만 넘어가므로 경계는 그대로다.)
+ *  내가 맡은 파트만 넘어가므로 관리자 경계는 그대로다.)
  * 거부하면 계정이 삭제되어 같은 이메일로 다시 신청할 수 있다.
  */
 export function PendingSignupRow({
@@ -103,7 +103,7 @@ export function PendingSignupRow({
                   ) : (
                     <p className="text-muted-foreground">
                       {siteName}에 부여할 수 있는 관리파트가 없습니다. 승인만 하고 나중에{" "}
-                      <b>점검자 배정</b>에서 권한을 줄 수 있습니다.
+                      <b>[범위 변경]</b>으로 권한을 줄 수 있습니다.
                     </p>
                   )}
                 </div>

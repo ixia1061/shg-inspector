@@ -687,7 +687,7 @@
         <li><a href="#ad-reg">소화기 등록</a></li>
         <li><a href="#ad-status">점검현황·조치</a></li>
         <li><a href="#ad-ledger">관리대장(엑셀)</a></li>
-        <li><a href="#ad-assign">점검자 배정</a></li>
+        <li><a href="#ad-assign">점검 범위 바꾸기</a></li>
         <li><a href="#ad-users">사용자 관리 · 가입 승인</a></li>
         <li><a href="#ad-etc">기타 메뉴</a></li>
       </ul>
@@ -729,8 +729,7 @@
             <tr><td><strong>사진 관리</strong></td><td>점검 사진 조회·삭제·ZIP 다운로드</td></tr>
             <tr><td><strong>통계</strong></td><td>건물별 점검률·점검자별 실적</td></tr>
             <tr><td><strong>QR Code 관리</strong></td><td>QR 라벨 검색·선택·인쇄</td></tr>
-            <tr><td><strong>점검자 배정</strong></td><td>점검자에게 관리파트별 점검 권한 부여</td></tr>
-            <tr><td><strong>사용자 관리</strong></td><td>점검자 조회·생성, <strong>가입 신청 승인</strong> / (시스템관리자) 역할·담당 범위 배정</td></tr>
+                        <tr><td><strong>사용자 관리</strong></td><td>점검자 조회·생성, <strong>가입 신청 승인</strong> / (시스템관리자) 역할·담당 범위 배정</td></tr>
           </tbody>
         </table>
       </div>
@@ -833,15 +832,15 @@
 
       </div>
       <div class="doc-sec">
-      <h2 id="ad-assign"><span class="num">8</span>점검자 배정</h2>
-      <p>점검자에게 <strong>내가 맡은 관리파트의 점검 권한</strong>을 부여하는 화면입니다.</p>
+      <h2 id="ad-assign"><span class="num">8</span>점검 범위 바꾸기</h2>
+      <p>점검자가 <strong>어느 사업장 소화기를 점검할 수 있는지</strong>를 바꿉니다. <strong>사용자 관리</strong> 목록의 담당 범위 아래 <strong>[범위 변경]</strong> 버튼을 누르세요.</p>
       <ul class="plain">
-        <li>세로축 <strong>점검자</strong> × 가로축 <strong>부여 가능한 관리파트</strong>의 매트릭스입니다.</li>
-        <li>칸의 <strong>체크박스를 켜면</strong> 그 점검자가 그 파트의 소화기를 스캔·점검할 수 있습니다 (저장 버튼 없이 즉시 반영).</li>
+        <li>창에 <strong>내가 담당하는 사업장</strong>만 나옵니다. 맡길 사업장을 체크하고 <strong>[저장]</strong>.</li>
+        <li>체크를 풀면 그 사업장 점검 권한이 해제됩니다. 파트가 여러 개인 사업장도 <strong>사업장 하나만 체크</strong>하면 됩니다.</li>
       </ul>
       <div class="callout callout--warn">
         <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-        <div class="callout__body"><p><span class="callout__tag">주의</span>관리자는 <strong>자기에게 배정된 범위의 파트만</strong> 부여할 수 있습니다. 부여할 파트가 없다고 나오면 시스템관리자에게 담당 배정을 요청하세요.</p></div>
+        <div class="callout__body"><p><span class="callout__tag">주의</span>시스템관리자가 “<strong>사업장 전체</strong>”로 배정한 곳은 <strong>전체 배정됨</strong> 표시와 함께 잠겨 있어 관리자가 풀 수 없습니다. 예전 <strong>점검자 배정</strong> 메뉴는 사용자 관리로 통합되어 없어졌습니다.</p></div>
       </div>
 
       </div>
@@ -948,7 +947,7 @@
       <h2 id="faq-perm"><span class="num">Q</span>스캔은 되는데 “권한이 없다”고 나와요 (점검자)</h2>
       <ul class="plain">
         <li>점검자는 <strong>배정된 관리파트의 소화기만</strong> 점검할 수 있습니다.</li>
-        <li>관리자에게 <strong>점검자 배정</strong> 화면에서 해당 파트 권한을 켜 달라고 요청하고, 앱을 새로고침/재로그인하세요.</li>
+        <li>관리자에게 <strong>사용자 관리 → [범위 변경]</strong> 에서 사업장을 체크해 달라고 요청하고, 앱을 새로고침/재로그인하세요.</li>
       </ul>
 
       </div>

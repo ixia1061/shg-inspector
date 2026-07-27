@@ -75,6 +75,12 @@ export function UsersClient({
 }) {
   const [siteId, setSiteId] = useState(sites.length > 1 ? ALL_SITES : (sites[0]?.id ?? ALL_SITES));
 
+  // 점검 범위를 바꿀 때 고를 수 있는 사업장 = 내가 부여 가능한 파트가 있는 사업장
+  const grantableSites = useMemo(() => {
+    const ids = new Set(grantableParts.map((p) => p.site_id));
+    return sites.filter((s) => ids.has(s.id));
+  }, [grantableParts, sites]);
+
   const visibleAdmins = useMemo(() => filterUsers(admins, siteId), [admins, siteId]);
   const visibleInspectors = useMemo(() => filterUsers(inspectors, siteId), [inspectors, siteId]);
   const visiblePending = useMemo(
@@ -131,17 +137,19 @@ export function UsersClient({
           rows={visibleAdmins}
           sites={sites}
           parts={parts}
+          grantableSites={grantableSites}
           canManage
           canToggleActive
         />
       )}
 
-      {/* 관리자도 자기 범위 점검자는 활성/비활성으로 접속을 막을 수 있다(퇴사·교대 등). */}
+      {/* 관리자도 자기 범위 점검자는 범위 변경·활성/비활성을 바로 할 수 있다. */}
       <UserSection
         title={`점검자 (${visibleInspectors.length})`}
         rows={visibleInspectors}
         sites={sites}
         parts={parts}
+        grantableSites={grantableSites}
         canManage={isSuper}
         canToggleActive
       />
@@ -154,6 +162,7 @@ function UserSection({
   rows,
   sites,
   parts,
+  grantableSites,
   canManage,
   canToggleActive,
 }: {
@@ -161,6 +170,8 @@ function UserSection({
   rows: UserListItem[];
   sites: Site[];
   parts: ManagementPart[];
+  /** 범위 변경 다이얼로그에 보일 사업장(내가 부여할 수 있는 곳) */
+  grantableSites: Site[];
   /** 역할 변경·배정·삭제 가능 여부(시스템관리자만) */
   canManage: boolean;
   /** 활성/비활성 토글 가능 여부 */
@@ -194,6 +205,8 @@ function UserSection({
                 parts={parts}
                 assignedSiteIds={u.assignedSiteIds}
                 assignedPartIds={u.assignedPartIds}
+                scopeSiteIds={u.siteIds}
+                grantableSites={grantableSites}
                 canManage={canManage}
                 canToggleActive={canToggleActive}
               />
