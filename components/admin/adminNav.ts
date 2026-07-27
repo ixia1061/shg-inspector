@@ -33,7 +33,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/stats", label: "통계", icon: Gauge },
   { href: "/labels", label: "QR Code 관리", icon: Printer },
   { href: "/assignments", label: "점검자 배정", icon: UserCheck },
-  { href: "/users", label: "사용자 관리", icon: Users, superAdminOnly: true },
+  // 관리자도 자기 사업장 점검자 조회·생성과 가입 승인을 할 수 있다(보이는 범위는 화면에서 한정).
+  { href: "/users", label: "사용자 관리", icon: Users },
   { href: "/help", label: "도움말", icon: HelpCircle },
 ];
 

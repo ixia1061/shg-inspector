@@ -25,9 +25,15 @@ export default async function AdminLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, name")
+    .select("role, name, is_active")
     .eq("id", user.id)
     .single();
+
+  // 승인 대기(비활성) 계정은 들여보내지 않는다. RLS로도 데이터가 안 보이지만,
+  // 빈 화면 대신 대기 안내를 보여주려고 로그인 화면으로 되돌린다.
+  if (profile && !profile.is_active) {
+    redirect("/login?status=pending");
+  }
 
   if (!isAdminRole(profile?.role)) {
     redirect("/scan");

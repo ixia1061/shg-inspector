@@ -42,7 +42,8 @@
 
 ```
 app/
-  (auth)/login/            로그인
+  (auth)/login/            로그인 (?status=pending이면 승인 대기 안내)
+  (auth)/signup/           점검자 가입 신청 (가입코드, 공개 경로) + submitSignupAction
   (admin)/                 관리자 (사이드바 레이아웃, role=admin/super_admin 가드)
     dashboard/             대시보드 (월간 점검 집계)
     sites/[siteId]/        사업장·관리파트·건물·층·구역·차량 관리
@@ -54,7 +55,7 @@ app/
     photos/                점검 사진 관리 (조회·삭제·ZIP 다운로드)
     stats/                 통계
     assignments/           점검자 배정 (관리자가 자기 파트를 점검자에게 부여)
-    users/                 사용자 관리 (시스템관리자 전용, 사업장 전체/파트 배정)
+    users/                 사용자 관리 (관리자=자기 사업장 점검자 조회·생성·가입승인 / 시스템관리자=전체·역할변경·배정)
   (inspector)/             점검자 (모바일 레이아웃)
     scan/                  QR 스캐너 (첫 화면)
     inspect/[assetCode]/   점검 체크리스트 (QR 스캔 통과 필요)
@@ -88,7 +89,8 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 | 테이블 | 요약 |
 |---|---|
-| `profiles` | auth.users 확장. `role`(super_admin/admin/inspector), `is_active`, `name` |
+| `profiles` | auth.users 확장. `role`(super_admin/admin/inspector), **`is_active`(= 승인 플래그, RLS가 실제로 차단)**, `name`, `email`(트리거가 복사), `pending_site_id`(자가 가입 신청 사업장 — 승인 시 null) |
+| `site_join_codes` | 사업장별 **점검자 가입코드**(사업장당 1행). 시스템관리자만 발급·재발급, 재발급 시 옛 코드 즉시 무효 |
 | `user_sites` | 사용자–**사업장 전체** 배정 (그 사업장의 현재·미래 모든 파트 접근) |
 | `user_parts` | 사용자–**특정 관리파트** 배정 (그 파트만 접근). 관리자가 점검자에게 부여 가능 |
 | `user_site_order` | 관리자 **개인별** 사업장 표시 순서(점검현황·수량현황 상단 버튼). `site_order`(site_id 배열), 본인 행만 RLS로 조작 가능 |
@@ -112,7 +114,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 - `fn_submit_inspection(jsonb)` — 점검+사진 원자적 저장 (온라인/오프라인 동기화 공용).
 - `fn_find_extinguisher_id_by_code(text)` — 관리번호(현재/과거)로 소화기 id 조회.
 - `fn_extinguisher_status`, `fn_kst_today()` — 내용연수 상태(KST 기준) 계산.
-- `is_admin()`, `is_super_admin()`, `has_site_access()`, `has_part_access()`, `fn_extinguisher_part_id()` — RLS 보안 정의자 헬퍼. **소화기·점검은 파트 스코프(`has_part_access`), 건물/층 등 구조는 사업장 스코프(`has_site_access`).**
+- `is_admin()`, `is_super_admin()`, `has_site_access()`, `has_part_access()`, `is_active_user()`, `fn_extinguisher_part_id()` — RLS 보안 정의자 헬퍼. **소화기·점검은 파트 스코프(`has_part_access`), 건물/층 등 구조는 사업장 스코프(`has_site_access`).** 넷 다 `is_active`를 확인하므로 **승인 대기·비활성 계정은 전부 통과 못 한다.**
 
 **날짜는 항상 KST(Asia/Seoul) 기준** — `fn_kst_today()`를 쓴다. (UTC로 계산하면 00:00~09:00 사이 하루 오차 발생.)
 
@@ -131,15 +133,17 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 - **프로젝트 ref**: `zbdvuxzoahusdrpniuwz` / URL `https://zbdvuxzoahusdrpniuwz.supabase.co` (`.env.local`·Vercel이 가리키는 **실제 운영 DB**)
 - **리전**: `ap-northeast-2`(서울) — 속도 개선 위해 뭄바이에서 이전 완료(2026-07). ⚠️ 옛 뭄바이 프로젝트 `nppqfmcrjvipjlcqjajv`(ap-south-1)는 **초기 MVP 시절 데이터만 있는 죽은 DB** — 마이그레이션/스크립트를 **절대 여기 적용하지 말 것**. 접속 대상은 항상 `.env.local`의 `NEXT_PUBLIC_SUPABASE_URL` ref로 확인.
-- **Auth**: 이메일/비밀번호, **공개 회원가입 없음**. 계정은 시스템관리자가 발급. `handle_new_user` 트리거가 가입 시 profile 자동 생성.
+- **Auth**: 이메일/비밀번호. **관리자 계정은 시스템관리자가 발급**하고, **점검자는 사업장 가입코드로 자가 신청 → 관리자 승인**(2026-07-27). Supabase의 공개 가입 설정은 꺼둔 채 서버 액션이 service_role로 계정을 만든다(브라우저 `signUp()` 미사용 = 메타데이터로 role을 심을 여지 없음, SMTP 불필요). `handle_new_user` 트리거는 **항상 "비활성 점검자"로** profile을 만들고, 권한이 검증된 서버 액션만 그 뒤에 값을 올린다.
+- **`is_active` = 승인 플래그**: `is_active_user()`가 `is_admin`·`is_super_admin`·`has_site_access`·`has_part_access`에 걸려 있어, 비활성 계정은 로그인해도 **자기 프로필 외에는 아무것도 못 읽는다**. 레이아웃·로그인 폼도 `/login?status=pending`으로 되돌린다. (2026-07-27 이전에는 표시용 플래그였다.)
 - **Storage**: `inspection-photos` 버킷(점검 사진). 경로에 소화기 id 포함, 소화기당 최신 5장 유지.
 - **RLS**: 모든 테이블에 적용. `is_admin()`(admin+super_admin) / `is_super_admin()` / `has_site_access()` 보안 정의자 함수로 판별. `profiles`·`user_sites` 쓰기는 **시스템관리자만**(일반 관리자가 API로 자기 역할을 올리는 것 차단).
 - **역할 체계 (3단계)**
   - `super_admin`(시스템관리자): 전체 권한. **사업장 등록·사용자 추가·역할 변경·담당 사업장 배정 독점**. 삭제·강등·비활성 불가(보호). 모든 사업장 접근.
-  - `admin`(관리자): **배정된 담당 사업장 범위 내에서만** 건물/층/구역/차량/소화기·점검·대시보드·통계 관리. 사업장 등록/수정/삭제와 사용자 관리는 불가. QR 없이 목록에서 점검 가능(관리자 영역 모달).
+  - `admin`(관리자): **배정된 담당 사업장 범위 내에서만** 건물/층/구역/차량/소화기·점검·대시보드·통계 관리. 사업장 등록/수정/삭제는 불가. **사용자 관리는 자기 사업장 점검자 한정**(조회 + 점검자 생성 + 가입 승인/거부만, 역할 변경·삭제·비활성은 불가). QR 없이 목록에서 점검 가능(관리자 영역 모달).
   - `inspector`(점검자): 배정된 사업장만 조회. **QR 스캔을 통해서만** 점검. (관리자의 QR 없는 점검도 점검자에게 완료로 반영.)
   - **스코핑 원리**: `has_site_access(site) = is_super_admin() OR user_sites(site) OR user_parts 중 그 site 파트`. `has_part_access(part) = is_super_admin() OR user_sites(part.site) OR user_parts(part)`. 소화기/점검 RLS는 `has_part_access(part_id)`, 건물/층 등 구조는 `has_site_access`. 뷰/RPC가 모두 `security invoker`라 자동 한정. **파트 배정(user_parts)이 없으면 user_sites로 귀결돼 사업장 단위와 동일.**
   - **권한 배정**: 시스템관리자는 사용자에게 **사업장 전체(user_sites) 또는 특정 파트(user_parts)** 배정(사용자 관리). 관리자는 **자기 맡은 파트**를 점검자에게 부여(`/assignments`, RLS로 경계 강제).
+  - **가입 승인**: `site_join_codes`(사업장당 1개, 시스템관리자가 발급·재발급) → 점검자가 `/signup`에서 신청 → `profiles.pending_site_id` 세팅 + `is_active=false` → 그 사업장 관리자가 `/users`에서 승인하며 파트 지정. 승인 UPDATE는 `profiles_admin_approve_signup` 정책(대상=대기 중인 점검자 + `has_site_access(pending_site_id)`)이 DB에서 경계를 강제.
 - **직접 DB 접속**(마이그레이션/스크립트): 직접 호스트는 IPv6 전용이라 접속 불가할 수 있음 → **Session Pooler**(`aws-1-ap-northeast-2.pooler.supabase.com:5432`, user `postgres.zbdvuxzoahusdrpniuwz`, database `postgres`, `ssl.rejectUnauthorized=false`) 사용. DDL(테이블/뷰/함수 생성)은 service_role(REST)로는 불가 → 반드시 이 pooler로 접속. DB 비밀번호는 문서에 적지 않음(사용 시 사용자에게 요청).
 
 ## Vercel 배포 정보
@@ -200,6 +204,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
+- **2026-07-27** — **점검자 자가 회원가입(사업장 가입코드) + 관리자 승인 도입, 사용자 관리를 관리자에게 개방.** 사업장 4곳·관리파트 13개로 늘면서 점검자 계정 발급이 시스템관리자 한 사람에게 몰려 병목이 됐다는 요청. **흐름**: 시스템관리자가 사업장 상세에서 **가입코드 발급**(`site_join_codes`, 사업장당 1개, 재발급 시 옛 코드 즉시 무효, 혼동 없는 32자 알파벳 8자리) → 점검자가 `/signup`에서 **가입코드·이름·이메일·비밀번호**로 신청 → 그 사업장 **관리자가 `/users`에서 승인하며 관리파트 지정** → 그때부터 로그인·점검 가능. **이메일 인증번호는 넣지 않음**(Supabase 기본 메일러가 시간당 2~3통 제한이라 현장에서 못 쓰고 외부 SMTP는 별도 작업 — 가입코드+승인으로 갈음, 이메일은 로그인 아이디). **가입은 브라우저 `signUp()`이 아니라 서버 액션 + service_role**(`admin.auth.admin.createUser`)로 처리 → Supabase 공개 가입 설정을 **꺼둔 채**로 두고, 메타데이터로 role을 심을 여지도 없앰. **함께 막은 기존 구멍 2건**: ① `handle_new_user`가 `raw_user_meta_data->>'role'`을 무검증 신뢰해 가입 화면을 여는 순간 누구나 관리자가 될 수 있었음 → **항상 "비활성 점검자"로 생성**하도록 재작성(권한이 검증된 서버 액션만 값을 올림, `createUserAction`에 `is_active: true` 추가). ② `is_active`가 로그인·RLS 어디에서도 검사되지 않아 표시용 플래그였음 → `is_active_user()` 신설 + `is_admin`·`is_super_admin`·`has_site_access`·`has_part_access`에 반영, 로그인 폼·루트·양쪽 레이아웃에서 `/login?status=pending`으로 차단. **사용자 관리 개편**: 가드를 `super_admin`→`isAdminRole`로 완화하고 **관리자는 자기 사업장 점검자만**(조회+생성+승인/거부, 역할변경·삭제·비활성 불가), **시스템관리자는 사업장 버튼 필터 + 관리자/점검자/승인대기 구분**. 별도 승인 메뉴는 만들지 않고 사용자 관리에 통합. 승인 UPDATE는 `profiles_admin_approve_signup` 정책이 DB에서도 경계 강제. `profiles`에 `email`(트리거가 복사, 기존 8명 백필)·`pending_site_id` 추가. 마이그레이션 `20260727160000_self_signup_approval.sql` **서울 운영 DB 적용 완료** — 적용 후 계정 8개 전원의 접근 범위가 이전과 동일함을 RLS 시뮬레이션으로 검증(남부 관리자 251·소방대 관리자 750·A~D조 482·남부 251·시스템관리자 750), 비활성 전환 시 소화기 0건·자기 프로필만 조회됨도 확인. 신규: `SignupForm`·`JoinCodeCard`·`PendingSignupRow`·`UsersClient`. `tsc --noEmit`·`next build --webpack` 통과, lint 신규 없음.
 - **2026-07-27** — **층 순서 변경에도 같은 캐시 수정 적용(FloorList).** 바로 아래 항목(사업장 표시 순서)과 **원인·구조가 동일** — `FloorList`도 `order_index` 업데이트만 하고 `router.refresh()`를 호출하지 않아, 층 순서를 바꿔도 **소화기 등록(`/extinguishers/new`)·수정(`/extinguishers/[id]`) 폼의 층 드롭다운**에는 캐시된 옛 순서가 최대 5분간 남았음(두 화면 모두 `floors`를 `order_index` 순으로 조회하고 사이드바가 prefetch함). 사업장 상세 화면 자체는 낙관적 UI라 바뀐 것처럼 보여 어긋남을 알아채기 어려웠음. 동일하게 **저장 큐가 빈 뒤 `router.refresh()` 1회 + "저장 중… → 저장됨 ✓" 표시(2초, `aria-live`) + 실패 시 마지막 저장 순서로 롤백**을 적용. `floors`에는 `updated_at`이 없어 그 항목만 해당 없음. `tsc --noEmit`·`next build --webpack` 통과, lint 신규 없음.
 - **2026-07-27** — **버그: 내 계정에서 바꾼 사업장 표시 순서가 다른 화면에 즉시 반영되지 않음.** 제보: `/account`에서 ▲▼로 순서를 바꾸고 뒤로 갔는데 점검현황·대시보드의 사업장 버튼이 그대로였고, **로그아웃 후 재접속하면 그제서야** 적용됨(저장 확인 표시도 없어 저장이 됐는지조차 알 수 없었음). 원인은 저장이 아니라 **클라이언트 라우터 캐시** — `SiteOrderEditor`가 upsert만 하고 `router.refresh()`를 호출하지 않는데(프로젝트의 다른 저장 컴포넌트는 전부 이 패턴을 따름), 순서를 쓰는 5개 페이지는 서버 컴포넌트이고 사이드바가 `<Link prefetch>`로 이동해 `next.config.ts`의 `staleTimes.static: 300` 때문에 **최대 5분간 캐시된 옛 RSC 페이로드**가 서버 왕복 없이 표시됨. **해결**: 저장 큐가 빈 뒤 `router.refresh()`를 1회 호출(연타해도 왕복 1회). Next 16 런타임에서 이 호출이 전역 세그먼트 캐시 버전을 올려(`segment-cache/cache.js`) **현재 라우트뿐 아니라 캐시된 다른 라우트까지** 무효화하고, `invalidateBfCache()`로 **브라우저 뒤로가기 경로**도 커버함을 확인. 소비 페이지에 `force-dynamic`을 붙이거나 `staleTimes`를 낮추는 방법은 평소 화면 전환 속도(2026-07-17 성능 개선)를 희생하므로 택하지 않음. 함께: **"저장 중… → 저장됨 ✓"** 상태 표시 추가(2초 후 사라짐, `aria-live`), 저장 실패 시 **마지막 저장 순서로 롤백**(기존엔 실패해도 화면만 바뀐 채 남음), upsert에 `updated_at` 명시(`default now()`는 INSERT에만 적용돼 갱신이 멈춰 있었음), 내 계정 설명 문구를 실제 적용 범위(대시보드·점검현황·수량현황·내용연수·통계)로 수정. 마이그레이션 불필요. `tsc --noEmit`·`next build --webpack` 통과, lint 신규 없음.
 - **2026-07-27** — **대시보드·통계도 사업장별 전환식으로 변경(집계를 RPC → 클라이언트로).** 여러 사업장을 담당하는 관리자(소방대 관리자=4곳)에게 한 화면에 다 섞여 보여 복잡하다는 요청. 특히 **건물명 9종이 사업장끼리 중복**(관리동·동력동·여객청사(일반)·관제탑·소방대·정비고·장비차고·화물청사·여객청사(격리))이라 건물 35개가 가나다순으로 늘어선 점검률 차트에서 **어느 사업장 건물인지 구분이 불가능**했음(단순 복잡함이 아니라 오독 문제). **공용 `SiteFilterButtons`**(신규, `ALL_SITES` 상수) — 담당 사업장이 2곳 이상일 때만 **[전체]** 버튼을 노출하고 기본 선택은 첫 사업장, 순서는 `user_site_order`(개인 설정). 전체를 볼 때는 차트 라벨에 `사업장 · 건물명`을 붙여 중복 건물을 구분. 대시보드 버튼에는 사업장별 **이번달 미점검 수**를 배지로 표시. **집계 방식 변경**: `fn_dashboard_summary`·`fn_inspection_rate` RPC 호출을 없애고, 이미 조회하던 `v_extinguisher_overview` 한 벌로 클라이언트에서 계산(`lib/utils/dashboard.ts`의 `summarizeExtinguishers`·`buildingInspectionRates`, 판정은 기존 `isMonthDone`/`isActionNeeded` 재사용) → 사업장 전환에 서버 왕복 없음 + 대시보드 쿼리 3개→2개. `recent_abnormal`만 점검기록 기반이라 최근 30일 이상점검을 별도 조회해 소화기→사업장 매핑으로 집계. 통계의 **점검자별 실적**도 `inspections.extinguisher_id`를 소화기 사업장으로 매핑해 사업장별로 분리. **실데이터 대조 검증**: 전체 및 사업장 4곳의 7개 지표와 건물 34개 점검률이 기존 DB 함수 결과와 **전부 일치**. (신규 `DashboardClient`·`StatsClient`) `tsc --noEmit`·`next build --webpack`·lint 통과.

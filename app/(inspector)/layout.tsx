@@ -27,9 +27,14 @@ export default async function InspectorLayout({
   // 관리자는 점검자 스캔 흐름 대신 관리 영역의 점검 모달을 쓰므로, 여기 갇히지 않게 한다.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, is_active")
     .eq("id", user.id)
     .single();
+
+  // 승인 대기(비활성) 계정은 들여보내지 않는다.
+  if (profile && !profile.is_active) {
+    redirect("/login?status=pending");
+  }
 
   if (isAdminRole(profile?.role)) {
     redirect("/dashboard");
