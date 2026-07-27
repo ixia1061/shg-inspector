@@ -34,6 +34,7 @@ export function UserRow({
   assignedSiteIds,
   assignedPartIds,
   canManage,
+  canToggleActive,
 }: {
   id: string;
   name: string;
@@ -45,8 +46,10 @@ export function UserRow({
   parts: ManagementPart[];
   assignedSiteIds: string[];
   assignedPartIds: string[];
-  /** 역할 변경·배정·비활성·삭제 가능 여부. 일반 관리자에게는 읽기 전용으로 보인다. */
+  /** 역할 변경·배정·삭제 가능 여부(시스템관리자만) */
   canManage: boolean;
+  /** 활성/비활성 토글 가능 여부. 관리자도 자기 범위 점검자는 켜고 끌 수 있다. */
+  canToggleActive: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -149,14 +152,22 @@ export function UserRow({
       <TableCell>
         {isSuperAdminUser ? (
           <span className="text-muted-foreground text-sm">활성 (보호됨)</span>
-        ) : canManage ? (
+        ) : canToggleActive ? (
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleToggleActive} disabled={isPending}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleActive}
+              disabled={isPending}
+              title={active ? "누르면 비활성 처리됩니다" : "누르면 다시 사용할 수 있습니다"}
+            >
               {active ? "활성" : "비활성"}
             </Button>
-            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isPending}>
-              삭제
-            </Button>
+            {canManage && (
+              <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isPending}>
+                삭제
+              </Button>
+            )}
           </div>
         ) : (
           <span className="text-muted-foreground text-sm">{active ? "활성" : "비활성"}</span>

@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatPartLabel } from "@/lib/utils/part";
+import { partIdsForSites } from "@/lib/utils/part";
 import { createUserSchema, type CreateUserFormValues } from "@/lib/validations/user.schema";
 import type { ManagementPart, Site } from "@/types/domain";
 
@@ -75,17 +75,20 @@ export function CreateUserDialog({
   });
 
   const siteIds = watch("siteIds");
-  const partIds = watch("partIds");
   const role = watch("role");
-  const siteNameById = new Map(sites.map((s) => [s.id, s.name]));
+  // 관리자 모드는 사업장 단위로 고르고(파트는 화면에 안 보임), 제출 시 파트로 펼친다.
+  const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([]);
+  const grantableSiteIds = new Set(parts.map((p) => p.site_id));
+  const grantableSites = sites.filter((s) => grantableSiteIds.has(s.id));
 
   async function onSubmit(values: CreateUserFormValues) {
     setSubmitting(true);
     try {
       await createUserAction(values);
-      toast.success("사용자를 생성했습니다");
+      toast.success(isSuper ? "사용자를 생성했습니다" : "점검자를 생성했습니다");
       setOpen(false);
       reset();
+      setSelectedSiteIds([]);
       router.refresh();
     } catch (err) {
       toast.error("사용자 생성에 실패했습니다", {
@@ -169,31 +172,31 @@ export function CreateUserDialog({
               </>
             ) : (
               <Field>
-                <FieldLabel>점검 범위 (관리파트)</FieldLabel>
+                <FieldLabel>점검 범위 (사업장)</FieldLabel>
                 <p className="text-muted-foreground text-xs">
-                  체크한 관리파트의 소화기를 점검할 수 있습니다. 내가 맡은 파트만 보입니다.
+                  체크한 사업장의 소화기를 점검할 수 있습니다. 내가 담당하는 사업장만 보입니다.
                 </p>
                 <div className="flex flex-col gap-2">
-                  {parts.map((part) => (
-                    <label key={part.id} className="flex items-center gap-2 text-sm">
+                  {grantableSites.map((site) => (
+                    <label key={site.id} className="flex items-center gap-2 text-sm">
                       <Checkbox
-                        checked={partIds.includes(part.id)}
+                        checked={selectedSiteIds.includes(site.id)}
                         onCheckedChange={(checked) => {
-                          setValue(
-                            "partIds",
-                            checked ? [...partIds, part.id] : partIds.filter((id) => id !== part.id)
-                          );
+                          const next = checked
+                            ? [...selectedSiteIds, site.id]
+                            : selectedSiteIds.filter((id) => id !== site.id);
+                          setSelectedSiteIds(next);
+                          // DB 배정은 파트 단위라, 고른 사업장의 파트를 모두 펼쳐 넘긴다.
+                          setValue("partIds", partIdsForSites(parts, next));
                         }}
                       />
-                      <span className="text-muted-foreground">
-                        {siteNameById.get(part.site_id) ?? "?"}
-                      </span>
-                      {formatPartLabel(part)}
+                      {site.name}
                     </label>
                   ))}
-                  {parts.length === 0 && (
+                  {grantableSites.length === 0 && (
                     <p className="text-muted-foreground text-sm">
-                      배정할 수 있는 관리파트가 없습니다.
+                      배정할 수 있는 사업장이 없습니다. 시스템관리자에게 담당 사업장 배정을
+                      요청하세요.
                     </p>
                   )}
                 </div>
