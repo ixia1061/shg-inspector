@@ -9,9 +9,10 @@ export default async function ExtinguishersPage() {
 
   // 전체를 한 번만 불러오고, 필터·검색·페이지네이션은 클라이언트에서 즉시 처리한다.
   // (사업장 전환/검색 때마다 수백 행을 서버에서 다시 불러오던 버벅임 제거)
-  const [{ data: extinguishers }, { data: sites }] = await Promise.all([
+  const [{ data: extinguishers }, { data: sites }, { data: parts }] = await Promise.all([
     supabase.from("v_extinguisher_list").select("*"),
     supabase.from("sites").select("*").order("name"),
+    supabase.from("management_parts").select("*").order("order_index").order("code"),
   ]);
 
   return (
@@ -23,7 +24,11 @@ export default async function ExtinguishersPage() {
         </Button>
       </div>
 
-      <ExtinguisherListClient extinguishers={extinguishers ?? []} sites={sites ?? []} />
+      <ExtinguisherListClient
+        extinguishers={extinguishers ?? []}
+        sites={sites ?? []}
+        parts={parts ?? []}
+      />
     </div>
   );
 }
