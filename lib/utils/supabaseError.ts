@@ -29,8 +29,13 @@ export function friendlyErrorMessage(error: unknown): string {
     return "이 항목에 소속된 소화기가 있어 삭제할 수 없습니다. 소화기를 먼저 이동하거나 삭제하세요.";
   }
   if (err.code === "42501") {
-    // RLS 정책 위반 — 점검자/관리자가 배정되지 않은 파트의 소화기에 접근한 경우
-    return "이 소화기를 점검할 권한이 없습니다. 관리자에게 관리파트 배정을 요청하세요.";
+    // RLS 정책 위반. 어느 테이블에서 막혔는지에 따라 안내를 나눈다.
+    // (점검 저장이 아닌데도 "점검 권한" 안내가 나가면 원인을 찾기 어려워진다.)
+    const table = err.message?.match(/for table "([^"]+)"/)?.[1];
+    if (table === "inspections" || table === "inspection_photos") {
+      return "이 소화기를 점검할 권한이 없습니다. 관리자에게 관리파트 배정을 요청하세요.";
+    }
+    return "권한이 없어 저장하지 못했습니다. 담당 사업장·관리파트 범위인지 확인하고, 계속되면 시스템관리자에게 문의하세요.";
   }
   if (typeof err.message === "string" && err.message) {
     return err.message;
