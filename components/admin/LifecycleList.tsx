@@ -18,11 +18,12 @@ import type { ExtinguisherOverview } from "@/types/domain";
 
 const PAGE_SIZE = 50;
 
-/** 내용연수 관리 목록 — 페이지당 50개(교체예정일 → 관리번호 순 정렬은 서버에서 이미 처리). */
+/** 내용연수 관리 목록 — 페이지당 50개(상태 → 관리번호 순 정렬은 서버에서 이미 처리). */
 export function LifecycleList({ rows }: { rows: ExtinguisherOverview[] }) {
   const [page, setPage] = useState(0);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  // 사업장을 바꾸면 목록이 짧아질 수 있으므로 범위를 벗어난 페이지는 마지막 페이지로 보정한다.
   const current = Math.min(page, pageCount - 1);
   const pageRows = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
 
