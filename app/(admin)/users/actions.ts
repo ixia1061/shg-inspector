@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getWritablePartIds } from "@/lib/auth";
+import { getAccessibleSiteIds, getWritablePartIds } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminRole } from "@/lib/utils/roles";
@@ -256,7 +256,7 @@ export async function updateUserSitesAction(
 }
 
 export async function toggleUserActiveAction(userId: string, isActive: boolean) {
-  await assertSuperAdmin();
+  const { supabase, isSuper } = await assertAdmin();
   const admin = createAdminClient();
 
   // 시스템관리자 계정은 비활성화할 수 없다 (잠금 방지)
@@ -265,8 +265,47 @@ export async function toggleUserActiveAction(userId: string, isActive: boolean) 
     throw new Error("시스템관리자 계정은 비활성화할 수 없습니다");
   }
 
+  // 일반 관리자는 "자기 범위의 점검자"만 활성/비활성할 수 있다.
+  if (!isSuper) {
+    if (target?.role !== "inspector") {
+      throw new Error("점검자 계정만 활성/비활성할 수 있습니다");
+    }
+    await assertInspectorInMyScope(supabase, userId);
+  }
+
   await admin.from("profiles").update({ is_active: isActive }).eq("id", userId);
   revalidatePath("/users");
+}
+
+/**
+ * 대상 점검자가 내 담당 범위인지 확인한다(시스템관리자는 이 함수를 거치지 않는다).
+ * 사용자 관리 목록에 보이는 기준과 같다 — 배정이 내 범위와 겹치거나, 아직 아무 데도
+ * 배정되지 않은(신규) 점검자. 화면에 보이는 대상만 조작할 수 있게 맞춘다.
+ */
+async function assertInspectorInMyScope(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+) {
+  const mySiteIds = await getAccessibleSiteIds();
+  if (mySiteIds === null) return; // 시스템관리자
+
+  const [{ data: theirSites }, { data: theirParts }, { data: allParts }] = await Promise.all([
+    supabase.from("user_sites").select("site_id").eq("user_id", userId),
+    supabase.from("user_parts").select("part_id").eq("user_id", userId),
+    supabase.from("management_parts").select("id, site_id"),
+  ]);
+
+  const siteOfPart = new Map((allParts ?? []).map((p) => [p.id, p.site_id]));
+  const theirSiteIds = new Set((theirSites ?? []).map((s) => s.site_id));
+  for (const p of theirParts ?? []) {
+    const siteId = siteOfPart.get(p.part_id);
+    if (siteId) theirSiteIds.add(siteId);
+  }
+
+  if (theirSiteIds.size === 0) return; // 아직 미배정 — 첫 배정 대상이라 허용
+  if (![...theirSiteIds].some((id) => mySiteIds.has(id))) {
+    throw new Error("담당하지 않는 사업장의 점검자입니다");
+  }
 }
 
 export async function deleteUserAction(userId: string) {

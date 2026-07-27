@@ -132,15 +132,18 @@ export function UsersClient({
           sites={sites}
           parts={parts}
           canManage
+          canToggleActive
         />
       )}
 
+      {/* 관리자도 자기 범위 점검자는 활성/비활성으로 접속을 막을 수 있다(퇴사·교대 등). */}
       <UserSection
         title={`점검자 (${visibleInspectors.length})`}
         rows={visibleInspectors}
         sites={sites}
         parts={parts}
         canManage={isSuper}
+        canToggleActive
       />
     </div>
   );
@@ -152,13 +155,16 @@ function UserSection({
   sites,
   parts,
   canManage,
+  canToggleActive,
 }: {
   title: string;
   rows: UserListItem[];
   sites: Site[];
   parts: ManagementPart[];
-  /** 역할 변경·배정·비활성·삭제 가능 여부(시스템관리자만) */
+  /** 역할 변경·배정·삭제 가능 여부(시스템관리자만) */
   canManage: boolean;
+  /** 활성/비활성 토글 가능 여부 */
+  canToggleActive: boolean;
 }) {
   return (
     <section className="flex flex-col gap-2">
@@ -189,6 +195,7 @@ function UserSection({
                 assignedSiteIds={u.assignedSiteIds}
                 assignedPartIds={u.assignedPartIds}
                 canManage={canManage}
+                canToggleActive={canToggleActive}
               />
             ))
           ) : (
