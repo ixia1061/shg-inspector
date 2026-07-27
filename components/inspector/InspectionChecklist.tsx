@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
+import { INSPECTION_CHECK_ITEMS, type InspectionCheckKey } from "@/lib/utils/inspection";
 import { LIFECYCLE_STATUS_LABEL } from "@/lib/utils/lifecycle";
 import { formatShortLocation } from "@/lib/utils/location";
 import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
@@ -23,27 +24,17 @@ import { createClient } from "@/lib/supabase/client";
 import { computeOverallResult } from "@/lib/validations/inspection.schema";
 import type { ExtinguisherOverview } from "@/types/domain";
 
-interface ChecklistValues {
-  pressure_ok: boolean;
-  seal_ok: boolean;
-  appearance_ok: boolean;
-  installation_ok: boolean;
-  etc_ok: boolean;
-  memo: string;
-}
+type ChecklistValues = Record<InspectionCheckKey, boolean> & { memo: string };
 
 interface StampedPhoto {
   file: File;
   previewUrl: string;
 }
 
-const CHECK_ITEMS: { key: keyof Omit<ChecklistValues, "memo">; label: string }[] = [
-  { key: "pressure_ok", label: "압력 정상" },
-  { key: "seal_ok", label: "봉인 정상" },
-  { key: "appearance_ok", label: "외관 정상" },
-  { key: "installation_ok", label: "설치상태 정상" },
-  { key: "etc_ok", label: "기타사항 정상" },
-];
+/** 체크는 기본 전부 정상. 푸는 항목이 곧 불량이 된다. */
+const ALL_OK = Object.fromEntries(
+  INSPECTION_CHECK_ITEMS.map((item) => [item.key, true])
+) as Record<InspectionCheckKey, boolean>;
 
 /** 점검 1회당 첨부 가능한 사진 수 (전·후 사진 등) */
 const MAX_INSPECTION_PHOTOS = 5;
@@ -67,14 +58,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
   }, []);
 
   const { register, handleSubmit, watch, setValue } = useForm<ChecklistValues>({
-    defaultValues: {
-      pressure_ok: true,
-      seal_ok: true,
-      appearance_ok: true,
-      installation_ok: true,
-      etc_ok: true,
-      memo: "",
-    },
+    defaultValues: { ...ALL_OK, memo: "" },
   });
 
   const values = watch();
@@ -136,7 +120,10 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
 
   async function onSubmit(values: ChecklistValues) {
     setSubmitting(true);
-    const overall_result = computeOverallResult(values);
+    const checks = Object.fromEntries(
+      INSPECTION_CHECK_ITEMS.map((item) => [item.key, values[item.key]])
+    ) as Record<InspectionCheckKey, boolean>;
+    const overall_result = computeOverallResult(checks);
     const inspected_at = new Date().toISOString();
 
     try {
@@ -156,11 +143,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
         const { error } = await supabase.rpc("fn_submit_inspection", {
           p_payload: {
             extinguisher_id: extinguisher.id,
-            pressure_ok: values.pressure_ok,
-            seal_ok: values.seal_ok,
-            appearance_ok: values.appearance_ok,
-            installation_ok: values.installation_ok,
-            etc_ok: values.etc_ok,
+            ...checks,
             overall_result,
             memo: values.memo || null,
             inspected_at,
@@ -176,11 +159,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
       } else {
         await enqueueInspection({
           extinguisher_id: extinguisher.id,
-          pressure_ok: values.pressure_ok,
-          seal_ok: values.seal_ok,
-          appearance_ok: values.appearance_ok,
-          installation_ok: values.installation_ok,
-          etc_ok: values.etc_ok,
+          ...checks,
           overall_result,
           memo: values.memo || null,
           inspected_at,
@@ -250,7 +229,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
       </div>
 
       <FieldGroup>
-        {CHECK_ITEMS.map(({ key, label }) => (
+        {INSPECTION_CHECK_ITEMS.map(({ key, label }) => (
           <Field key={key} orientation="horizontal">
             <Checkbox
               id={key}

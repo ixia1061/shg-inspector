@@ -58,13 +58,25 @@ async function submitOne(
     photoPaths.push(path);
   }
 
+  // 구버전 앱에서 큐에 쌓인 항목은 옛 체크항목(압력/봉인/외관/설치)만 갖고 있다.
+  // 그대로 실어 보내면 서버가 해당 컬럼에 기록한다(없는 항목은 null).
+  const legacy = item as Partial<
+    Record<"pressure_ok" | "seal_ok" | "appearance_ok" | "installation_ok", boolean>
+  >;
+
   const { error } = await supabase.rpc("fn_submit_inspection", {
     p_payload: {
       extinguisher_id: item.extinguisher_id,
-      pressure_ok: item.pressure_ok,
-      seal_ok: item.seal_ok,
-      appearance_ok: item.appearance_ok,
-      installation_ok: item.installation_ok,
+      agent_discharge_ok: item.agent_discharge_ok ?? null,
+      agent_caking_ok: item.agent_caking_ok ?? null,
+      gauge_ok: item.gauge_ok ?? null,
+      handle_ok: item.handle_ok ?? null,
+      hose_ok: item.hose_ok ?? null,
+      hose_holder_ok: item.hose_holder_ok ?? null,
+      pressure_ok: legacy.pressure_ok ?? null,
+      seal_ok: legacy.seal_ok ?? null,
+      appearance_ok: legacy.appearance_ok ?? null,
+      installation_ok: legacy.installation_ok ?? null,
       etc_ok: item.etc_ok,
       overall_result: item.overall_result,
       memo: item.memo,

@@ -239,10 +239,18 @@ export interface Database {
           id: string;
           extinguisher_id: string;
           inspector_id: string;
-          pressure_ok: boolean;
-          seal_ok: boolean;
-          appearance_ok: boolean;
-          installation_ok: boolean;
+          // 구 항목(2026-07-27 이전 점검 기록 보존용) — 신규 점검에서는 null
+          pressure_ok: boolean | null;
+          seal_ok: boolean | null;
+          appearance_ok: boolean | null;
+          installation_ok: boolean | null;
+          // 관리대장 점검사항 6개
+          agent_discharge_ok: boolean | null;
+          agent_caking_ok: boolean | null;
+          gauge_ok: boolean | null;
+          handle_ok: boolean | null;
+          hose_ok: boolean | null;
+          hose_holder_ok: boolean | null;
           etc_ok: boolean;
           overall_result: InspectionResult;
           memo: string | null;
@@ -254,10 +262,16 @@ export interface Database {
           id?: string;
           extinguisher_id: string;
           inspector_id: string;
-          pressure_ok: boolean;
-          seal_ok: boolean;
-          appearance_ok: boolean;
-          installation_ok: boolean;
+          pressure_ok?: boolean | null;
+          seal_ok?: boolean | null;
+          appearance_ok?: boolean | null;
+          installation_ok?: boolean | null;
+          agent_discharge_ok?: boolean | null;
+          agent_caking_ok?: boolean | null;
+          gauge_ok?: boolean | null;
+          handle_ok?: boolean | null;
+          hose_ok?: boolean | null;
+          hose_holder_ok?: boolean | null;
           etc_ok?: boolean;
           overall_result: InspectionResult;
           memo?: string | null;
@@ -355,6 +369,12 @@ export interface Database {
           part_id: string;
           part_code: string;
           part_name: string;
+          last_agent_discharge_ok: boolean | null;
+          last_agent_caking_ok: boolean | null;
+          last_gauge_ok: boolean | null;
+          last_handle_ok: boolean | null;
+          last_hose_ok: boolean | null;
+          last_hose_holder_ok: boolean | null;
         };
         Relationships: [];
       };

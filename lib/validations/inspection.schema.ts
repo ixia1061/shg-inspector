@@ -1,11 +1,15 @@
 import { z } from "zod";
 
+import { INSPECTION_CHECK_ITEMS, type InspectionCheckKey } from "@/lib/utils/inspection";
+
 export const inspectionSchema = z.object({
   extinguisher_id: z.string().uuid(),
-  pressure_ok: z.boolean(),
-  seal_ok: z.boolean(),
-  appearance_ok: z.boolean(),
-  installation_ok: z.boolean(),
+  agent_discharge_ok: z.boolean(),
+  agent_caking_ok: z.boolean(),
+  gauge_ok: z.boolean(),
+  handle_ok: z.boolean(),
+  hose_ok: z.boolean(),
+  hose_holder_ok: z.boolean(),
   etc_ok: z.boolean(),
   memo: z.string().optional(),
   inspected_at: z.string(),
@@ -14,18 +18,9 @@ export const inspectionSchema = z.object({
 
 export type InspectionFormValues = z.infer<typeof inspectionSchema>;
 
-/** 5개 체크항목이 모두 정상일 때만 overall_result가 'normal'이 된다. */
+/** 체크항목(점검사항 6개 + 기타사항)이 모두 정상일 때만 overall_result가 'normal'이 된다. */
 export function computeOverallResult(
-  values: Pick<
-    InspectionFormValues,
-    "pressure_ok" | "seal_ok" | "appearance_ok" | "installation_ok" | "etc_ok"
-  >
+  values: Record<InspectionCheckKey, boolean>
 ): "normal" | "abnormal" {
-  const allOk =
-    values.pressure_ok &&
-    values.seal_ok &&
-    values.appearance_ok &&
-    values.installation_ok &&
-    values.etc_ok;
-  return allOk ? "normal" : "abnormal";
+  return INSPECTION_CHECK_ITEMS.every((item) => values[item.key]) ? "normal" : "abnormal";
 }
