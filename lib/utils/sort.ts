@@ -10,6 +10,23 @@ export function sortByAssetCode<T extends { asset_code: string }>(rows: T[]): T[
 }
 
 /**
+ * 내용연수 관리 목록 정렬: 급한 상태(만료 → 30일 → 90일)를 먼저, 같은 상태 안에서는
+ * 관리번호 순. 만료 목록을 관리번호 순으로 훑으며 현장에서 교체할 수 있게 하기 위함이다.
+ * (교체 예정일은 상태 안에서 뒤섞이지만 목록에 그대로 표시된다.)
+ */
+const LIFECYCLE_URGENCY: Record<string, number> = { expired: 0, due_30: 1, due_90: 2 };
+
+export function sortByLifecycleUrgency<
+  T extends { asset_code: string; lifecycle_status: string },
+>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const ua = LIFECYCLE_URGENCY[a.lifecycle_status] ?? 99;
+    const ub = LIFECYCLE_URGENCY[b.lifecycle_status] ?? 99;
+    return ua - ub || compareAssetCode(a.asset_code, b.asset_code);
+  });
+}
+
+/**
  * 관리자 개인 설정(user_site_order)에 따라 사업장 목록을 정렬한다. 설정에 없는 사업장은
  * (신규 사업장 등) 기존 순서를 유지한 채 뒤로 밀린다 — Array.sort는 안정 정렬이므로
  * 호출 전 이름순으로 정렬해 넘기면 미설정 사업장끼리는 이름순을 유지한다.
