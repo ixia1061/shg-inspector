@@ -1,75 +1,53 @@
-import { ActionRequiredList } from "@/components/admin/ActionRequiredList";
-import { DashboardCards } from "@/components/admin/DashboardCards";
-import { InspectionRateChart } from "@/components/admin/InspectionRateChart";
-import { ResolvedActionList } from "@/components/admin/ResolvedActionList";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isActionNeeded, isActionResolved } from "@/lib/utils/inspection";
+import { subDays } from "date-fns";
+
+import { DashboardClient } from "@/components/admin/DashboardClient";
 import { createClient } from "@/lib/supabase/server";
-import { sortByAssetCode } from "@/lib/utils/sort";
+import { sortSitesByPreference } from "@/lib/utils/sort";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [{ data: summaryRows }, { data: rateRows }, { data: overviewRows }] = await Promise.all([
-    supabase.rpc("fn_dashboard_summary"),
-    supabase.rpc("fn_inspection_rate", { p_group_by: "building", p_period: "month" }),
-    supabase.from("v_extinguisher_overview").select("*").eq("status", "active"),
-  ]);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // 건물별 점검률은 건물명 가나다순으로 정렬해 표시한다.
-  const rateRowsSorted = [...(rateRows ?? [])].sort((a, b) =>
-    (a.group_name ?? "").localeCompare(b.group_name ?? "", "ko"),
-  );
+  // 요약·점검률은 소화기 뷰 한 번으로 클라이언트에서 집계한다(사업장 전환 시 서버 왕복 없음).
+  // 최근 30일 이상점검만 점검 기록 기반이라 따로 조회한다.
+  const since = subDays(new Date(), 30).toISOString();
+  const [{ data: overviewRows }, { data: abnormalRows }, { data: sites }, { data: orderRow }] =
+    await Promise.all([
+      supabase.from("v_extinguisher_overview").select("*").eq("status", "active"),
+      supabase
+        .from("inspections")
+        .select("extinguisher_id")
+        .eq("overall_result", "abnormal")
+        .gte("inspected_at", since),
+      supabase.from("sites").select("*").order("name"),
+      user
+        ? supabase.from("user_site_order").select("site_order").eq("user_id", user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
 
-  // 조치필요(이상+미조치) / 조치완료(이번달 조치됨) 소화기 목록
-  const actionNeeded = sortByAssetCode((overviewRows ?? []).filter((r) => isActionNeeded(r)));
-  const actionResolved = sortByAssetCode((overviewRows ?? []).filter((r) => isActionResolved(r)));
+  const rows = overviewRows ?? [];
 
-  const summary = summaryRows?.[0] ?? {
-    total_extinguishers: 0,
-    inspected_this_month: 0,
-    not_inspected_this_month: 0,
-    action_required: 0,
-    due_soon: 0,
-    expired: 0,
-    recent_abnormal: 0,
-  };
+  // 최근 이상점검을 사업장별로 세기 위해 소화기 → 사업장으로 매핑한다.
+  const siteByExtinguisher = new Map(rows.map((r) => [r.id, r.site_id]));
+  const recentAbnormalSiteIds = (abnormalRows ?? [])
+    .map((i) => siteByExtinguisher.get(i.extinguisher_id))
+    .filter((s): s is string => Boolean(s));
+
+  // 사업장 버튼 순서는 관리자 개인 설정(내 계정 → 사업장 표시 순서)을 따른다.
+  const orderedSites = sortSitesByPreference(sites ?? [], orderRow?.site_order);
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold">대시보드</h1>
-      <DashboardCards summary={summary} />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>건물별 이번달 점검률</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <InspectionRateChart rows={rateRowsSorted} />
-          </CardContent>
-        </Card>
-
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>조치 필요 소화기 ({actionNeeded.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ActionRequiredList rows={actionNeeded} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>조치완료 소화기 ({actionResolved.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResolvedActionList rows={actionResolved} />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <DashboardClient
+        extinguishers={rows}
+        sites={orderedSites}
+        recentAbnormalSiteIds={recentAbnormalSiteIds}
+      />
     </div>
   );
 }

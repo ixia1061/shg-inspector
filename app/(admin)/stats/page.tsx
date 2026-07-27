@@ -1,6 +1,6 @@
-import { InspectionRateChart } from "@/components/admin/InspectionRateChart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatsClient, type MonthInspection } from "@/components/admin/StatsClient";
 import { createClient } from "@/lib/supabase/server";
+import { sortSitesByPreference } from "@/lib/utils/sort";
 
 export default async function StatsPage() {
   const supabase = await createClient();
@@ -10,73 +10,48 @@ export default async function StatsPage() {
   const kstToday = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" }); // YYYY-MM-DD
   const startOfMonthIso = new Date(`${kstToday.slice(0, 7)}-01T00:00:00+09:00`).toISOString();
 
-  const [{ data: buildingRate }, { data: monthInspections }] = await Promise.all([
-    // 구역(zone)은 실데이터에 거의 없어 건물 단위로 집계한다. (대시보드·점검현황과 동일)
-    supabase.rpc("fn_inspection_rate", { p_group_by: "building", p_period: "month" }),
-    supabase
-      .from("inspections")
-      .select("inspector_id, overall_result")
-      .gte("inspected_at", startOfMonthIso),
-  ]);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // 이름 있는 건물만, 건물명 가나다순 정렬
-  const rateRows = [...(buildingRate ?? [])]
-    .filter((r) => r.group_name)
-    .sort((a, b) => (a.group_name ?? "").localeCompare(b.group_name ?? "", "ko"));
+  const [{ data: overviewRows }, { data: monthInspections }, { data: sites }, { data: orderRow }] =
+    await Promise.all([
+      supabase.from("v_extinguisher_overview").select("*").eq("status", "active"),
+      supabase
+        .from("inspections")
+        .select("inspector_id, overall_result, extinguisher_id")
+        .gte("inspected_at", startOfMonthIso),
+      supabase.from("sites").select("*").order("name"),
+      user
+        ? supabase.from("user_site_order").select("site_order").eq("user_id", user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
 
   const inspectorIds = [...new Set((monthInspections ?? []).map((i) => i.inspector_id))];
   const { data: inspectors } = inspectorIds.length
     ? await supabase.from("profiles").select("id, name").in("id", inspectorIds)
     : { data: [] };
-  const inspectorNameById = new Map((inspectors ?? []).map((p) => [p.id, p.name]));
+  const nameById = new Map((inspectors ?? []).map((p) => [p.id, p.name]));
 
-  const countByInspector = (monthInspections ?? []).reduce<Record<string, number>>((acc, i) => {
-    acc[i.inspector_id] = (acc[i.inspector_id] ?? 0) + 1;
-    return acc;
-  }, {});
+  // 점검 기록에는 사업장이 없으므로 소화기 → 사업장으로 매핑해 사업장별 실적을 낼 수 있게 한다.
+  const rows = overviewRows ?? [];
+  const siteByExtinguisher = new Map(rows.map((r) => [r.id, r.site_id]));
 
-  const totalThisMonth = monthInspections?.length ?? 0;
-  const abnormalThisMonth = (monthInspections ?? []).filter((i) => i.overall_result === "abnormal").length;
-  const abnormalRate = totalThisMonth > 0 ? Math.round((abnormalThisMonth / totalThisMonth) * 1000) / 10 : 0;
+  const inspections: MonthInspection[] = (monthInspections ?? []).map((i) => ({
+    inspector_id: i.inspector_id,
+    inspector_name: nameById.get(i.inspector_id) ?? "알 수 없음",
+    site_id: siteByExtinguisher.get(i.extinguisher_id) ?? null,
+    abnormal: i.overall_result === "abnormal",
+  }));
+
+  // 사업장 버튼 순서는 관리자 개인 설정(내 계정 → 사업장 표시 순서)을 따른다.
+  const orderedSites = sortSitesByPreference(sites ?? [], orderRow?.site_order);
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold">통계</h1>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>건물별 이번달 점검률</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <InspectionRateChart rows={rateRows} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>이번달 점검자별 실적</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-3 text-sm">
-              이번달 총 {totalThisMonth}건 · 이상점검 비율 {abnormalRate}%
-            </p>
-            <ul className="flex flex-col gap-2 text-sm">
-              {Object.entries(countByInspector)
-                .sort((a, b) => b[1] - a[1])
-                .map(([inspectorId, count]) => (
-                  <li key={inspectorId} className="flex justify-between border-b pb-1 last:border-0">
-                    <span>{inspectorNameById.get(inspectorId) ?? "알 수 없음"}</span>
-                    <span className="font-medium">{count}건</span>
-                  </li>
-                ))}
-              {totalThisMonth === 0 && (
-                <li className="text-muted-foreground">이번달 점검 이력이 없습니다.</li>
-              )}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+      <StatsClient extinguishers={rows} sites={orderedSites} monthInspections={inspections} />
     </div>
   );
 }
