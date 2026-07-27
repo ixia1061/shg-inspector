@@ -3,10 +3,12 @@ import type { InspectionResult } from "@/types/domain";
 
 export interface EnqueueInspectionInput {
   extinguisher_id: string;
-  pressure_ok: boolean;
-  seal_ok: boolean;
-  appearance_ok: boolean;
-  installation_ok: boolean;
+  agent_discharge_ok: boolean;
+  agent_caking_ok: boolean;
+  gauge_ok: boolean;
+  handle_ok: boolean;
+  hose_ok: boolean;
+  hose_holder_ok: boolean;
   etc_ok: boolean;
   overall_result: InspectionResult;
   memo: string | null;

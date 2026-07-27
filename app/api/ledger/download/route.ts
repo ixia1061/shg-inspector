@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
-import { defectItemsText, isActionNeeded } from "@/lib/utils/inspection";
+import { defectItemsText, isActionNeeded, LEDGER_CHECK_ITEMS } from "@/lib/utils/inspection";
 import { LIFECYCLE_STATUS_LABEL } from "@/lib/utils/lifecycle";
 import { formatShortLocation } from "@/lib/utils/location";
 import { isAdminRole } from "@/lib/utils/roles";
@@ -55,6 +55,9 @@ function monthStatus(e: ExtinguisherOverview): string {
   if (isActionNeeded(e)) return "조치필요";
   return "완료";
 }
+
+/** 점검사항 한 항목의 표기: 체크 유지=O, 체크 해제=X, 값 없음(미점검·구버전 점검)=빈칸 */
+const checkMark = (ok: boolean | null): string => (ok === null ? "" : ok ? "O" : "X");
 
 /** timestamptz(UTC ISO)를 KST 기준 'YYYY-MM-DD'로. (UTC로 자르면 최대 9시간 하루 오차) */
 function kstDate(iso: string | null): string {
@@ -347,6 +350,7 @@ function buildLedgerSheet(
   nameById: Map<string, string>,
 ) {
   const sheet = workbook.addWorksheet(sheetName);
+  // 점검사항 6개(약제방출~호스걸이)는 내용연수상태와 최근점검일 사이에 들어간다.
   sheet.columns = [
     { header: "관리번호", key: "asset_code", width: 18 },
     { header: "위치", key: "location", width: 58 },
@@ -357,6 +361,7 @@ function buildLedgerSheet(
     { header: "내용연수(년)", key: "useful_life", width: 12 },
     { header: "교체예정일", key: "replace_due", width: 12 },
     { header: "내용연수상태", key: "lifecycle", width: 14 },
+    ...LEDGER_CHECK_ITEMS.map((item) => ({ header: item.header, key: item.key, width: 9 })),
     { header: "최근점검일", key: "last_inspected", width: 12 },
     { header: "점검결과", key: "result", width: 10 },
     { header: "불량항목", key: "defect", width: 18 },
@@ -365,6 +370,9 @@ function buildLedgerSheet(
     { header: "점검자", key: "inspector", width: 12 },
     { header: "이번달상태", key: "month", width: 11 },
   ];
+
+  /** key로 컬럼 번호를 찾는다(점검사항 추가로 인덱스가 밀리므로 하드코딩하지 않는다). */
+  const colNo = (key: string) => sheet.getColumn(key).number;
 
   const headerRow = sheet.getRow(1);
   headerRow.font = { bold: true };
@@ -385,6 +393,9 @@ function buildLedgerSheet(
       useful_life: e.useful_life_years ?? "",
       replace_due: e.replace_due_date ?? "",
       lifecycle: LIFECYCLE_STATUS_LABEL[e.lifecycle_status as LifecycleStatus] ?? "",
+      ...Object.fromEntries(
+        LEDGER_CHECK_ITEMS.map((item) => [item.key, checkMark(e[item.viewKey])]),
+      ),
       last_inspected: kstDate(e.last_inspected_at),
       result: resultLabel(e.last_inspection_result),
       defect: defectItemsText(e),
@@ -393,11 +404,15 @@ function buildLedgerSheet(
       inspector: e.last_inspector_id ? (nameById.get(e.last_inspector_id) ?? "") : "",
       month: monthStatus(e),
     });
-    // 위치(2)·불량항목(12)·불량내용(13)·조치내용(14) 셀은 왼쪽 정렬로 전체가 보이게
-    row.getCell(2).alignment = { vertical: "middle", horizontal: "left" };
-    row.getCell(12).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
-    row.getCell(13).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
-    row.getCell(14).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+    // 위치·불량항목·불량내용·조치내용 셀은 왼쪽 정렬로 전체가 보이게
+    row.getCell(colNo("location")).alignment = { vertical: "middle", horizontal: "left" };
+    for (const key of ["defect", "defect_note", "action"]) {
+      row.getCell(colNo(key)).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+    }
+    // 점검사항 O/X는 가운데 정렬
+    for (const item of LEDGER_CHECK_ITEMS) {
+      row.getCell(colNo(item.key)).alignment = { vertical: "middle", horizontal: "center" };
+    }
   }
 
   sheet.eachRow({ includeEmpty: false }, (row) => {

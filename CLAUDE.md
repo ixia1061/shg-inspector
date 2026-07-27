@@ -101,7 +101,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 | `extinguisher_types` | 소화기 종류. `default_useful_life_years`(nullable — CO2/할론 등 내용연수 없음) |
 | `extinguishers` | 소화기. `location_type`(BUILDING/VEHICLE), **`part_id`**(관리파트 → 관리번호 prefix), `asset_code`(UNIQUE, 자동생성), `manufacture_date`, `useful_life_years`(nullable), `status` |
 | `asset_code_history` | 관리번호 변경 이력 (QR 재발급 없이 옛 코드→최신 소화기 연결) |
-| `inspections` | 점검 기록. **append-only**. `inspector_id`, 4개 체크항목, `overall_result`, `inspected_at` |
+| `inspections` | 점검 기록. **append-only**. `inspector_id`, 체크항목 7개(점검사항 6개 + `etc_ok`), `overall_result`, `inspected_at`. 구 항목 4개(`pressure_ok`·`seal_ok`·`appearance_ok`·`installation_ok`)는 2026-07-27 이전 기록 보존용(nullable) |
 | `inspection_photos` | 점검 사진 메타. 소화기당 최신 5장만 유지 |
 | `inspection_actions` | 이상 점검 조치 기록(append). `inspection_id`(UNIQUE), `action_note`(조치내용), `resolved_by`, `resolved_at`. 관리자 전용. 조치완료해야 이번달 점검완료로 집계 |
 
@@ -200,6 +200,7 @@ next.config.ts             Serwist는 프로덕션 빌드에서만 래핑
 
 > 형식: `YYYY-MM-DD — 요약`. 기능 추가·수정 시 최신 항목을 위에 추가한다.
 
+- **2026-07-27** — **점검 체크항목을 실제 관리대장 양식(점검사항 6개)으로 교체 + 관리대장에 O/X 컬럼 추가.** 현장에서 쓰던 기존 종이 관리대장의 점검사항이 **약제방출·약제응고·게이지상태·손잡이상태·호스상태·호스걸이** 6개인데 앱은 압력/봉인/외관/설치 4개(+기타)라 대장과 항목이 맞지 않았음. 앱 체크항목을 이 **6개 + 기존 "기타사항 정상"**(불량 시 아래 이상 내용에 수기 기입, 방식 그대로 유지) = **7개**로 교체. 관리대장 점검대장 시트에 **내용연수상태와 최근점검일 사이**로 점검사항 6개 컬럼을 넣고 **체크 유지=O / 체크 해제=X / 값 없음(미점검·구버전 점검)=빈칸**으로 표기. 신규 마이그레이션 `20260727090000_inspection_items_v2.sql`: `inspections`에 6개 컬럼(nullable) 추가, 구 4개 컬럼은 **과거 기록 보존을 위해 남기고 not null만 해제**(신규 점검은 null → 불량항목·대장에서 자동 제외), `fn_submit_inspection`·`v_extinguisher_overview`(`last_*` 6개 노출) 갱신. 체크항목 정의를 `lib/utils/inspection.ts`의 `LEDGER_CHECK_ITEMS`(대장 6개)·`INSPECTION_CHECK_ITEMS`(6개+기타)로 **한 곳에 모아** 점검 화면 2곳(`InspectionChecklist`·`AdminInspectDialog`)·`computeOverallResult`·불량항목 표기·대장 컬럼이 모두 이 배열을 따르게 함(항목 추가·순서 변경이 한 파일로 끝남). 오프라인 Outbox(`OutboxInspection`)도 신규 필드로 교체하되, 구버전 앱이 쌓아둔 큐 항목은 `syncEngine`이 옛 항목까지 함께 실어 보내 유실 없이 동기화. 도움말(`/help`) 점검 항목 문구 갱신. `tsc --noEmit`·`next build --webpack` 통과, lint 신규 오류 없음.
 - **2026-07-26** — **점검현황·수량현황 사업장 버튼 순서를 관리자 개인별로 설정 가능하게 추가.** 요청: 관리자 계정마다 원하는 사업장 순서가 다를 수 있음(예: A 관리자는 상주업체를 먼저, B 관리자는 한국공항공사를 먼저) — 전체 공통 순서가 아니라 계정별 개인 설정으로 구현. **신규 테이블** `user_site_order`(`site_order` jsonb 배열, `user_id` PK, RLS `user_id = auth.uid()`로 본인 행만 조작 — `profiles` 쓰기가 시스템관리자 전용이라 그 경계를 안 건드리려고 별도 테이블로 분리, `user_sites`/`user_parts`와 같은 패턴). **내 계정**(`/account`) 화면에 관리자에게만 보이는 **"사업장 표시 순서"** 섹션 추가(`SiteOrderEditor`, `FloorList`의 "선택 후 고정 ▲▼로 이동" UI 재사용, 이동마다 `user_site_order` upsert). `lib/utils/sort.ts`에 `sortSitesByPreference` 추가(설정 없는 사업장은 기존 순서 유지한 채 뒤로, 안정 정렬). `app/(admin)/inspections/page.tsx`·`app/(admin)/inventory/page.tsx`가 로그인한 관리자의 `user_site_order`를 조회해 사업장 버튼 순서에 반영. 마이그레이션 `20260726140000_user_site_order.sql`, **서울 운영 DB 적용 완료**. `tsc --noEmit`·`next build --webpack`·lint 통과.
 
 - **2026-07-26** — **내용연수 관리 2차 정렬(교체예정일 동률 시 관리번호 자연정렬) 추가.** 기존엔 `.order("replace_due_date")`만 걸려 있어 교체예정일이 같은 소화기끼리는 순서가 불규칙(DB 반환 순서 의존)했음. `app/(admin)/lifecycle/page.tsx`에서 조회 후 JS로 재정렬: 1차 교체예정일 오름차순, 동률이면 `compareAssetCode`(`lib/utils/sort.ts`, `localeCompare` numeric)로 관리번호를 가나다+숫자 순번대로 정렬(`공사-1-1-10`이 `...-2`보다 앞서는 문제 방지). `tsc --noEmit`·`next build --webpack`·lint 통과.

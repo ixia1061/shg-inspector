@@ -19,29 +19,19 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
+import { INSPECTION_CHECK_ITEMS, type InspectionCheckKey } from "@/lib/utils/inspection";
 import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 import { watermarkImage } from "@/lib/utils/watermark";
 import { computeOverallResult } from "@/lib/validations/inspection.schema";
 import type { ExtinguisherOverview } from "@/types/domain";
 
-const CHECK_ITEMS = [
-  { key: "pressure_ok", label: "압력 정상" },
-  { key: "seal_ok", label: "봉인 정상" },
-  { key: "appearance_ok", label: "외관 정상" },
-  { key: "installation_ok", label: "설치상태 정상" },
-  { key: "etc_ok", label: "기타사항 정상" },
-] as const;
-
 const MAX_PHOTOS = 5;
 
-type Checks = Record<(typeof CHECK_ITEMS)[number]["key"], boolean>;
-const ALL_OK: Checks = {
-  pressure_ok: true,
-  seal_ok: true,
-  appearance_ok: true,
-  installation_ok: true,
-  etc_ok: true,
-};
+type Checks = Record<InspectionCheckKey, boolean>;
+/** 체크는 기본 전부 정상. 푸는 항목이 곧 불량이 된다. */
+const ALL_OK = Object.fromEntries(
+  INSPECTION_CHECK_ITEMS.map((item) => [item.key, true])
+) as Checks;
 
 /**
  * 관리자가 QR 스캔 없이 관리자 화면 안에서 바로 점검을 완료하는 모달.
@@ -112,11 +102,7 @@ export function AdminInspectDialog({
       const { error } = await supabase.rpc("fn_submit_inspection", {
         p_payload: {
           extinguisher_id: extinguisher.id,
-          pressure_ok: checks.pressure_ok,
-          seal_ok: checks.seal_ok,
-          appearance_ok: checks.appearance_ok,
-          installation_ok: checks.installation_ok,
-          etc_ok: checks.etc_ok,
+          ...checks,
           overall_result,
           memo: memo || null,
           inspected_at,
@@ -173,7 +159,7 @@ export function AdminInspectDialog({
         </DialogHeader>
 
         <FieldGroup>
-          {CHECK_ITEMS.map(({ key, label }) => (
+          {INSPECTION_CHECK_ITEMS.map(({ key, label }) => (
             <Field key={key} orientation="horizontal">
               <Checkbox
                 id={`ai-${key}`}
