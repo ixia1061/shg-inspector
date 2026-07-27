@@ -192,6 +192,59 @@ export async function rejectSignupAction(userId: string) {
   revalidatePath("/users");
 }
 
+/**
+ * 점검자의 점검 범위를 **사업장 단위**로 교체한다(사용자 관리에서 바로 변경).
+ *
+ * 실제 DB 배정은 파트 단위(user_parts)지만, 파트가 많아 하나씩 고르기 번거로우므로
+ * 화면에서는 사업장으로 묶는다. 내가 부여할 수 있는 파트만 대상으로 지우고 채우므로,
+ * **다른 관리자가 준 범위는 건드리지 않는다.**
+ * RLS 사용자 클라이언트로 수행해 user_parts_write 정책이 경계를 DB에서도 강제한다.
+ */
+export async function updateInspectorSitesAction(inspectorId: string, siteIds: string[]) {
+  const { supabase } = await assertAdmin();
+
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", inspectorId)
+    .single();
+  if (target?.role !== "inspector") {
+    throw new Error("점검자만 점검 범위를 지정할 수 있습니다");
+  }
+  await assertInspectorInMyScope(supabase, inspectorId);
+
+  // 내가 부여할 수 있는 파트 = 이번 조작의 대상 범위
+  const writable = await getWritablePartIds();
+  const { data: allParts } = await supabase.from("management_parts").select("id, site_id");
+  const grantable = (allParts ?? []).filter((p) => writable === null || writable.has(p.id));
+
+  const selected = new Set(siteIds);
+  const outside = siteIds.filter((id) => !grantable.some((p) => p.site_id === id));
+  if (outside.length > 0) {
+    throw new Error("담당하지 않는 사업장은 배정할 수 없습니다");
+  }
+
+  const toGrant = grantable.filter((p) => selected.has(p.site_id)).map((p) => p.id);
+  const toRevoke = grantable.filter((p) => !selected.has(p.site_id)).map((p) => p.id);
+
+  if (toRevoke.length > 0) {
+    const { error } = await supabase
+      .from("user_parts")
+      .delete()
+      .eq("user_id", inspectorId)
+      .in("part_id", toRevoke);
+    if (error) throw new Error(error.message);
+  }
+  if (toGrant.length > 0) {
+    const { error } = await supabase
+      .from("user_parts")
+      .upsert(toGrant.map((part_id) => ({ user_id: inspectorId, part_id })));
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath("/users");
+}
+
 export async function updateUserRoleAction(userId: string, role: UserRole) {
   await assertSuperAdmin();
   if (role !== "admin" && role !== "inspector") {

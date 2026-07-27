@@ -20,7 +20,6 @@ export function partsForSite<T extends { site_id: string }>(parts: T[], siteId: 
  * 점검자 권한을 **사업장 단위**로 다룰 때, 고른 사업장들에 속한 파트 id를 모두 모은다.
  * 실제 DB 배정은 파트 단위(user_parts)라 관리자 경계를 벗어나지 않지만,
  * 화면에서는 파트가 많아 고르기 번거로우므로 사업장 하나로 묶어 보여준다.
- * (점검자 배정 화면이 쓰는 방식과 같다)
  */
 export function partIdsForSites<T extends { id: string; site_id: string }>(
   parts: T[],

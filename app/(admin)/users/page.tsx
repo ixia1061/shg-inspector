@@ -115,7 +115,7 @@ export default async function UsersPage() {
     }));
   } else {
     // 일반 관리자는 자기 담당 사업장의 점검자만 본다. 아직 아무 데도 배정되지 않은
-    // 점검자는 누구나 볼 수 있게 남긴다(점검자 배정 화면과 같은 규칙 — 첫 배정 가능).
+    // 점검자는 누구나 볼 수 있게 남긴다(아직 아무도 안 맡은 사람이라 첫 배정이 가능해야 한다).
     inspectors = activeProfiles
       .filter((p) => p.role === "inspector")
       .map(toItem)
