@@ -45,11 +45,12 @@ export interface Database {
         Relationships: [];
       };
       user_site_order: {
-        // 관리자 개인별 사업장 표시 순서(점검현황·수량현황). site_order는 site_id를
+        // 관리자 개인별 사업장 표시 순서(관리 화면 상단 버튼). site_order는 site_id를
         // 원하는 순서대로 나열한 배열 — 없는 사업장은 이름순으로 뒤에 붙는다.
+        // updated_at의 default now()는 INSERT에만 적용되므로 갱신 시 직접 넣는다.
         Row: { user_id: string; site_order: string[]; updated_at: string };
-        Insert: { user_id: string; site_order?: string[] };
-        Update: Partial<{ user_id: string; site_order: string[] }>;
+        Insert: { user_id: string; site_order?: string[]; updated_at?: string };
+        Update: Partial<{ user_id: string; site_order: string[]; updated_at: string }>;
         Relationships: [];
       };
       sites: {

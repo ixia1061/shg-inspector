@@ -28,7 +28,7 @@ export default async function AccountPage() {
   const isAdmin = isAdminRole(profile?.role);
   const homeHref = isAdmin ? "/dashboard" : "/scan";
 
-  // 관리자만 점검현황·수량현황 사업장 버튼 순서를 개인적으로 설정할 수 있다.
+  // 관리자만 관리 화면 사업장 버튼 순서를 개인적으로 설정할 수 있다.
   const [{ data: sites }, { data: orderRow }] = isAdmin
     ? await Promise.all([
         supabase.from("sites").select("id, name").order("name"),
@@ -60,7 +60,8 @@ export default async function AccountPage() {
           <div>
             <h2 className="text-sm font-semibold">사업장 표시 순서</h2>
             <p className="text-muted-foreground text-xs">
-              점검현황·수량현황 상단 사업장 버튼이 이 순서로 나타납니다. 나에게만 적용됩니다.
+              대시보드·점검현황·수량현황·내용연수 관리·통계 상단의 사업장 버튼이 이 순서로
+              나타납니다. 나에게만 적용되고, 순서를 바꾸면 바로 저장됩니다.
             </p>
           </div>
           <SiteOrderEditor sites={orderedSites} />
