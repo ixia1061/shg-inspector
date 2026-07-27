@@ -18,16 +18,24 @@ export interface Database {
           id: string;
           name: string;
           phone: string | null;
+          // 가입 트리거가 auth.users의 이메일을 복사해 둔다(승인 화면에서 신청자 식별용).
+          email: string | null;
           role: UserRole;
+          // 승인 플래그. false면 로그인해도 아무 데이터에 접근할 수 없다.
           is_active: boolean;
+          // 자가 회원가입으로 신청한 사업장. 승인하면 null로 비운다.
+          // 승인 대기 = is_active === false && pending_site_id !== null
+          pending_site_id: string | null;
           created_at: string;
         };
         Insert: {
           id: string;
           name: string;
           phone?: string | null;
+          email?: string | null;
           role?: UserRole;
           is_active?: boolean;
+          pending_site_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -42,6 +50,13 @@ export interface Database {
         Row: { user_id: string; part_id: string };
         Insert: { user_id: string; part_id: string };
         Update: Partial<{ user_id: string; part_id: string }>;
+        Relationships: [];
+      };
+      site_join_codes: {
+        // 사업장별 가입코드(사업장당 1행). 점검자가 /signup에서 이 코드로 가입 신청한다.
+        Row: { site_id: string; code: string; updated_at: string; updated_by: string | null };
+        Insert: { site_id: string; code: string; updated_at?: string; updated_by?: string | null };
+        Update: Partial<{ code: string; updated_at: string; updated_by: string | null }>;
         Relationships: [];
       };
       user_site_order: {

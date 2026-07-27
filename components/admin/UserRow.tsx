@@ -25,6 +25,7 @@ import type { ManagementPart, Site, UserRole } from "@/types/domain";
 export function UserRow({
   id,
   name,
+  email,
   role,
   isActive,
   scopeLabels,
@@ -32,9 +33,11 @@ export function UserRow({
   parts,
   assignedSiteIds,
   assignedPartIds,
+  canManage,
 }: {
   id: string;
   name: string;
+  email: string | null;
   role: UserRole;
   isActive: boolean;
   scopeLabels: string[];
@@ -42,13 +45,17 @@ export function UserRow({
   parts: ManagementPart[];
   assignedSiteIds: string[];
   assignedPartIds: string[];
+  /** 역할 변경·배정·비활성·삭제 가능 여부. 일반 관리자에게는 읽기 전용으로 보인다. */
+  canManage: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [active, setActive] = useState(isActive);
 
   // 시스템관리자 계정은 역할 변경·비활성·삭제가 불가능하도록 잠근다.
-  const locked = role === "super_admin";
+  // 일반 관리자에게는 모든 행이 읽기 전용이다(계정 관리는 시스템관리자 몫).
+  const isSuperAdminUser = role === "super_admin";
+  const locked = isSuperAdminUser || !canManage;
 
   function handleRoleChange(value: string | null) {
     if (!value) return;
@@ -97,10 +104,11 @@ export function UserRow({
   return (
     <TableRow>
       <TableCell className="font-medium">{name}</TableCell>
+      <TableCell className="text-muted-foreground text-sm">{email ?? "-"}</TableCell>
       <TableCell>
         {locked ? (
           <span className="inline-flex h-9 items-center rounded-md bg-primary/10 px-3 text-sm font-medium text-primary">
-            {ROLE_LABELS.super_admin}
+            {ROLE_LABELS[role] ?? role}
           </span>
         ) : (
           <Select
@@ -120,26 +128,28 @@ export function UserRow({
         )}
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">
-        {locked ? (
+        {isSuperAdminUser ? (
           <span>전체 (시스템관리자)</span>
         ) : (
           <div className="flex flex-col items-start gap-1">
             <span>{scopeLabels.length ? scopeLabels.join(", ") : "미배정"}</span>
-            <UserSitesDialog
-              userId={id}
-              userName={name}
-              sites={sites}
-              parts={parts}
-              assignedSiteIds={assignedSiteIds}
-              assignedPartIds={assignedPartIds}
-            />
+            {canManage && (
+              <UserSitesDialog
+                userId={id}
+                userName={name}
+                sites={sites}
+                parts={parts}
+                assignedSiteIds={assignedSiteIds}
+                assignedPartIds={assignedPartIds}
+              />
+            )}
           </div>
         )}
       </TableCell>
       <TableCell>
-        {locked ? (
+        {isSuperAdminUser ? (
           <span className="text-muted-foreground text-sm">활성 (보호됨)</span>
-        ) : (
+        ) : canManage ? (
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleToggleActive} disabled={isPending}>
               {active ? "활성" : "비활성"}
@@ -148,6 +158,8 @@ export function UserRow({
               삭제
             </Button>
           </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">{active ? "활성" : "비활성"}</span>
         )}
       </TableCell>
     </TableRow>

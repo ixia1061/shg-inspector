@@ -444,7 +444,7 @@
         <li><a href="#in-and">안드로이드 설치</a></li>
         <li><a href="#in-ios">아이폰 설치</a></li>
         <li><a href="#in-pc">PC 설치</a></li>
-        <li><a href="#in-login">처음 로그인</a></li>
+        <li><a href="#in-login">처음 로그인 · 가입 신청</a></li>
       </ul>
     </nav>
     <div class="content">
@@ -460,7 +460,7 @@
       <div class="flow"><span class="code">https://shg-inspector.vercel.app</span></div>
       <div class="callout callout--note">
         <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
-        <div class="callout__body"><p><span class="callout__tag">참고</span>관리 업무(등록·통계·인쇄)는 PC, 현장 점검은 휴대폰이 편리합니다. 로그인 계정은 <strong>시스템관리자가 발급</strong>하며 공개 회원가입은 없습니다.</p></div>
+        <div class="callout__body"><p><span class="callout__tag">참고</span>관리 업무(등록·통계·인쇄)는 PC, 현장 점검은 휴대폰이 편리합니다. <strong>관리자 계정</strong>은 시스템관리자가 발급하고, <strong>점검자</strong>는 사업장 <strong>가입코드</strong>로 직접 가입 신청한 뒤 관리자 승인을 받습니다.</p></div>
       </div>
 
       </div>
@@ -501,12 +501,23 @@
 
       </div>
       <div class="doc-sec">
-      <h2 id="in-login"><span class="num">5</span>처음 로그인</h2>
+      <h2 id="in-login"><span class="num">5</span>처음 로그인 · 가입 신청</h2>
       <ol class="steps">
         <li>설치한 아이콘(또는 주소)으로 접속합니다.</li>
         <li><strong>이메일</strong>·<strong>비밀번호</strong>를 입력하고 <strong>[로그인]</strong>.</li>
         <li>역할에 따라 화면이 자동으로 나뉩니다 — <strong>관리자 → 대시보드</strong>, <strong>점검자 → QR 스캔</strong>.</li>
       </ol>
+      <h3>점검자 계정이 없다면 (가입 신청)</h3>
+      <ol class="steps">
+        <li>관리자에게 우리 사업장의 <strong>가입코드</strong>(8자리)를 받습니다.</li>
+        <li>로그인 화면 아래 <strong>[점검자이신가요? 가입 신청]</strong> 을 누릅니다.</li>
+        <li><strong>가입코드 · 이름 · 이메일 · 비밀번호</strong>(8자 이상)를 입력하고 <strong>[가입 신청]</strong>.</li>
+        <li>관리자가 승인하면 그때부터 로그인해 점검할 수 있습니다.</li>
+      </ol>
+      <div class="callout callout--warn">
+        <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <div class="callout__body"><p><span class="callout__tag">주의</span>승인 전에 로그인하면 “<strong>가입 승인 대기 중입니다</strong>” 안내가 뜹니다. 가입코드가 맞지 않는다고 나오면 관리자에게 <strong>현재 코드</strong>를 다시 확인하세요(재발급될 수 있습니다).</p></div>
+      </div>
       </div>
     </div>
   </div>
@@ -520,7 +531,7 @@
       <ul>
         <li><a href="#ip-intro">한눈에 보기</a></li>
         <li><a href="#ip-scan">QR 점검 (핵심)</a></li>
-        <li><a href="#ip-check">점검 항목 5가지</a></li>
+        <li><a href="#ip-check">점검 항목</a></li>
         <li><a href="#ip-photo">사진 촬영</a></li>
         <li><a href="#ip-status">점검 현황 보기</a></li>
         <li><a href="#ip-offline">오프라인 점검</a></li>
@@ -677,7 +688,7 @@
         <li><a href="#ad-status">점검현황·조치</a></li>
         <li><a href="#ad-ledger">관리대장(엑셀)</a></li>
         <li><a href="#ad-assign">점검자 배정</a></li>
-        <li><a href="#ad-users">사용자 관리</a></li>
+        <li><a href="#ad-users">사용자 관리 · 가입 승인</a></li>
         <li><a href="#ad-etc">기타 메뉴</a></li>
       </ul>
     </nav>
@@ -719,13 +730,13 @@
             <tr><td><strong>통계</strong></td><td>건물별 점검률·점검자별 실적</td></tr>
             <tr><td><strong>QR Code 관리</strong></td><td>QR 라벨 검색·선택·인쇄</td></tr>
             <tr><td><strong>점검자 배정</strong></td><td>점검자에게 관리파트별 점검 권한 부여</td></tr>
-            <tr><td><strong>사용자 관리</strong> <span class="chip chip--crit">시스템관리자만</span></td><td>계정 발급·역할·담당 범위 배정</td></tr>
+            <tr><td><strong>사용자 관리</strong></td><td>점검자 조회·생성, <strong>가입 신청 승인</strong> / (시스템관리자) 역할·담당 범위 배정</td></tr>
           </tbody>
         </table>
       </div>
       <div class="callout callout--warn">
         <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-        <div class="callout__body"><p><span class="callout__tag">주의</span><strong>사업장·관리파트 추가/수정/삭제</strong>와 <strong>사용자 관리</strong>는 시스템관리자만 할 수 있습니다. 일반 관리자는 배정된 범위의 건물·소화기·점검만 관리합니다.</p></div>
+        <div class="callout__body"><p><span class="callout__tag">주의</span><strong>사업장·관리파트 추가/수정/삭제</strong>, <strong>가입코드 발급</strong>, <strong>역할 변경·계정 삭제</strong>는 시스템관리자만 할 수 있습니다. 일반 관리자는 배정된 범위의 건물·소화기·점검을 관리하고, 자기 사업장 점검자만 보고 승인·생성할 수 있습니다.</p></div>
       </div>
 
       </div>
@@ -835,12 +846,33 @@
 
       </div>
       <div class="doc-sec">
-      <h2 id="ad-users"><span class="num">9</span>사용자 관리 <span class="chip chip--crit">시스템관리자만</span></h2>
+      <h2 id="ad-users"><span class="num">9</span>사용자 관리 · 가입 승인</h2>
+      <h3>점검자 가입코드 발급 <span class="chip chip--crit">시스템관리자만</span></h3>
       <ol class="steps">
-        <li><strong>사용자 추가</strong>로 이름·이메일·비밀번호·역할(관리자/점검자)을 입력해 계정을 만듭니다.</li>
-        <li><strong>담당 배정</strong> 창에서 범위를 지정합니다 — <strong>사업장 전체</strong>(현재·미래 모든 파트) 또는 <strong>특정 관리파트</strong>(그 파트만).</li>
-        <li>배정된 범위의 데이터만 그 사용자에게 보입니다.</li>
+        <li><strong>사업장/건물 관리 → 사업장 선택</strong> → 맨 위 <strong>점검자 가입코드</strong>에서 <strong>[가입코드 발급]</strong>.</li>
+        <li>만들어진 8자리 코드를 <strong>[복사]</strong>해 점검자에게 전달합니다.</li>
+        <li>코드가 유출되면 <strong>[재발급]</strong> — 새 코드가 생기고 <strong>옛 코드는 즉시 무효</strong>가 됩니다.</li>
       </ol>
+      <h3>가입 신청 승인 <span class="chip">관리자·시스템관리자</span></h3>
+      <ol class="steps">
+        <li>점검자가 가입코드로 신청하면 <strong>사용자 관리 → 가입 승인 대기</strong>에 이름·이메일·신청 사업장·신청일이 나타납니다.</li>
+        <li><strong>[승인]</strong> → 그 점검자가 맡을 <strong>관리파트</strong>를 체크(기본 전체 선택) → 승인하면 즉시 로그인·점검이 가능합니다.</li>
+        <li><strong>[거부]</strong> 하면 신청 계정이 삭제됩니다(같은 이메일로 재신청 가능).</li>
+      </ol>
+      <div class="callout callout--warn">
+        <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <div class="callout__body"><p><span class="callout__tag">주의</span>승인 전 계정은 로그인해도 “<strong>가입 승인 대기 중</strong>” 안내만 뜨고 아무 데이터도 열리지 않습니다.</p></div>
+      </div>
+      <h3>계정 직접 만들기</h3>
+      <ol class="steps">
+        <li><strong>관리자</strong>: <strong>[점검자 추가]</strong> → 이름·이메일·임시 비밀번호 + <strong>점검 범위(관리파트)</strong> 체크. 내가 맡은 파트만 보입니다.</li>
+        <li><strong>시스템관리자</strong>: <strong>[새 사용자]</strong> → 역할(관리자/점검자)과 <strong>담당 사업장</strong>까지 지정.</li>
+        <li><strong>담당 배정</strong> 창에서 범위를 지정합니다 — <strong>사업장 전체</strong>(현재·미래 모든 파트) 또는 <strong>특정 관리파트</strong>(그 파트만).</li>
+      </ol>
+      <div class="callout callout--warn">
+        <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <div class="callout__body"><p><span class="callout__tag">주의</span>일반 관리자에게는 <strong>자기 담당 사업장의 점검자만</strong> 보이고, 역할 변경·계정 삭제·비활성화는 할 수 없습니다(시스템관리자 전용).</p></div>
+      </div>
       <div class="callout callout--tip">
         <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V17h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>
         <div class="callout__body"><p><span class="callout__tag">팁</span>여러 파트로 나뉜 사업장에서 한 담당자에게 특정 파트만 맡기려면 “특정 관리파트” 배정을 쓰세요. 파트를 나누지 않은 사업장은 “사업장 전체”만으로 충분합니다. 시스템관리자 계정은 보호되어 삭제·강등·비활성화가 되지 않습니다.</p></div>
@@ -889,7 +921,8 @@
       <h2 id="faq-login"><span class="num">Q</span>로그인이 안 돼요</h2>
       <ul class="plain">
         <li>이메일·비밀번호를 다시 정확히(앞뒤 공백·대소문자) 입력하고 인터넷을 확인합니다.</li>
-        <li>그래도 안 되면 <strong>시스템관리자</strong>에게 계정 <strong>활성 상태</strong>·<strong>비밀번호 재설정</strong>을 요청하세요. (공개 회원가입·비밀번호 찾기 없음)</li>
+        <li>"<strong>가입 승인 대기 중</strong>"이라고 뜨면 아직 승인 전입니다. 사업장 관리자에게 승인을 요청하세요.</li>
+        <li>그래도 안 되면 <strong>관리자</strong>에게 계정 <strong>활성 상태</strong>·<strong>비밀번호 재설정</strong>을 요청하세요. (비밀번호 찾기 기능은 아직 없음)</li>
       </ul>
 
       </div>

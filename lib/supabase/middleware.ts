@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import type { Database } from "@/types/database.types";
 
-const PUBLIC_PATHS = ["/login"];
+// /signup은 점검자 가입 신청 화면이라 로그인 없이 열려 있어야 한다.
+const PUBLIC_PATHS = ["/login", "/signup"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { BuildingFormDialog } from "@/components/admin/BuildingFormDialog";
 import { FloorFormDialog } from "@/components/admin/FloorFormDialog";
 import { FloorList } from "@/components/admin/FloorList";
+import { JoinCodeCard } from "@/components/admin/JoinCodeCard";
 import { PartFormDialog } from "@/components/admin/PartFormDialog";
 import { SiteFormDialog } from "@/components/admin/SiteFormDialog";
 import { VehicleFormDialog } from "@/components/admin/VehicleFormDialog";
@@ -31,6 +32,11 @@ export default async function SiteDetailPage({
     .select("*")
     .eq("site_id", siteId)
     .order("order_index");
+
+  // 점검자 가입코드(사업장당 1개). 발급·재발급은 시스템관리자만.
+  const { data: joinCode } = canManageSite
+    ? await supabase.from("site_join_codes").select("code").eq("site_id", siteId).maybeSingle()
+    : { data: null };
 
   const { data: buildings } = await supabase
     .from("buildings")
@@ -72,6 +78,19 @@ export default async function SiteDetailPage({
           <BuildingFormDialog siteId={site.id} nextBuildingNo={nextBuildingNo} />
         </div>
       </div>
+
+      {canManageSite && (
+        <div className="flex flex-col gap-3 rounded-lg border p-4">
+          <div>
+            <h2 className="text-lg font-semibold">점검자 가입코드</h2>
+            <p className="text-muted-foreground text-sm">
+              점검자가 가입 신청 화면에서 이 코드를 넣으면 이 사업장으로 접수됩니다. 신청은
+              사용자 관리에서 승인합니다.
+            </p>
+          </div>
+          <JoinCodeCard siteId={site.id} code={joinCode?.code ?? null} />
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 rounded-lg border p-4">
         <div className="flex items-center justify-between">

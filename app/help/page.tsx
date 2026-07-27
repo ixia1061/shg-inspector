@@ -58,6 +58,23 @@ function InspectorHelp() {
 
       <Card>
         <CardHeader>
+          <CardTitle>계정 만들기 (가입 신청)</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm">
+          <ol className="ml-4 flex list-decimal flex-col gap-1">
+            <li>관리자에게 사업장 <b>가입코드</b>를 받습니다.</li>
+            <li>로그인 화면 아래 <b>[점검자이신가요? 가입 신청]</b> 을 누릅니다.</li>
+            <li>가입코드·이름·이메일·비밀번호를 입력하고 <b>[가입 신청]</b>.</li>
+            <li>
+              관리자가 승인하면 로그인할 수 있습니다. 승인 전에 로그인하면 <b>가입 승인 대기</b>{" "}
+              안내가 뜹니다.
+            </li>
+          </ol>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>QR 점검 순서</CardTitle>
         </CardHeader>
         <CardContent className="text-sm">
@@ -159,11 +176,14 @@ function AdminHelp() {
         <CardContent className="text-sm">
           <ul className="ml-4 flex list-disc flex-col gap-1">
             <li>브라우저에서 <b>shg-inspector.vercel.app</b> 접속 → 발급받은 <b>이메일·비밀번호</b>로 로그인.</li>
-            <li>공개 회원가입은 없습니다. 계정은 <b>시스템관리자</b>가 발급합니다.</li>
+            <li>
+              <b>관리자 계정</b>은 시스템관리자가 발급합니다. <b>점검자</b>는 사업장
+              <b>가입코드</b>로 직접 가입 신청하고, 관리자가 승인하면 이용할 수 있습니다.
+            </li>
             <li>휴대폰 브라우저 메뉴의 <b>홈 화면에 추가</b>를 누르면 앱처럼 설치됩니다.</li>
             <li>
               <b>내 권한 범위</b>: 일반 관리자는 <b>배정된 담당 범위(사업장 전체 또는 특정 관리파트)</b>
-              만 보고 관리합니다. 사업장·관리파트 추가와 사용자 관리는 시스템관리자 전용입니다.
+              만 보고 관리합니다. 사업장·관리파트 추가는 시스템관리자 전용입니다.
             </li>
           </ul>
         </CardContent>
@@ -185,6 +205,7 @@ function AdminHelp() {
             <li><b>통계</b>: 점검자별 실적, 건물별 점검률</li>
             <li><b>QR Code 관리</b>: 라벨 검색·다중선택·인쇄(재발급)</li>
             <li><b>점검자 배정</b>: 점검자에게 관리파트별 점검 권한 부여</li>
+            <li><b>사용자 관리</b>: 담당 사업장 점검자 조회·생성, <b>가입 신청 승인</b></li>
           </ul>
         </CardContent>
       </Card>
@@ -298,6 +319,32 @@ function AdminHelp() {
 
       <Card>
         <CardHeader>
+          <CardTitle>점검자 가입 승인 (사용자 관리)</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm">
+          <ul className="ml-4 flex list-disc flex-col gap-1">
+            <li>
+              점검자는 <b>사업장 가입코드</b>로 직접 가입 신청합니다. 코드는 시스템관리자가
+              <b>사업장/건물 관리 → 사업장 상세</b>에서 발급하며, 유출되면 <b>재발급</b>으로 옛
+              코드를 무효화할 수 있습니다.
+            </li>
+            <li>
+              신청이 들어오면 <b>사용자 관리 → 가입 승인 대기</b>에 나타납니다. <b>승인</b>을 누르고
+              점검 범위(관리파트)를 체크하면 그때부터 로그인·점검이 가능합니다.
+            </li>
+            <li>
+              <b>거부</b>하면 신청 계정이 삭제됩니다(같은 이메일로 다시 신청할 수 있습니다).
+            </li>
+            <li>
+              급할 때는 <b>점검자 추가</b>로 관리자가 직접 계정을 만들어 줄 수도 있습니다.
+            </li>
+            <li>승인 전에는 로그인해도 <b>가입 승인 대기</b> 안내만 보이고 아무 데이터도 열리지 않습니다.</li>
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>수량 현황 · 내용연수 · 사진 · 통계</CardTitle>
         </CardHeader>
         <CardContent className="text-sm">
@@ -336,6 +383,8 @@ function AdminHelp() {
         <CardContent className="text-sm">
           <ul className="ml-4 flex list-disc flex-col gap-1">
             <li><b>로그인 실패</b>: 이메일·비밀번호 확인. 점검자 계정 문제는 사용자 관리에서 상태(활성) 확인.</li>
+            <li><b>점검자가 승인 대기라고 함</b>: <b>사용자 관리 → 가입 승인 대기</b>에서 승인해 주세요.</li>
+            <li><b>가입코드가 안 맞는다고 함</b>: 사업장 상세에서 현재 코드를 확인해 다시 알려주세요(재발급하면 옛 코드는 즉시 무효).</li>
             <li><b>최신 내용이 안 보임</b>: 화면 새로고침(QR Code 관리는 [새로고침] 버튼). 앱이면 껐다 켜기.</li>
             <li><b>관리번호 중복 오류</b>: 등록 시 끝자리를 비워 자동 부여되게 하세요.</li>
             <li><b>점검자가 QR이 안 잡힌다고 함</b>: 라벨 손상일 수 있으니 QR Code 관리에서 재인쇄.</li>

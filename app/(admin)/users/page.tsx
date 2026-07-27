@@ -1,55 +1,75 @@
 import { redirect } from "next/navigation";
 
-import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
-import { UserRow } from "@/components/admin/UserRow";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  UsersClient,
+  type PendingSignupItem,
+  type UserListItem,
+} from "@/components/admin/UsersClient";
+import { getWritablePartIds } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminRole, isSuperAdminRole } from "@/lib/utils/roles";
+import { sortSitesByPreference } from "@/lib/utils/sort";
 
 export default async function UsersPage() {
   const supabase = await createClient();
 
-  // 사용자 관리는 시스템관리자 전용
   const {
     data: { user },
   } = await supabase.auth.getUser();
   const { data: me } = user
     ? await supabase.from("profiles").select("role").eq("id", user.id).single()
     : { data: null };
-  if (me?.role !== "super_admin") {
-    redirect("/dashboard");
-  }
+  if (!isAdminRole(me?.role)) redirect("/dashboard");
+  const isSuper = isSuperAdminRole(me?.role);
 
-  const [{ data: profiles }, { data: sites }, { data: parts }, { data: userSites }, { data: userParts }] =
-    await Promise.all([
-      supabase.from("profiles").select("*").order("created_at"),
-      supabase.from("sites").select("*").order("name"),
-      supabase.from("management_parts").select("*").order("order_index"),
-      supabase.from("user_sites").select("user_id, site_id"),
-      supabase.from("user_parts").select("user_id, part_id"),
-    ]);
+  const [
+    { data: profiles },
+    { data: sites },
+    { data: parts },
+    { data: userSites },
+    { data: userParts },
+    { data: orderRow },
+  ] = await Promise.all([
+    supabase.from("profiles").select("*").order("created_at"),
+    supabase.from("sites").select("*").order("name"),
+    supabase.from("management_parts").select("*").order("order_index"),
+    supabase.from("user_sites").select("user_id, site_id"),
+    supabase.from("user_parts").select("user_id, part_id"),
+    user
+      ? supabase.from("user_site_order").select("site_order").eq("user_id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  // 내가 부여할 수 있는 관리파트(= has_part_access). 시스템관리자는 null(제한 없음).
+  const writablePartIds = await getWritablePartIds();
+  const grantableParts = (parts ?? []).filter(
+    (p) => writablePartIds === null || writablePartIds.has(p.id)
+  );
+  const mySiteIds = new Set(grantableParts.map((p) => p.site_id));
 
   const siteNameById = new Map((sites ?? []).map((s) => [s.id, s.name]));
   const partById = new Map((parts ?? []).map((p) => [p.id, p]));
 
-  // 사업장 "전체" 배정
   const siteIdsByUser = (userSites ?? []).reduce<Record<string, string[]>>((acc, us) => {
     (acc[us.user_id] ??= []).push(us.site_id);
     return acc;
   }, {});
-  // 특정 파트 배정
   const partIdsByUser = (userParts ?? []).reduce<Record<string, string[]>>((acc, up) => {
     (acc[up.user_id] ??= []).push(up.part_id);
     return acc;
   }, {});
 
-  // 화면 표기: "무안공항 전체", "상주업체 기상(기상)" 등
+  /** 배정을 사업장 집합으로 환산 — 사업장 필터와 관리자 가시 범위 판단에 쓴다. */
+  function sitesOf(userId: string): string[] {
+    const ids = new Set(siteIdsByUser[userId] ?? []);
+    for (const partId of partIdsByUser[userId] ?? []) {
+      const part = partById.get(partId);
+      if (part) ids.add(part.site_id);
+    }
+    return [...ids];
+  }
+
+  // 화면 표기: "무안공항 전체", "상주업체 기상" 등
   function scopeLabelsFor(userId: string): string[] {
     const labels: string[] = [];
     for (const siteId of siteIdsByUser[userId] ?? []) {
@@ -62,47 +82,71 @@ export default async function UsersPage() {
     return labels;
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">사용자 관리</h1>
-        <CreateUserDialog sites={sites ?? []} />
-      </div>
+  const toItem = (p: NonNullable<typeof profiles>[number]): UserListItem => ({
+    id: p.id,
+    name: p.name,
+    email: p.email,
+    role: p.role,
+    isActive: p.is_active,
+    scopeLabels: scopeLabelsFor(p.id),
+    assignedSiteIds: siteIdsByUser[p.id] ?? [],
+    assignedPartIds: partIdsByUser[p.id] ?? [],
+    siteIds: sitesOf(p.id),
+  });
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>이름</TableHead>
-            <TableHead>역할</TableHead>
-            <TableHead>담당 사업장</TableHead>
-            <TableHead>상태</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {profiles?.length ? (
-            profiles.map((p) => (
-              <UserRow
-                key={p.id}
-                id={p.id}
-                name={p.name}
-                role={p.role}
-                isActive={p.is_active}
-                scopeLabels={scopeLabelsFor(p.id)}
-                sites={sites ?? []}
-                parts={parts ?? []}
-                assignedSiteIds={siteIdsByUser[p.id] ?? []}
-                assignedPartIds={partIdsByUser[p.id] ?? []}
-              />
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={4} className="text-muted-foreground text-center">
-                등록된 사용자가 없습니다.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+  // 승인 대기 = 자가 회원가입으로 신청했고 아직 활성화되지 않은 계정
+  const pendingProfiles = (profiles ?? []).filter((p) => !p.is_active && p.pending_site_id);
+  const activeProfiles = (profiles ?? []).filter((p) => !(!p.is_active && p.pending_site_id));
+
+  let admins: UserListItem[] = [];
+  let inspectors: UserListItem[] = [];
+  let pending: PendingSignupItem[] = [];
+
+  if (isSuper) {
+    admins = activeProfiles.filter((p) => isAdminRole(p.role)).map(toItem);
+    inspectors = activeProfiles.filter((p) => p.role === "inspector").map(toItem);
+    pending = pendingProfiles.map((p) => ({
+      id: p.id,
+      name: p.name,
+      email: p.email,
+      siteId: p.pending_site_id!,
+      siteName: siteNameById.get(p.pending_site_id!) ?? "?",
+      requestedAt: p.created_at,
+    }));
+  } else {
+    // 일반 관리자는 자기 담당 사업장의 점검자만 본다. 아직 아무 데도 배정되지 않은
+    // 점검자는 누구나 볼 수 있게 남긴다(점검자 배정 화면과 같은 규칙 — 첫 배정 가능).
+    inspectors = activeProfiles
+      .filter((p) => p.role === "inspector")
+      .map(toItem)
+      .filter((u) => u.siteIds.length === 0 || u.siteIds.some((id) => mySiteIds.has(id)));
+    pending = pendingProfiles
+      .filter((p) => mySiteIds.has(p.pending_site_id!))
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        email: p.email,
+        siteId: p.pending_site_id!,
+        siteName: siteNameById.get(p.pending_site_id!) ?? "?",
+        requestedAt: p.created_at,
+      }));
+  }
+
+  // 사업장 버튼: 시스템관리자는 전체, 관리자는 담당 사업장만. 순서는 개인 설정을 따른다.
+  const visibleSites = isSuper
+    ? (sites ?? [])
+    : (sites ?? []).filter((s) => mySiteIds.has(s.id));
+  const orderedSites = sortSitesByPreference(visibleSites, orderRow?.site_order);
+
+  return (
+    <UsersClient
+      isSuper={isSuper}
+      sites={orderedSites}
+      parts={parts ?? []}
+      grantableParts={grantableParts}
+      admins={admins}
+      inspectors={inspectors}
+      pending={pending}
+    />
   );
 }

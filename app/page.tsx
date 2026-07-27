@@ -18,9 +18,14 @@ export default async function RootPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, is_active")
     .eq("id", user.id)
     .single();
+
+  // 승인 대기(비활성) 계정은 어떤 화면에도 들어가지 못한다.
+  if (profile && !profile.is_active) {
+    redirect("/login?status=pending");
+  }
 
   redirect(isAdminRole(profile?.role) ? "/dashboard" : "/scan");
 }

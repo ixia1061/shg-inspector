@@ -43,9 +43,21 @@ export function LoginForm() {
     //  루트 페이지를 한 번 더 거치는 서버 왕복을 없애 로그인 체감 속도도 개선)
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, is_active")
       .eq("id", data.user.id)
       .single();
+
+    // 승인 대기(또는 비활성) 계정은 들여보내지 않는다. 세션을 남겨두면 화면만 계속
+    // 튕기므로 바로 로그아웃시키고 이유를 알려준다.
+    if (profile && !profile.is_active) {
+      await supabase.auth.signOut();
+      setSubmitting(false);
+      toast.error("가입 승인 대기 중입니다", {
+        description: "사업장 관리자가 승인하면 이용할 수 있습니다.",
+      });
+      return;
+    }
+
     const destination = isAdminRole(profile?.role) ? "/dashboard" : "/scan";
 
     router.replace(destination);
