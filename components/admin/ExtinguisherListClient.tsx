@@ -23,8 +23,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatShortLocation } from "@/lib/utils/location";
+import { formatPartLabel, partsForSite } from "@/lib/utils/part";
 import { compareAssetCode } from "@/lib/utils/sort";
-import type { ExtinguisherListItem, LifecycleStatus, Site } from "@/types/domain";
+import type {
+  ExtinguisherListItem,
+  LifecycleStatus,
+  ManagementPart,
+  Site,
+} from "@/types/domain";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "전체 상태" },
@@ -40,11 +46,14 @@ const PAGE_SIZE = 50;
 export function ExtinguisherListClient({
   extinguishers,
   sites,
+  parts,
 }: {
   extinguishers: ExtinguisherListItem[];
   sites: Site[];
+  parts: ManagementPart[];
 }) {
   const [siteId, setSiteId] = useState("all");
+  const [partId, setPartId] = useState("all");
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -54,12 +63,32 @@ export function ExtinguisherListClient({
     [sites]
   );
 
+  // 사업장을 고르면 그 사업장의 파트만 선택지에 남긴다.
+  const visibleParts = useMemo(() => partsForSite(parts, siteId), [parts, siteId]);
+  const partItems = useMemo(
+    () => [
+      { value: "all", label: "전체 관리파트" },
+      ...visibleParts.map((p) => ({ value: p.id, label: formatPartLabel(p) })),
+    ],
+    [visibleParts]
+  );
+
+  /** 사업장을 바꿀 때, 선택돼 있던 파트가 그 사업장 소속이 아니면 파트 선택을 푼다. */
+  function changeSite(next: string) {
+    setSiteId(next);
+    if (partId !== "all" && !partsForSite(parts, next).some((p) => p.id === partId)) {
+      setPartId("all");
+    }
+    resetPage();
+  }
+
   // 클라이언트에서 즉시 필터 (서버 왕복 없음)
   const filtered = useMemo(() => {
     const kw = search.trim().toLowerCase();
     return extinguishers
       .filter((e) => {
         if (siteId !== "all" && e.site_id !== siteId) return false;
+        if (partId !== "all" && e.part_id !== partId) return false;
         if (status !== "all" && e.lifecycle_status !== (status as LifecycleStatus)) return false;
         if (
           kw &&
@@ -72,7 +101,7 @@ export function ExtinguisherListClient({
         return true;
       })
       .sort((a, b) => compareAssetCode(a.asset_code, b.asset_code));
-  }, [extinguishers, siteId, status, search]);
+  }, [extinguishers, siteId, partId, status, search]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -95,14 +124,7 @@ export function ExtinguisherListClient({
             resetPage();
           }}
         />
-        <Select
-          items={siteItems}
-          value={siteId}
-          onValueChange={(v) => {
-            setSiteId(v ?? "all");
-            resetPage();
-          }}
-        >
+        <Select items={siteItems} value={siteId} onValueChange={(v) => changeSite(v ?? "all")}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="사업장" />
           </SelectTrigger>
@@ -111,6 +133,26 @@ export function ExtinguisherListClient({
             {sites.map((s) => (
               <SelectItem key={s.id} value={s.id}>
                 {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          items={partItems}
+          value={partId}
+          onValueChange={(v) => {
+            setPartId(v ?? "all");
+            resetPage();
+          }}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="관리파트" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 관리파트</SelectItem>
+            {visibleParts.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {formatPartLabel(p)}
               </SelectItem>
             ))}
           </SelectContent>

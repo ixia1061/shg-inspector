@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatLocationPath } from "@/lib/utils/location";
+import { formatShortLocation } from "@/lib/utils/location";
 import type { ExtinguisherOverview } from "@/types/domain";
 
 const PAGE_SIZE = 50;
@@ -48,7 +48,8 @@ export function LifecycleList({ rows }: { rows: ExtinguisherOverview[] }) {
                     {e.asset_code}
                   </Link>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">{formatLocationPath(e)}</TableCell>
+                {/* 사업장은 상단 버튼으로 이미 선택돼 있으므로 소화기 관리와 같은 짧은 형식으로 표기 */}
+                <TableCell className="text-muted-foreground text-sm">{formatShortLocation(e)}</TableCell>
                 <TableCell>{e.manufacture_date}</TableCell>
                 <TableCell>{e.replace_due_date}</TableCell>
                 <TableCell>

@@ -8,9 +8,10 @@ export const dynamic = "force-dynamic";
 export default async function LabelsPage() {
   const supabase = await createClient();
 
-  const [{ data: extinguishers }, { data: sites }] = await Promise.all([
+  const [{ data: extinguishers }, { data: sites }, { data: parts }] = await Promise.all([
     supabase.from("v_extinguisher_list").select("*"),
     supabase.from("sites").select("*").order("name"),
+    supabase.from("management_parts").select("*").order("order_index").order("code"),
   ]);
 
   return (
@@ -22,7 +23,7 @@ export default async function LabelsPage() {
         </p>
       </div>
 
-      <QrBulkPrint extinguishers={extinguishers ?? []} sites={sites ?? []} />
+      <QrBulkPrint extinguishers={extinguishers ?? []} sites={sites ?? []} parts={parts ?? []} />
     </div>
   );
 }
