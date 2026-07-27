@@ -588,19 +588,25 @@
 
       </div>
       <div class="doc-sec">
-      <h2 id="ip-check"><span class="num">3</span>점검 항목 5가지</h2>
-      <p>처음에는 <strong>모두 “정상”으로 체크</strong>되어 있습니다. 문제가 있는 항목만 <strong>체크를 눌러 해제</strong>하세요.</p>
+      <h2 id="ip-check"><span class="num">3</span>점검 항목 (점검사항 6가지 + 기타사항)</h2>
+      <p>관리대장의 <strong>점검사항 6가지</strong>와 <strong>기타사항</strong>을 확인합니다. 처음에는 <strong>모두 “정상”으로 체크</strong>되어 있습니다. 문제가 있는 항목만 <strong>체크를 눌러 해제</strong>하세요.</p>
       <div class="table-wrap">
         <table>
           <thead><tr><th>항목</th><th>확인 내용</th></tr></thead>
           <tbody>
-            <tr><td><strong>압력 정상</strong></td><td>압력계 바늘이 초록색(정상) 범위에 있는가</td></tr>
-            <tr><td><strong>봉인 정상</strong></td><td>안전핀·봉인줄이 그대로 붙어 있는가</td></tr>
-            <tr><td><strong>외관 정상</strong></td><td>찌그러짐·부식·손상이 없는가</td></tr>
-            <tr><td><strong>설치상태 정상</strong></td><td>제자리에 걸려 있고 접근이 가능한가</td></tr>
-            <tr><td><strong>기타사항 정상</strong></td><td>위 4가지로 분류되지 않는 그 외 이상이 없는가</td></tr>
+            <tr><td><strong>약제방출 정상</strong></td><td>약제가 방출된 흔적 없이 그대로 채워져 있는가</td></tr>
+            <tr><td><strong>약제응고 정상</strong></td><td>흔들어 보았을 때 약제가 굳지 않고 움직이는가</td></tr>
+            <tr><td><strong>게이지상태 정상</strong></td><td>압력계 바늘이 초록색(정상) 범위에 있는가</td></tr>
+            <tr><td><strong>손잡이상태 정상</strong></td><td>손잡이·안전핀·봉인줄이 손상 없이 붙어 있는가</td></tr>
+            <tr><td><strong>호스상태 정상</strong></td><td>호스에 균열·막힘·노후·이탈이 없는가</td></tr>
+            <tr><td><strong>호스걸이 정상</strong></td><td>호스가 걸이에 제대로 꽂혀 있는가</td></tr>
+            <tr><td><strong>기타사항 정상</strong></td><td>위 6가지로 분류되지 않는 그 외 이상(외관 손상, 설치 위치 이탈 등)이 없는가</td></tr>
           </tbody>
         </table>
+      </div>
+      <div class="callout callout--tip">
+        <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-4 12.7V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3A7 7 0 0 0 12 2z"/><path d="M9 21h6"/></svg>
+        <div class="callout__body"><p><span class="callout__tag">팁</span>앞의 6가지 항목은 <strong>관리대장(엑셀)의 “점검사항” 칸</strong>에 그대로 들어갑니다. 체크를 유지하면 <strong>O</strong>, 체크를 풀면 <strong>X</strong> 로 표시됩니다.</p></div>
       </div>
       <div class="callout callout--warn">
         <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
@@ -808,7 +814,11 @@
         <li>오른쪽 위 <strong>[○○○ 관리대장]</strong> 버튼을 누릅니다.</li>
         <li>그 사업장의 관리대장 <strong>엑셀(.xlsx)</strong>이 다운로드됩니다.</li>
       </ol>
-      <p>표지(점검일자·점검자 수기란 + 동·층별 보유현황표)와 점검대장(위치·종류·제조일·최근점검일·점검결과·불량항목·불량내용·조치내용·이번달상태 등)이 담깁니다.</p>
+      <p>표지(점검일자·점검자 수기란 + 동·층별 보유현황표)와 점검대장(위치·종류·제조일·<strong>점검사항 6개(O/X)</strong>·최근점검일·점검결과·불량항목·불량내용·조치내용·이번달상태 등)이 담깁니다.</p>
+      <div class="callout callout--tip">
+        <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-4 12.7V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3A7 7 0 0 0 12 2z"/><path d="M9 21h6"/></svg>
+        <div class="callout__body"><p><span class="callout__tag">팁</span><strong>점검사항</strong> 칸(약제방출·약제응고·게이지상태·손잡이상태·호스상태·호스걸이)은 점검자가 체크를 유지하면 <strong>O</strong>, 체크를 풀면 <strong>X</strong> 로 찍힙니다. <strong>조치를 완료하면 X 였던 칸이 O 로 바뀝니다.</strong> 아직 점검하지 않았거나 2026-07-27 이전에 한 점검은 빈칸입니다.</p></div>
+      </div>
 
       </div>
       <div class="doc-sec">

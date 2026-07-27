@@ -56,8 +56,13 @@ function monthStatus(e: ExtinguisherOverview): string {
   return "완료";
 }
 
-/** 점검사항 한 항목의 표기: 체크 유지=O, 체크 해제=X, 값 없음(미점검·구버전 점검)=빈칸 */
-const checkMark = (ok: boolean | null): string => (ok === null ? "" : ok ? "O" : "X");
+/**
+ * 점검사항 한 항목의 표기: 체크 유지=O, 체크 해제=X, 값 없음(미점검·구버전 점검)=빈칸.
+ * 관리자가 조치를 완료한 소화기는 불량이 해소된 상태이므로 X도 O로 표기한다.
+ * (무엇이 불량이었는지는 불량항목·불량내용·조치내용 컬럼에 그대로 남는다.)
+ */
+const checkMark = (ok: boolean | null, resolved: boolean): string =>
+  ok === null ? "" : ok || resolved ? "O" : "X";
 
 /** timestamptz(UTC ISO)를 KST 기준 'YYYY-MM-DD'로. (UTC로 자르면 최대 9시간 하루 오차) */
 function kstDate(iso: string | null): string {
@@ -383,6 +388,8 @@ function buildLedgerSheet(
   });
 
   for (const e of rows) {
+    // 조치완료된 소화기는 점검사항을 O로 되돌린다(조치로 불량이 해소된 상태).
+    const resolved = !!e.last_action_resolved_at;
     const row = sheet.addRow({
       asset_code: e.asset_code,
       location: formatShortLocation(e),
@@ -394,7 +401,7 @@ function buildLedgerSheet(
       replace_due: e.replace_due_date ?? "",
       lifecycle: LIFECYCLE_STATUS_LABEL[e.lifecycle_status as LifecycleStatus] ?? "",
       ...Object.fromEntries(
-        LEDGER_CHECK_ITEMS.map((item) => [item.key, checkMark(e[item.viewKey])]),
+        LEDGER_CHECK_ITEMS.map((item) => [item.key, checkMark(e[item.viewKey], resolved)]),
       ),
       last_inspected: kstDate(e.last_inspected_at),
       result: resultLabel(e.last_inspection_result),
