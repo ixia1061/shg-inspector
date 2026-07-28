@@ -103,7 +103,7 @@ export function SiteFormDialog({ site }: { site?: Site }) {
               <Input id="name" {...register("name")} />
               <FieldError errors={errors.name ? [errors.name] : undefined} />
               <p className="text-muted-foreground text-xs">
-                관리번호 앞자리는 사업장이 아니라 '관리파트'에서 설정합니다(사업장 등록 후 상세
+                관리번호 앞자리는 사업장이 아니라 &apos;관리파트&apos;에서 설정합니다(사업장 등록 후 상세
                 화면에서 추가).
               </p>
             </Field>
