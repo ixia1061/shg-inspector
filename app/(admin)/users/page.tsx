@@ -40,6 +40,14 @@ export default async function UsersPage() {
       : Promise.resolve({ data: null }),
   ]);
 
+  // 내가 "사업장 전체"로 담당하는 곳 — 점검자에게도 사업장 한 줄로 넘길 수 있는 범위다.
+  const { data: myWholeSites } = user
+    ? await supabase.from("user_sites").select("site_id").eq("user_id", user.id)
+    : { data: null };
+  const myWholeSiteIds = isSuper
+    ? (sites ?? []).map((s) => s.id)
+    : (myWholeSites ?? []).map((s) => s.site_id);
+
   // 내가 부여할 수 있는 관리파트(= has_part_access). 시스템관리자는 null(제한 없음).
   const writablePartIds = await getWritablePartIds();
   const grantableParts = (parts ?? []).filter(
@@ -144,6 +152,7 @@ export default async function UsersPage() {
       sites={orderedSites}
       parts={parts ?? []}
       grantableParts={grantableParts}
+      myWholeSiteIds={myWholeSiteIds}
       admins={admins}
       inspectors={inspectors}
       pending={pending}

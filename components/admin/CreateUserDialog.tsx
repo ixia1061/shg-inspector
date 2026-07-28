@@ -27,7 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { partIdsForSites } from "@/lib/utils/part";
 import { createUserSchema, type CreateUserFormValues } from "@/lib/validations/user.schema";
 import type { ManagementPart, Site } from "@/types/domain";
 
@@ -70,14 +69,12 @@ export function CreateUserDialog({
       name: "",
       role: "inspector",
       siteIds: [],
-      partIds: [],
     },
   });
 
   const siteIds = watch("siteIds");
   const role = watch("role");
-  // 관리자 모드는 사업장 단위로 고르고(파트는 화면에 안 보임), 제출 시 파트로 펼친다.
-  const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([]);
+  // 관리자에게는 자기 담당 사업장만 보여준다(파트는 화면에 드러내지 않는다).
   const grantableSiteIds = new Set(parts.map((p) => p.site_id));
   const grantableSites = sites.filter((s) => grantableSiteIds.has(s.id));
 
@@ -88,7 +85,6 @@ export function CreateUserDialog({
       toast.success(isSuper ? "사용자를 생성했습니다" : "점검자를 생성했습니다");
       setOpen(false);
       reset();
-      setSelectedSiteIds([]);
       router.refresh();
     } catch (err) {
       toast.error("사용자 생성에 실패했습니다", {
@@ -180,14 +176,14 @@ export function CreateUserDialog({
                   {grantableSites.map((site) => (
                     <label key={site.id} className="flex items-center gap-2 text-sm">
                       <Checkbox
-                        checked={selectedSiteIds.includes(site.id)}
+                        checked={siteIds.includes(site.id)}
                         onCheckedChange={(checked) => {
-                          const next = checked
-                            ? [...selectedSiteIds, site.id]
-                            : selectedSiteIds.filter((id) => id !== site.id);
-                          setSelectedSiteIds(next);
-                          // DB 배정은 파트 단위라, 고른 사업장의 파트를 모두 펼쳐 넘긴다.
-                          setValue("partIds", partIdsForSites(parts, next));
+                          setValue(
+                            "siteIds",
+                            checked
+                              ? [...siteIds, site.id]
+                              : siteIds.filter((id) => id !== site.id)
+                          );
                         }}
                       />
                       {site.name}

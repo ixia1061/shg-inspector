@@ -43,18 +43,52 @@ async function assertAdmin() {
 }
 
 /**
- * 넘어온 관리파트가 전부 내 권한 범위 안인지 확인한다(시스템관리자는 제한 없음).
- * 일반 관리자가 다른 사업장 파트를 실어 보내 권한을 넓히는 것을 막는 서버측 방어선 —
- * DB의 user_parts_write 정책도 같은 경계를 강제하지만, 여기서 먼저 안내 문구를 준다.
+ * 관리자가 "사업장 단위"로 고른 범위를 실제로 기록할 형태로 나눈다.
+ *
+ * - 내가 **사업장 전체(user_sites)를 가진 사업장** → 점검자에게도 `user_sites` 한 줄로 준다.
+ *   (파트를 낱개로 펼치면 행이 여러 개 쌓이고 담당 범위 표기도 길어진다)
+ * - 파트만 담당하는 사업장 → 예전처럼 `user_parts`로 준다. 자기 파트보다 넓은 권한을
+ *   만들 수 없어야 하기 때문이다.
+ *
+ * 시스템관리자는 요청한 사업장을 그대로 사업장 단위로 준다.
  */
-async function assertGrantableParts(partIds: string[]) {
-  if (partIds.length === 0) return;
+async function splitScopeForGrant(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  requestedSiteIds: string[],
+  isSuper: boolean
+): Promise<{ siteIds: string[]; partIds: string[] }> {
+  if (isSuper) return { siteIds: requestedSiteIds, partIds: [] };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("로그인이 필요합니다");
+
+  const [{ data: mySites }, { data: allParts }] = await Promise.all([
+    supabase.from("user_sites").select("site_id").eq("user_id", user.id),
+    supabase.from("management_parts").select("id, site_id"),
+  ]);
   const writable = await getWritablePartIds();
-  if (writable === null) return; // 시스템관리자
-  const outside = partIds.filter((id) => !writable.has(id));
+  const wholeSiteIds = new Set((mySites ?? []).map((s) => s.site_id));
+
+  const siteIds = requestedSiteIds.filter((id) => wholeSiteIds.has(id));
+  const partIds = (allParts ?? [])
+    .filter(
+      (p) =>
+        requestedSiteIds.includes(p.site_id) &&
+        !wholeSiteIds.has(p.site_id) &&
+        (writable === null || writable.has(p.id))
+    )
+    .map((p) => p.id);
+
+  const outside = requestedSiteIds.filter(
+    (id) => !wholeSiteIds.has(id) && !(allParts ?? []).some((p) => p.site_id === id && partIds.includes(p.id))
+  );
   if (outside.length > 0) {
-    throw new Error("담당하지 않는 관리파트는 배정할 수 없습니다");
+    throw new Error("담당하지 않는 사업장은 배정할 수 없습니다");
   }
+
+  return { siteIds, partIds };
 }
 
 export async function createUserAction(input: {
@@ -62,22 +96,18 @@ export async function createUserAction(input: {
   password: string;
   name: string;
   role: UserRole;
-  /** 사업장 "전체" 배정 — 시스템관리자만 지정할 수 있다. */
+  /** 담당 사업장(사업장 단위). 관리자는 자기 담당 사업장만 넘길 수 있다. */
   siteIds: string[];
-  /** 관리파트 단위 배정 — 일반 관리자가 점검자를 만들 때 쓰는 경로. */
-  partIds?: string[];
 }) {
-  const { isSuper } = await assertAdmin();
+  const { supabase, isSuper } = await assertAdmin();
   if (input.role !== "admin" && input.role !== "inspector") {
     throw new Error("허용되지 않은 역할입니다");
   }
-  // 일반 관리자는 점검자만, 그것도 자기가 맡은 파트 범위로만 만들 수 있다.
+  // 일반 관리자는 점검자만, 그것도 자기 담당 범위로만 만들 수 있다.
   if (!isSuper && input.role !== "inspector") {
     throw new Error("관리자 계정 생성은 시스템관리자만 할 수 있습니다");
   }
-  const siteIds = isSuper ? input.siteIds : [];
-  const partIds = input.partIds ?? [];
-  await assertGrantableParts(partIds);
+  const { siteIds, partIds } = await splitScopeForGrant(supabase, input.siteIds, isSuper);
 
   const admin = createAdminClient();
 
@@ -117,8 +147,8 @@ export async function createUserAction(input: {
 }
 
 /** 가입 신청 승인 — 계정을 활성화하고 지정한 관리파트의 점검 권한을 준다. */
-export async function approveSignupAction(userId: string, partIds: string[]) {
-  const { supabase } = await assertAdmin();
+export async function approveSignupAction(userId: string) {
+  const { supabase, isSuper } = await assertAdmin();
 
   const { data: target } = await supabase
     .from("profiles")
@@ -129,27 +159,28 @@ export async function approveSignupAction(userId: string, partIds: string[]) {
   if (!target || target.role !== "inspector" || target.is_active || !target.pending_site_id) {
     throw new Error("승인 대기 중인 가입 신청이 아닙니다");
   }
-  await assertGrantableParts(partIds);
 
-  // 지정한 파트가 신청 사업장 소속인지 확인한다(다른 사업장 파트를 끼워 넣는 것 방지).
-  if (partIds.length > 0) {
-    const { data: parts } = await supabase
-      .from("management_parts")
-      .select("id, site_id")
-      .in("id", partIds);
-    if ((parts ?? []).some((p) => p.site_id !== target.pending_site_id)) {
-      throw new Error("신청한 사업장의 관리파트만 배정할 수 있습니다");
-    }
-  }
+  // 승인하면 신청한 사업장 전체를 맡긴다.
+  const { siteIds, partIds } = await splitScopeForGrant(
+    supabase,
+    [target.pending_site_id],
+    isSuper
+  );
 
-  // RLS 사용자 클라이언트로 수행해 profiles_admin_approve_signup / user_parts_write
-  // 정책이 관리자 경계를 DB에서도 강제하게 한다.
+  // RLS 사용자 클라이언트로 수행해 profiles_admin_manage_inspector / user_sites·user_parts
+  // 쓰기 정책이 관리자 경계를 DB에서도 강제하게 한다.
   const { error } = await supabase
     .from("profiles")
     .update({ is_active: true, pending_site_id: null })
     .eq("id", userId);
   if (error) throw new Error(error.message);
 
+  if (siteIds.length > 0) {
+    const { error: siteError } = await supabase
+      .from("user_sites")
+      .upsert(siteIds.map((site_id) => ({ user_id: userId, site_id })));
+    if (siteError) throw new Error(siteError.message);
+  }
   if (partIds.length > 0) {
     const { error: partError } = await supabase
       .from("user_parts")
@@ -201,7 +232,7 @@ export async function rejectSignupAction(userId: string) {
  * RLS 사용자 클라이언트로 수행해 user_parts_write 정책이 경계를 DB에서도 강제한다.
  */
 export async function updateInspectorSitesAction(inspectorId: string, siteIds: string[]) {
-  const { supabase } = await assertAdmin();
+  const { supabase, isSuper } = await assertAdmin();
 
   const { data: target } = await supabase
     .from("profiles")
@@ -213,32 +244,66 @@ export async function updateInspectorSitesAction(inspectorId: string, siteIds: s
   }
   await assertInspectorInMyScope(supabase, inspectorId);
 
-  // 내가 부여할 수 있는 파트 = 이번 조작의 대상 범위
+  // 고른 사업장을 "사업장 한 줄(user_sites)"과 "파트(user_parts)"로 나눈다.
+  const { siteIds: grantSites, partIds: grantParts } = await splitScopeForGrant(
+    supabase,
+    siteIds,
+    isSuper
+  );
+
+  // 내가 손댈 수 있는 범위 = 내가 통째로 가진 사업장 + 내가 맡은 파트.
+  // 그 안에서만 지우고 채우므로 다른 관리자가 준 범위는 건드리지 않는다.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const [{ data: mySites }, { data: allParts }] = await Promise.all([
+    supabase.from("user_sites").select("site_id").eq("user_id", user!.id),
+    supabase.from("management_parts").select("id, site_id"),
+  ]);
   const writable = await getWritablePartIds();
-  const { data: allParts } = await supabase.from("management_parts").select("id, site_id");
-  const grantable = (allParts ?? []).filter((p) => writable === null || writable.has(p.id));
+  const myWholeSites = isSuper
+    ? (allParts ?? []).map((p) => p.site_id)
+    : (mySites ?? []).map((s) => s.site_id);
+  const myParts = (allParts ?? [])
+    .filter((p) => writable === null || writable.has(p.id))
+    .map((p) => p.id);
 
   const selected = new Set(siteIds);
-  const outside = siteIds.filter((id) => !grantable.some((p) => p.site_id === id));
-  if (outside.length > 0) {
-    throw new Error("담당하지 않는 사업장은 배정할 수 없습니다");
+  const sitesToRevoke = [...new Set(myWholeSites)].filter((id) => !selected.has(id));
+  // 사업장 한 줄로 주는 사업장의 파트 행은 중복이므로 함께 정리한다.
+  const grantedSiteSet = new Set(grantSites);
+  const partsToRevoke = (allParts ?? [])
+    .filter(
+      (p) => myParts.includes(p.id) && (!selected.has(p.site_id) || grantedSiteSet.has(p.site_id))
+    )
+    .map((p) => p.id);
+
+  if (sitesToRevoke.length > 0) {
+    const { error } = await supabase
+      .from("user_sites")
+      .delete()
+      .eq("user_id", inspectorId)
+      .in("site_id", sitesToRevoke);
+    if (error) throw new Error(error.message);
   }
-
-  const toGrant = grantable.filter((p) => selected.has(p.site_id)).map((p) => p.id);
-  const toRevoke = grantable.filter((p) => !selected.has(p.site_id)).map((p) => p.id);
-
-  if (toRevoke.length > 0) {
+  if (partsToRevoke.length > 0) {
     const { error } = await supabase
       .from("user_parts")
       .delete()
       .eq("user_id", inspectorId)
-      .in("part_id", toRevoke);
+      .in("part_id", partsToRevoke);
     if (error) throw new Error(error.message);
   }
-  if (toGrant.length > 0) {
+  if (grantSites.length > 0) {
+    const { error } = await supabase
+      .from("user_sites")
+      .upsert(grantSites.map((site_id) => ({ user_id: inspectorId, site_id })));
+    if (error) throw new Error(error.message);
+  }
+  if (grantParts.length > 0) {
     const { error } = await supabase
       .from("user_parts")
-      .upsert(toGrant.map((part_id) => ({ user_id: inspectorId, part_id })));
+      .upsert(grantParts.map((part_id) => ({ user_id: inspectorId, part_id })));
     if (error) throw new Error(error.message);
   }
 

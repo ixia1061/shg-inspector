@@ -46,10 +46,7 @@ export function PendingSignupRow({
   function handleApprove() {
     startTransition(async () => {
       try {
-        await approveSignupAction(
-          id,
-          parts.map((p) => p.id)
-        );
+        await approveSignupAction(id);
         toast.success(`${name} 님의 가입을 승인했습니다`);
         setOpen(false);
         router.refresh();
