@@ -147,6 +147,25 @@ export async function createUserAction(input: {
   revalidatePath("/users");
 }
 
+/**
+ * 이 가입 신청을 내가 처리할 수 있는지 확인한다.
+ * 내 코드로 온 것이거나, **코드 주인의 담당 사업장이 내 범위에 전부 포함**되면 처리할 수 있다.
+ * (전체 사업장을 담당하는 관리자가 한 사업장만 담당하는 관리자의 신청도 처리할 수 있게 —
+ *  DB의 covers_admin_scope와 같은 기준)
+ */
+async function assertCanHandleSignup(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  pendingAdminId: string,
+  myId: string,
+  isSuper: boolean
+) {
+  if (isSuper || pendingAdminId === myId) return;
+  const { data: covered } = await supabase.rpc("covered_admin_ids");
+  if (!((covered ?? []) as string[]).includes(pendingAdminId)) {
+    throw new Error("내가 처리할 수 있는 가입 신청이 아닙니다");
+  }
+}
+
 /** 가입 신청 승인 — 계정을 활성화하고 지정한 관리파트의 점검 권한을 준다. */
 export async function approveSignupAction(userId: string, requestedSiteIds: string[]) {
   const { supabase, user, isSuper } = await assertAdmin();
@@ -160,10 +179,7 @@ export async function approveSignupAction(userId: string, requestedSiteIds: stri
   if (!target || target.role !== "inspector" || target.is_active || !target.pending_admin_id) {
     throw new Error("승인 대기 중인 가입 신청이 아닙니다");
   }
-  // 내 코드로 온 신청만 승인한다(시스템관리자는 전부).
-  if (!isSuper && target.pending_admin_id !== user.id) {
-    throw new Error("내 가입코드로 접수된 신청이 아닙니다");
-  }
+  await assertCanHandleSignup(supabase, target.pending_admin_id, user.id, isSuper);
   if (requestedSiteIds.length === 0) {
     throw new Error("점검할 사업장을 하나 이상 선택하세요");
   }
@@ -208,10 +224,7 @@ export async function rejectSignupAction(userId: string) {
   if (!target || target.role !== "inspector" || target.is_active || !target.pending_admin_id) {
     throw new Error("승인 대기 중인 가입 신청이 아닙니다");
   }
-  // 내 코드로 온 신청만 거부할 수 있다(시스템관리자는 전부).
-  if (!isSuper && target.pending_admin_id !== user.id) {
-    throw new Error("내 가입코드로 접수된 신청이 아닙니다");
-  }
+  await assertCanHandleSignup(supabase, target.pending_admin_id, user.id, isSuper);
 
   // 계정 삭제는 service_role로만 가능하다(profile은 FK cascade로 함께 삭제).
   const admin = createAdminClient();
