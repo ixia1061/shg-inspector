@@ -20,6 +20,7 @@ import {
 import { TableCell, TableRow } from "@/components/ui/table";
 import { InspectorScopeDialog } from "@/components/admin/InspectorScopeDialog";
 import { JoinCodeCard } from "@/components/admin/JoinCodeCard";
+import { ResetPasswordButton } from "@/components/admin/ResetPasswordButton";
 import { UserSitesDialog } from "@/components/admin/UserSitesDialog";
 import { ASSIGNABLE_ROLE_ITEMS, ROLE_LABELS } from "@/lib/utils/roles";
 import type { ManagementPart, Site, UserRole } from "@/types/domain";
@@ -204,6 +205,7 @@ export function UserRow({
             >
               {active ? "활성" : "비활성"}
             </Button>
+            <ResetPasswordButton userId={id} userName={name} />
             {canDelete && (
               <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isPending}>
                 삭제
