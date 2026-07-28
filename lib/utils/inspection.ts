@@ -88,6 +88,29 @@ export function defectItemsText(e: ExtinguisherOverview): string {
   return defectItemList(e).join(", ");
 }
 
+/** 2026-07-27 이전 체크항목의 원본 컬럼명(점검 이력 표시용). */
+const LEGACY_INSPECTION_KEYS = [
+  { key: "pressure_ok", defectLabel: "압력 불량" },
+  { key: "seal_ok", defectLabel: "봉인 불량" },
+  { key: "appearance_ok", defectLabel: "외관 불량" },
+  { key: "installation_ok", defectLabel: "설치 불량" },
+] as const;
+
+/**
+ * `inspections` 행(원본 컬럼) 기준 불량 항목 문자열.
+ * 뷰의 `last_*`가 아니라 점검 한 건을 그대로 볼 때 쓴다(소화기 상세의 점검 이력).
+ */
+export function defectItemsTextOfInspection(row: Record<string, unknown>): string {
+  const failed: string[] = [];
+  for (const item of INSPECTION_CHECK_ITEMS) {
+    if (row[item.key] === false) failed.push(item.defectLabel);
+  }
+  for (const item of LEGACY_INSPECTION_KEYS) {
+    if (row[item.key] === false) failed.push(item.defectLabel);
+  }
+  return failed.join(", ");
+}
+
 /** 이번달 점검됐지만 이상 + 미조치 상태(관리자 조치 필요). */
 export function isActionNeeded(e: ExtinguisherOverview): boolean {
   return (

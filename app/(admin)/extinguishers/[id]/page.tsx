@@ -10,6 +10,7 @@ import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getWritablePartIds } from "@/lib/auth";
+import { defectItemsTextOfInspection } from "@/lib/utils/inspection";
 import { formatShortLocation } from "@/lib/utils/location";
 import { createClient } from "@/lib/supabase/server";
 
@@ -58,18 +59,32 @@ export default async function ExtinguisherDetailPage({
     ? (parts ?? []).filter((p) => writableParts.has(p.id) || p.id === extinguisher?.part_id)
     : (parts ?? []);
 
+  // 점검사항 컬럼까지 가져와 이력에 "어디가 불량이었는지"를 함께 보여준다.
   const { data: inspections } = await supabase
     .from("inspections")
-    .select("id, inspected_at, overall_result, memo, inspector_id")
+    .select("*")
     .eq("extinguisher_id", id)
     .order("inspected_at", { ascending: false });
 
-  const inspectorIds = [...new Set((inspections ?? []).map((i) => i.inspector_id))];
+  const inspectionIds = (inspections ?? []).map((i) => i.id);
+
+  // 이상 점검에 대한 조치 기록. 이게 없으면 이력에 "이상"만 남아 어떻게 처리했는지 알 수 없다.
+  const { data: actions } = inspectionIds.length
+    ? await supabase
+        .from("inspection_actions")
+        .select("inspection_id, action_note, resolved_at, resolved_by")
+        .in("inspection_id", inspectionIds)
+    : { data: [] };
+
+  const inspectorIds = [
+    ...new Set([
+      ...(inspections ?? []).map((i) => i.inspector_id),
+      ...(actions ?? []).map((a) => a.resolved_by),
+    ]),
+  ].filter(Boolean) as string[];
   const { data: inspectors } = inspectorIds.length
     ? await supabase.from("profiles").select("id, name").in("id", inspectorIds)
     : { data: [] };
-
-  const inspectionIds = (inspections ?? []).map((i) => i.id);
   const { data: photos } = inspectionIds.length
     ? await supabase
         .from("inspection_photos")
@@ -93,14 +108,27 @@ export default async function ExtinguisherDetailPage({
     return acc;
   }, {});
 
-  const historyItems = (inspections ?? []).map((i) => ({
-    id: i.id,
-    inspected_at: i.inspected_at,
-    overall_result: i.overall_result,
-    memo: i.memo,
-    inspector_name: inspectorNameById.get(i.inspector_id) ?? "알 수 없음",
-    photo_urls: photoUrlsByInspection[i.id] ?? [],
-  }));
+  const actionByInspection = new Map((actions ?? []).map((a) => [a.inspection_id, a]));
+
+  const historyItems = (inspections ?? []).map((i) => {
+    const action = actionByInspection.get(i.id);
+    return {
+      id: i.id,
+      inspected_at: i.inspected_at,
+      overall_result: i.overall_result,
+      memo: i.memo,
+      defect_items: defectItemsTextOfInspection(i),
+      inspector_name: inspectorNameById.get(i.inspector_id) ?? "알 수 없음",
+      photo_urls: photoUrlsByInspection[i.id] ?? [],
+      action: action
+        ? {
+            note: action.action_note,
+            resolved_at: action.resolved_at,
+            resolved_by_name: inspectorNameById.get(action.resolved_by) ?? "알 수 없음",
+          }
+        : null,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">
