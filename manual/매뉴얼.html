@@ -370,6 +370,18 @@
     thead th { padding: 8px 9px; font-size: 12.5px; }
     tbody td { padding: 8px 9px; font-size: 12px; line-height: 1.55; }
 
+    /* 8 점검 범위 바꾸기 + 9 사용자 관리는 각각 한 장씩 차지해 두 장이 크게 비었다.
+       이 두 섹션만 줄간격을 조금 좁혀 한 장에 함께 담는다(다른 파트에는 영향 없음). */
+    :is(.doc-sec:has(#ad-assign), .doc-sec:has(#ad-users)) {
+      :is(p, li) { line-height: 1.5; }
+      ul.plain li { margin: 4px 0; }
+      ol.steps > li { margin-bottom: 7px; }
+      ol.steps { margin: 8px 0; }
+      .content p { margin: 6px 0; }
+      .content h3 { margin: 7px 0 2px; }
+      .callout { margin: 8px 0; padding: 8px 11px; }
+    }
+
     /* 페이지 배치는 손대지 않는다. 위의 규칙만으로 충분하다.
        - .doc-sec { break-inside: avoid } → 번호 섹션은 페이지 중간에서 안 끊긴다
        - .panel + .panel { break-before: page } → 파트(설치/점검자/관리자/FAQ)마다 새 장
