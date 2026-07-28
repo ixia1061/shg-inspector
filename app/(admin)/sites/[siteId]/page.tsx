@@ -26,21 +26,6 @@ export default async function SiteDetailPage({
   // 사업장 수정/삭제는 시스템관리자만. 건물 이하는 일반 관리자도 가능.
   const canManageSite = isSuperAdminRole(await getCurrentUserRole());
 
-  // 관리파트는 **이 사업장 전체를 담당하는** 관리자도 다룰 수 있다.
-  // (파트 코드를 바꾸면 소속 소화기 관리번호가 연쇄로 재계산되므로, 사업장 일부만
-  //  담당하는 관리자에게는 열지 않는다 — DB의 management_parts_admin_write와 같은 기준)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: myWholeSite } = user
-    ? await supabase
-        .from("user_sites")
-        .select("site_id")
-        .eq("user_id", user.id)
-        .eq("site_id", siteId)
-        .maybeSingle()
-    : { data: null };
-  const canManageParts = canManageSite || !!myWholeSite;
 
   const { data: parts } = await supabase
     .from("management_parts")
@@ -98,7 +83,7 @@ export default async function SiteDetailPage({
               관리번호 앞자리(예: 소방-1-1-1)를 결정합니다. 소화기 등록 시 파트를 선택합니다.
             </p>
           </div>
-          {canManageParts && (
+          {canManageSite && (
             <PartFormDialog siteId={site.id} nextOrderIndex={(parts ?? []).length} />
           )}
         </div>
@@ -111,13 +96,13 @@ export default async function SiteDetailPage({
               >
                 <span className="font-medium">{part.name}</span>
                 <span className="text-muted-foreground font-mono text-xs">({part.code})</span>
-                {canManageParts && <PartFormDialog siteId={site.id} part={part} />}
+                {canManageSite && <PartFormDialog siteId={site.id} part={part} />}
               </li>
             ))}
           </ul>
         ) : (
           <p className="text-muted-foreground text-sm">
-            등록된 관리파트가 없습니다. {canManageParts ? "'관리파트 추가'로 만들어주세요." : ""}
+            등록된 관리파트가 없습니다. {canManageSite ? "'관리파트 추가'로 만들어주세요." : ""}
           </p>
         )}
       </div>
