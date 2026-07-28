@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AdminInspectDialog } from "@/components/admin/AdminInspectDialog";
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
@@ -60,11 +60,37 @@ export function ExtinguisherListClient({
   const [status, setStatus] = useState(initial.status);
   const [search, setSearch] = useState(initial.q);
   const [page, setPage] = useState(initial.page);
+  // 첫 렌더에서는 주소를 덮어쓰지 않는다. 아래 복원 효과가 먼저 돌아 상태를 맞춘 뒤,
+  // 그 결과로 다시 렌더될 때부터 주소에 반영한다.
+  const firstRun = useRef(true);
+
+  // 마운트할 때 **주소를 직접 읽어** 상태를 되살린다.
+  // 서버가 넘겨준 initial만 믿으면 안 되는 이유: 뒤로 올 때 Next가 캐시해 둔 옛 화면
+  // (필터 없이 처음 들어왔을 때의 트리)을 그대로 되살려 initial이 1페이지로 남아 있다.
+  // 주소창에는 실제로 보던 ?page=4가 복원돼 있으므로 그 값을 기준으로 삼는다.
+  // popstate도 같이 들어, 브라우저 앞/뒤로가기에서도 목록이 주소를 따라간다.
+  useEffect(() => {
+    const applyFromUrl = () => {
+      const q = new URLSearchParams(window.location.search);
+      setSiteId(q.get("site") ?? "all");
+      setPartId(q.get("part") ?? "all");
+      setStatus(q.get("status") ?? "all");
+      setSearch(q.get("q") ?? "");
+      setPage(Math.max(0, (Number(q.get("page")) || 1) - 1));
+    };
+    applyFromUrl();
+    window.addEventListener("popstate", applyFromUrl);
+    return () => window.removeEventListener("popstate", applyFromUrl);
+  }, []);
 
   // 필터·페이지를 주소에 남긴다. history.replaceState라 Next 라우팅을 타지 않아
-  // 서버 왕복 없이 즉시 반응하는 지금 동작은 그대로고, 상세로 갔다가 뒤로 오면
-  // 브라우저가 이 주소를 복원해 보던 페이지·필터가 그대로 살아난다.
+  // 서버 왕복 없이 즉시 반응하는 동작은 그대로고, 상세로 갔다가 뒤로 오면
+  // 위 효과가 이 주소를 읽어 보던 페이지·필터를 되살린다.
   useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
     const q = new URLSearchParams();
     if (siteId !== "all") q.set("site", siteId);
     if (partId !== "all") q.set("part", partId);
