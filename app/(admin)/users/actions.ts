@@ -308,6 +308,54 @@ export async function updateInspectorSitesAction(inspectorId: string, siteIds: s
   revalidatePath("/users");
 }
 
+/** 임시 비밀번호 — 헷갈리는 글자를 뺀 문자로 10자리. 관리자가 구두·문자로 전달한다. */
+function generateTempPassword(): string {
+  const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz";
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+}
+
+/**
+ * 비밀번호 재설정 — 임시 비밀번호를 만들어 돌려준다(화면에 한 번만 표시).
+ *
+ * 이메일 재설정 링크는 SMTP가 있어야 해서 지금은 쓸 수 없다. 대신 관리자가 임시 비밀번호를
+ * 발급해 전달하고, 받은 사람이 "내 계정"에서 직접 바꾸는 방식으로 둔다.
+ * 일반 관리자는 **자기 범위의 점검자만**, 시스템관리자는 관리자 계정까지 재설정할 수 있다.
+ * (다른 시스템관리자 계정은 보호)
+ */
+export async function resetPasswordAction(userId: string): Promise<{ password: string }> {
+  const { supabase, user: currentUser, isSuper } = await assertAdmin();
+
+  const admin = createAdminClient();
+  const { data: target } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .single();
+  if (!target) throw new Error("대상 계정을 찾을 수 없습니다");
+
+  // 본인 비밀번호는 "내 계정"에서 직접 바꾼다.
+  if (currentUser.id === userId) {
+    throw new Error("본인 비밀번호는 내 계정에서 변경하세요");
+  }
+  if (target.role === "super_admin") {
+    throw new Error("시스템관리자 계정의 비밀번호는 재설정할 수 없습니다");
+  }
+  if (!isSuper) {
+    if (target.role !== "inspector") {
+      throw new Error("점검자 계정만 재설정할 수 있습니다");
+    }
+    await assertInspectorInMyScope(supabase, userId);
+  }
+
+  const password = generateTempPassword();
+  const { error } = await admin.auth.admin.updateUserById(userId, { password });
+  if (error) throw new Error(error.message);
+
+  return { password };
+}
+
 /**
  * 관리자 가입코드 발급·재발급 (시스템관리자 전용).
  * 코드 생성은 클라이언트에서 하고(crypto.getRandomValues) 여기서는 대상 검증만 한다.
