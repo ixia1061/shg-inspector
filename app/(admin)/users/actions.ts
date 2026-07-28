@@ -407,21 +407,22 @@ async function assertInspectorInMyScope(
   const mySiteIds = await getAccessibleSiteIds();
   if (mySiteIds === null) return; // 시스템관리자
 
-  const [{ data: theirSites }, { data: theirParts }, { data: allParts }] = await Promise.all([
+  const [{ data: theirSites }, { data: theirParts }] = await Promise.all([
     supabase.from("user_sites").select("site_id").eq("user_id", userId),
     supabase.from("user_parts").select("part_id").eq("user_id", userId),
-    supabase.from("management_parts").select("id, site_id"),
   ]);
 
-  const siteOfPart = new Map((allParts ?? []).map((p) => [p.id, p.site_id]));
-  const theirSiteIds = new Set((theirSites ?? []).map((s) => s.site_id));
-  for (const p of theirParts ?? []) {
-    const siteId = siteOfPart.get(p.part_id);
-    if (siteId) theirSiteIds.add(siteId);
-  }
+  // 배정 여부는 행 자체로 판단한다. 파트를 사업장으로 환산하려면 management_parts가
+  // 필요한데 그건 RLS로 내 사업장 것만 읽혀서, 다른 사업장 파트만 가진 점검자를
+  // "미배정"으로 오인해 통과시키는 구멍이 있었다.
+  const hasAssignment = (theirSites ?? []).length > 0 || (theirParts ?? []).length > 0;
+  if (!hasAssignment) return; // 아직 미배정 — 첫 배정 대상이라 허용
 
-  if (theirSiteIds.size === 0) return; // 아직 미배정 — 첫 배정 대상이라 허용
-  if (![...theirSiteIds].some((id) => mySiteIds.has(id))) {
+  const myPartIds = await getWritablePartIds();
+  const overlaps =
+    (theirSites ?? []).some((s) => mySiteIds.has(s.site_id)) ||
+    (theirParts ?? []).some((p) => myPartIds === null || myPartIds.has(p.part_id));
+  if (!overlaps) {
     throw new Error("담당하지 않는 사업장의 점검자입니다");
   }
 }
