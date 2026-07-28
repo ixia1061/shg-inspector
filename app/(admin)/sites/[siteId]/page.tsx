@@ -1,6 +1,7 @@
 import { Car } from "lucide-react";
 import { notFound } from "next/navigation";
 
+import { BackButton } from "@/components/shared/BackButton";
 import { BuildingFormDialog } from "@/components/admin/BuildingFormDialog";
 import { FloorFormDialog } from "@/components/admin/FloorFormDialog";
 import { FloorList } from "@/components/admin/FloorList";
@@ -64,6 +65,9 @@ export default async function SiteDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <div>
+        <BackButton label="사업장 목록" />
+      </div>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{site.name}</h1>

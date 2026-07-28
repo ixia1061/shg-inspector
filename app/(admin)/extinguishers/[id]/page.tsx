@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AdminInspectDialog } from "@/components/admin/AdminInspectDialog";
+import { BackButton } from "@/components/shared/BackButton";
 import { DeleteExtinguisherButton } from "@/components/admin/DeleteExtinguisherButton";
 import { ExtinguisherForm } from "@/components/admin/ExtinguisherForm";
 import { InspectionHistoryTimeline } from "@/components/admin/InspectionHistoryTimeline";
@@ -103,6 +104,9 @@ export default async function ExtinguisherDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <div>
+        <BackButton label="목록으로" />
+      </div>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold font-mono">{overview.asset_code}</h1>
