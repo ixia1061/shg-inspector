@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
+import { JoinCodeCard } from "@/components/admin/JoinCodeCard";
 import { PendingSignupRow } from "@/components/admin/PendingSignupRow";
 import { ALL_SITES, SiteFilterButtons } from "@/components/admin/SiteFilterButtons";
 import { UserRow } from "@/components/admin/UserRow";
@@ -14,7 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { partsForSite } from "@/lib/utils/part";
 import type { ManagementPart, Site, UserRole } from "@/types/domain";
 
 export interface UserListItem {
@@ -26,6 +26,8 @@ export interface UserListItem {
   scopeLabels: string[];
   assignedSiteIds: string[];
   assignedPartIds: string[];
+  /** 관리자 행에 보여줄 가입코드(시스템관리자에게만 채워 보낸다) */
+  joinCode?: string | null;
   /** 배정으로 계산한 소속 사업장(사업장 필터용). 비어 있으면 미배정. */
   siteIds: string[];
 }
@@ -43,8 +45,9 @@ export interface PendingSignupItem {
   id: string;
   name: string;
   email: string | null;
-  siteId: string;
-  siteName: string;
+  /** 이 신청을 받은 관리자(= 가입코드 주인) */
+  adminId: string;
+  adminName: string;
   requestedAt: string;
 }
 
@@ -59,6 +62,8 @@ export function UsersClient({
   parts,
   grantableParts,
   myWholeSiteIds,
+  meId,
+  myJoinCode,
   admins,
   inspectors,
   pending,
@@ -72,6 +77,10 @@ export function UsersClient({
   grantableParts: ManagementPart[];
   /** 내가 통째로 담당하는 사업장 id (범위 변경 창의 잠금 판단용) */
   myWholeSiteIds: string[];
+  /** 로그인한 관리자 본인 */
+  meId: string;
+  /** 내 가입코드 — 점검자에게 불러주는 값 */
+  myJoinCode: string | null;
   admins: UserListItem[];
   inspectors: UserListItem[];
   pending: PendingSignupItem[];
@@ -86,16 +95,25 @@ export function UsersClient({
 
   const visibleAdmins = useMemo(() => filterUsers(admins, siteId), [admins, siteId]);
   const visibleInspectors = useMemo(() => filterUsers(inspectors, siteId), [inspectors, siteId]);
-  const visiblePending = useMemo(
-    () => (siteId === ALL_SITES ? pending : pending.filter((p) => p.siteId === siteId)),
-    [pending, siteId]
-  );
+  // 대기 신청은 아직 사업장이 정해지기 전이라(승인할 때 고른다) 사업장 필터를 걸지 않는다.
+  const visiblePending = pending;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">사용자 관리</h1>
         <CreateUserDialog isSuper={isSuper} sites={sites} parts={grantableParts} />
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-lg border p-4">
+        <div>
+          <h2 className="text-sm font-semibold">내 가입코드</h2>
+          <p className="text-muted-foreground text-xs">
+            점검자가 가입 신청 화면에서 이 코드를 넣으면 아래 <b>가입 승인 대기</b>에 나타납니다.
+            승인할 때 내 담당 사업장 중에서 점검 범위를 정합니다.
+          </p>
+        </div>
+        <JoinCodeCard adminId={meId} code={myJoinCode} canIssue={isSuper} />
       </div>
 
       {sites.length > 1 && (
@@ -110,7 +128,7 @@ export function UsersClient({
               <TableRow>
                 <TableHead>이름</TableHead>
                 <TableHead>이메일</TableHead>
-                <TableHead>신청 사업장</TableHead>
+                {isSuper && <TableHead>가입코드 주인</TableHead>}
                 <TableHead>신청일</TableHead>
                 <TableHead>처리</TableHead>
               </TableRow>
@@ -122,9 +140,10 @@ export function UsersClient({
                   id={p.id}
                   name={p.name}
                   email={p.email}
-                  siteName={p.siteName}
+                  adminName={p.adminName}
                   requestedAt={p.requestedAt}
-                  parts={partsForSite(grantableParts, p.siteId)}
+                  sites={grantableSites}
+                  showAdminColumn={isSuper}
                 />
               ))}
             </TableBody>
@@ -145,6 +164,7 @@ export function UsersClient({
           canManage
           canToggleActive
           canDelete
+          showJoinCode
         />
       )}
 
@@ -175,6 +195,7 @@ function UserSection({
   canManage,
   canToggleActive,
   canDelete,
+  showJoinCode,
 }: {
   title: string;
   rows: UserListItem[];
@@ -189,6 +210,8 @@ function UserSection({
   canToggleActive: boolean;
   /** 계정 삭제 가능 여부 */
   canDelete: boolean;
+  /** 관리자 목록에서만 가입코드 열을 보여준다 */
+  showJoinCode?: boolean;
 }) {
   return (
     <section className="flex flex-col gap-2">
@@ -200,6 +223,7 @@ function UserSection({
             <TableHead>이메일</TableHead>
             <TableHead>역할</TableHead>
             <TableHead>담당 범위</TableHead>
+            {showJoinCode && <TableHead>가입코드</TableHead>}
             <TableHead>상태</TableHead>
           </TableRow>
         </TableHeader>
@@ -224,11 +248,12 @@ function UserSection({
                 canManage={canManage}
                 canToggleActive={canToggleActive}
                 canDelete={canDelete}
+                joinCode={showJoinCode ? (u.joinCode ?? null) : undefined}
               />
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={5} className="text-muted-foreground text-center">
+              <TableCell colSpan={showJoinCode ? 6 : 5} className="text-muted-foreground text-center">
                 해당하는 사용자가 없습니다.
               </TableCell>
             </TableRow>

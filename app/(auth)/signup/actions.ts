@@ -23,6 +23,9 @@ async function clientIp(): Promise<string> {
 /**
  * 점검자 가입 신청(비로그인 호출).
  *
+ * 가입코드는 **관리자에게** 붙어 있다. 코드로 신청하면 그 관리자에게 접수되고, 관리자가
+ * 승인할 때 자기 담당 사업장 중에서 골라 점검 권한을 준다.
+ *
  * 브라우저의 supabase.auth.signUp()을 쓰지 않고 service_role로 계정을 만드는 이유:
  * signUp은 가입 메타데이터를 클라이언트가 정하므로 role을 심어 보낼 여지가 생기고,
  * Supabase의 공개 가입 설정을 열어야 한다. 여기서는 두 가지 다 필요 없다.
@@ -30,7 +33,7 @@ async function clientIp(): Promise<string> {
  *
  * 만들어진 계정은 승인 전까지 is_active = false라 로그인해도 아무 데이터에 접근할 수 없다.
  */
-export async function submitSignupAction(input: unknown): Promise<{ siteName: string }> {
+export async function submitSignupAction(input: unknown): Promise<{ adminName: string }> {
   // 비로그인 진입점이므로 폼 검증을 믿지 않고 서버에서 다시 검증한다.
   const parsed = signupSchema.safeParse(input);
   if (!parsed.success) {
@@ -56,24 +59,31 @@ export async function submitSignupAction(input: unknown): Promise<{ siteName: st
     );
   }
 
-  // 가입코드 → 사업장. 코드가 틀리면 여기서 끝나므로 계정은 만들어지지 않는다.
+  // 가입코드 → 관리자. 코드가 틀리면 여기서 끝나므로 계정은 만들어지지 않는다.
   const { data: joinRow } = await admin
-    .from("site_join_codes")
-    .select("site_id")
+    .from("admin_join_codes")
+    .select("admin_id")
     .eq("code", normalizeJoinCode(joinCode))
     .maybeSingle();
 
-  await admin.from("signup_attempts").insert({ ip, success: !!joinRow });
+  // 코드가 살아 있어도 그 관리자가 비활성이거나 점검자로 강등됐으면 접수하지 않는다.
+  const { data: targetAdmin } = joinRow
+    ? await admin
+        .from("profiles")
+        .select("id, name, role, is_active")
+        .eq("id", joinRow.admin_id)
+        .maybeSingle()
+    : { data: null };
+  const usable =
+    !!targetAdmin &&
+    targetAdmin.is_active &&
+    (targetAdmin.role === "admin" || targetAdmin.role === "super_admin");
 
-  if (!joinRow) {
+  await admin.from("signup_attempts").insert({ ip, success: usable });
+
+  if (!usable) {
     throw new Error("가입코드가 올바르지 않습니다. 관리자에게 코드를 다시 확인하세요.");
   }
-
-  const { data: site } = await admin
-    .from("sites")
-    .select("name")
-    .eq("id", joinRow.site_id)
-    .single();
 
   const { data, error } = await admin.auth.admin.createUser({
     email,
@@ -94,14 +104,14 @@ export async function submitSignupAction(input: unknown): Promise<{ siteName: st
   // 트리거가 만든 profile에 신청 정보를 채운다(role/is_active는 트리거가 정한 안전한 값 유지).
   const { error: profileError } = await admin
     .from("profiles")
-    .update({ name, pending_site_id: joinRow.site_id })
+    .update({ name, pending_admin_id: targetAdmin.id })
     .eq("id", data.user.id);
 
-  // 신청 사업장이 안 붙으면 관리자 화면에 안 보여 영영 승인받지 못하므로 되돌린다.
+  // 신청 대상 관리자가 안 붙으면 어느 화면에도 안 보여 영영 승인받지 못하므로 되돌린다.
   if (profileError) {
     await admin.auth.admin.deleteUser(data.user.id);
     throw new Error("가입 신청 저장에 실패했습니다. 잠시 후 다시 시도하세요.");
   }
 
-  return { siteName: site?.name ?? "" };
+  return { adminName: targetAdmin.name ?? "" };
 }

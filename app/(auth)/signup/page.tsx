@@ -9,7 +9,7 @@ export default function SignupPage() {
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-bold">소화기 점검 관리 시스템</h1>
         <p className="text-muted-foreground text-sm">
-          사업장 가입코드로 점검자 계정을 신청하세요
+          관리자에게 받은 가입코드로 점검자 계정을 신청하세요
         </p>
       </div>
       <SignupForm />

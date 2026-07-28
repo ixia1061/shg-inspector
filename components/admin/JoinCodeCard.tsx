@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { issueJoinCodeAction } from "@/app/(admin)/users/actions";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
-import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 
 /** 0/O, 1/I 처럼 헷갈리는 글자를 뺀 32자 — 현장에서 구두로 전달하기 쉽게. */
 const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -21,16 +20,15 @@ function generateCode(): string {
 }
 
 /**
- * 사업장 가입코드 — 점검자가 /signup에서 이 코드로 가입 신청하면 이 사업장으로 접수된다.
- * 담당 사업장 관리자는 코드를 **보고 복사**할 수 있고(현장 점검자에게 알려주기 위함),
- * 발급·재발급은 시스템관리자만 할 수 있다(RLS site_join_codes_super_admin_write).
+ * 관리자 가입코드 — 점검자가 /signup에서 이 코드로 신청하면 그 관리자에게 접수된다.
+ * 관리자는 자기 코드를 보고 복사만 하고, 발급·재발급은 시스템관리자만 한다.
  */
 export function JoinCodeCard({
-  siteId,
+  adminId,
   code,
   canIssue,
 }: {
-  siteId: string;
+  adminId: string;
   code: string | null;
   /** 발급·재발급 가능 여부(시스템관리자만) */
   canIssue: boolean;
@@ -44,25 +42,17 @@ export function JoinCodeCard({
       return;
     }
     setSaving(true);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    const { error } = await supabase.from("site_join_codes").upsert({
-      site_id: siteId,
-      code: generateCode(),
-      updated_at: new Date().toISOString(),
-      updated_by: user?.id ?? null,
-    });
-    setSaving(false);
-
-    if (error) {
-      toast.error("가입코드 발급에 실패했습니다", { description: friendlyErrorMessage(error) });
-      return;
+    try {
+      await issueJoinCodeAction(adminId, generateCode());
+      toast.success(code ? "가입코드를 재발급했습니다" : "가입코드를 발급했습니다");
+      router.refresh();
+    } catch (err) {
+      toast.error("가입코드 발급에 실패했습니다", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setSaving(false);
     }
-    toast.success(code ? "가입코드를 재발급했습니다" : "가입코드를 발급했습니다");
-    router.refresh();
   }
 
   async function copy() {
@@ -80,7 +70,7 @@ export function JoinCodeCard({
     <div className="flex flex-wrap items-center gap-2">
       {code ? (
         <>
-          <span className="bg-muted rounded px-3 py-2 font-mono text-lg tracking-widest">
+          <span className="bg-muted rounded px-3 py-1.5 font-mono text-lg tracking-widest">
             {code}
           </span>
           <Button variant="outline" size="sm" onClick={copy}>
@@ -96,17 +86,15 @@ export function JoinCodeCard({
         </>
       ) : canIssue ? (
         <>
-          <p className="text-muted-foreground text-sm">
-            아직 가입코드가 없습니다. 발급하면 점검자가 이 코드로 가입 신청할 수 있습니다.
-          </p>
+          <span className="text-muted-foreground text-sm">코드 없음</span>
           <Button variant="outline" size="sm" onClick={issue} disabled={saving}>
             {saving ? "발급 중..." : "가입코드 발급"}
           </Button>
         </>
       ) : (
-        <p className="text-muted-foreground text-sm">
+        <span className="text-muted-foreground text-sm">
           아직 가입코드가 없습니다. 시스템관리자에게 발급을 요청하세요.
-        </p>
+        </span>
       )}
     </div>
   );
