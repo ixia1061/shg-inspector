@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AdminInspectDialog } from "@/components/admin/AdminInspectDialog";
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
@@ -47,16 +47,33 @@ export function ExtinguisherListClient({
   extinguishers,
   sites,
   parts,
+  initial,
 }: {
   extinguishers: ExtinguisherListItem[];
   sites: Site[];
   parts: ManagementPart[];
+  /** 주소(쿼리)에서 읽은 초기 상태 — 상세를 보고 뒤로 왔을 때 목록을 그대로 되살린다 */
+  initial: { site: string; part: string; status: string; q: string; page: number };
 }) {
-  const [siteId, setSiteId] = useState("all");
-  const [partId, setPartId] = useState("all");
-  const [status, setStatus] = useState("all");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
+  const [siteId, setSiteId] = useState(initial.site);
+  const [partId, setPartId] = useState(initial.part);
+  const [status, setStatus] = useState(initial.status);
+  const [search, setSearch] = useState(initial.q);
+  const [page, setPage] = useState(initial.page);
+
+  // 필터·페이지를 주소에 남긴다. history.replaceState라 Next 라우팅을 타지 않아
+  // 서버 왕복 없이 즉시 반응하는 지금 동작은 그대로고, 상세로 갔다가 뒤로 오면
+  // 브라우저가 이 주소를 복원해 보던 페이지·필터가 그대로 살아난다.
+  useEffect(() => {
+    const q = new URLSearchParams();
+    if (siteId !== "all") q.set("site", siteId);
+    if (partId !== "all") q.set("part", partId);
+    if (status !== "all") q.set("status", status);
+    if (search.trim()) q.set("q", search.trim());
+    if (page > 0) q.set("page", String(page + 1));
+    const qs = q.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, [siteId, partId, status, search, page]);
 
   const siteItems = useMemo(
     () => [{ value: "all", label: "전체 사업장" }, ...sites.map((s) => ({ value: s.id, label: s.name }))],

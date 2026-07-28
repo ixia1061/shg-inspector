@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { BackButton } from "@/components/shared/BackButton";
 import { QrLabelPreview } from "@/components/admin/QrLabelPreview";
 import { buildInspectionUrl } from "@/lib/qr/encode";
 import { formatShortLocation } from "@/lib/utils/location";
@@ -25,6 +26,9 @@ export default async function ExtinguisherLabelPage({
 
   return (
     <div className="flex flex-col items-center gap-6">
+      <div className="w-full print:hidden">
+        <BackButton label="소화기 상세" />
+      </div>
       <h1 className="text-2xl font-bold font-mono">QR 라벨 — {overview.asset_code}</h1>
       <QrLabelPreview
         url={buildInspectionUrl(overview.asset_code)}
