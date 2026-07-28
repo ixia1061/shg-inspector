@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { formatKstDate, kstDateKey } from "@/lib/utils/datetime";
 import { deletePhotosAction } from "@/app/actions/photoActions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -46,7 +47,7 @@ export function PhotoManager({ photos }: { photos: ManagedPhoto[] }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `점검사진_${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `점검사진_${kstDateKey()}.zip`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success("ZIP 다운로드를 시작했습니다");
@@ -170,7 +171,7 @@ export function PhotoManager({ photos }: { photos: ManagedPhoto[] }) {
                   </span>
                   {photo.inspectedAt && (
                     <span className="bg-background/80 text-muted-foreground absolute right-0 bottom-0 left-0 rounded-b px-1 py-0.5 text-[10px]">
-                      {new Date(photo.inspectedAt).toLocaleDateString("ko-KR")}
+                      {formatKstDate(photo.inspectedAt)}
                     </span>
                   )}
                 </button>

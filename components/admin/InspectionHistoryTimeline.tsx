@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import { formatKstDate } from "@/lib/utils/datetime";
 import { Badge } from "@/components/ui/badge";
 
 interface InspectionHistoryRow {
@@ -29,7 +30,7 @@ export function InspectionHistoryTimeline({ items }: { items: InspectionHistoryR
           <li key={item.id} className="flex flex-col gap-1 border-b pb-3 last:border-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium">
-                {new Date(item.inspected_at).toLocaleString("ko-KR")}
+                {formatKstDate(item.inspected_at)}
               </span>
               <Badge variant={abnormal ? "destructive" : "secondary"}>
                 {abnormal ? "이상" : "정상"}
@@ -65,7 +66,7 @@ export function InspectionHistoryTimeline({ items }: { items: InspectionHistoryR
                   <span className="text-muted-foreground">조치내용</span> {item.action.note}
                 </p>
                 <p className="text-muted-foreground text-xs">
-                  {new Date(item.action.resolved_at).toLocaleString("ko-KR")} ·{" "}
+                  {formatKstDate(item.action.resolved_at)} ·{" "}
                   {item.action.resolved_by_name}
                 </p>
               </div>

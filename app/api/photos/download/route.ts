@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
 
+import { kstDateKey } from "@/lib/utils/datetime";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminRole } from "@/lib/utils/roles";
@@ -67,7 +68,8 @@ export async function POST(request: Request) {
     const assetCode = inspection
       ? (assetCodeById.get(inspection.extinguisher_id) ?? "알수없음")
       : "알수없음";
-    const date = inspection ? inspection.inspected_at.slice(0, 10) : "unknown";
+    // UTC ISO를 그대로 자르면 KST 00:00~09:00 점검이 하루 이르게 묶인다.
+    const date = inspection ? kstDateKey(inspection.inspected_at) : "unknown";
 
     const base = `${assetCode}/${date}`;
     let name = `${base}.jpg`;
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
   }
 
   const buffer = await zip.generateAsync({ type: "arraybuffer" });
-  const filename = `점검사진_${new Date().toISOString().slice(0, 10)}.zip`;
+  const filename = `점검사진_${kstDateKey()}.zip`;
 
   return new NextResponse(buffer, {
     headers: {

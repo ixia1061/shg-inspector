@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { kstDateKey } from "@/lib/utils/datetime";
 import { Button } from "@/components/ui/button";
 import type { Site } from "@/types/domain";
 
@@ -49,7 +50,7 @@ export function LedgerDownloadButton({
       a.href = url;
       a.download = month
         ? `소화기관리대장_${site.name}_${month}.xlsx`
-        : `소화기관리대장_${site.name}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        : `소화기관리대장_${site.name}_${kstDateKey()}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success(

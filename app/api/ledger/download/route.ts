@@ -194,7 +194,7 @@ export async function GET(request: Request) {
   // 지난달 대장은 파일명에 그 달을 박아 여러 달치를 모아둬도 구분되게 한다.
   const filename = isPastMonth
     ? `소화기관리대장_${siteName}_${month}.xlsx`
-    : `소화기관리대장_${siteName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    : `소화기관리대장_${siteName}_${kstDate(new Date().toISOString())}.xlsx`;
 
   return new NextResponse(buffer, {
     headers: {

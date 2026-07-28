@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { formatKstDate } from "@/lib/utils/datetime";
 import { AdminInspectDialog } from "@/components/admin/AdminInspectDialog";
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
 import { Input } from "@/components/ui/input";
@@ -257,7 +258,7 @@ export function ExtinguisherListClient({
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {e.last_inspected_at
-                    ? new Date(e.last_inspected_at).toLocaleDateString("ko-KR")
+                    ? formatKstDate(e.last_inspected_at)
                     : "이력 없음"}
                 </TableCell>
                 <TableCell className="text-right">
