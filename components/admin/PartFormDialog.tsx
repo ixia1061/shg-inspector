@@ -121,7 +121,7 @@ export function PartFormDialog({
           <FieldGroup>
             <Field data-invalid={!!errors.code}>
               <FieldLabel htmlFor="part_code">파트 코드</FieldLabel>
-              <Input id="part_code" placeholder="예: 공사, 소방, 전기" {...register("code")} />
+              <Input id="part_code" placeholder="예: 소방, 기계, 전기, 통신" {...register("code")} />
               <FieldError errors={errors.code ? [errors.code] : undefined} />
               <p className="text-muted-foreground text-xs">
                 관리번호 앞자리가 됩니다(예: 소방-1-1-1). 전체에서 유일해야 합니다.
@@ -131,7 +131,7 @@ export function PartFormDialog({
             </Field>
             <Field data-invalid={!!errors.name}>
               <FieldLabel htmlFor="part_name">파트 이름</FieldLabel>
-              <Input id="part_name" placeholder="예: 공사, 소방시설" {...register("name")} />
+              <Input id="part_name" placeholder="예: 소방파트, 기계파트" {...register("name")} />
               <FieldError errors={errors.name ? [errors.name] : undefined} />
             </Field>
           </FieldGroup>

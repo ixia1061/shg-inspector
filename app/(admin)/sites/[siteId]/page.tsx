@@ -103,7 +103,7 @@ export default async function SiteDetailPage({
           <div>
             <h2 className="text-lg font-semibold">관리파트</h2>
             <p className="text-muted-foreground text-sm">
-              관리번호 앞자리(예: 공사-1-1-1)를 결정합니다. 소화기 등록 시 파트를 선택합니다.
+              관리번호 앞자리(예: 소방-1-1-1)를 결정합니다. 소화기 등록 시 파트를 선택합니다.
             </p>
           </div>
           {canManageSite && (

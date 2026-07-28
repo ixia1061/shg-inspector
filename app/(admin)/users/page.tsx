@@ -69,7 +69,7 @@ export default async function UsersPage() {
     return [...ids];
   }
 
-  // 화면 표기: "무안공항 전체", "상주업체 기상" 등
+  // 화면 표기: "한국공항공사 전체", "남부공항서비스 기계" 등
   function scopeLabelsFor(userId: string): string[] {
     const labels: string[] = [];
     for (const siteId of siteIdsByUser[userId] ?? []) {
