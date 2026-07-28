@@ -370,28 +370,11 @@
     thead th { padding: 8px 9px; font-size: 12.5px; }
     tbody td { padding: 8px 9px; font-size: 12px; line-height: 1.55; }
 
-    /* ---- 페이지 묶음 지정 ----
-       읽는 흐름에 맞게 한 장에 담길 섹션을 정한다.
-       설치: 1+2+3 / 4+5      점검자: 1+2 / 3+4 / 5+6+7 */
-    .doc-sec:has(#in-pc) { break-before: page; }
-    .doc-sec:has(#ip-check) { break-before: page; }
-    .doc-sec:has(#ip-status) { break-before: page; }
-    /* 관리자: 1+2 / 3+4+5 / 6~ */
-    .doc-sec:has(#ad-part) { break-before: page; }
-    .doc-sec:has(#ad-status) { break-before: page; }
-
-    /* 위 두 묶음은 한 장에 여유가 남아, 그 섹션들만 줄간격을 한 번 더 넓힌다.
-       (전체를 넓히면 앞의 4p·9p 묶음이 다음 장으로 밀린다) */
-    :is(.doc-sec:has(#ad-roles), .doc-sec:has(#ad-menu),
-        .doc-sec:has(#ad-part), .doc-sec:has(#ad-org), .doc-sec:has(#ad-reg)) {
-      :is(p, li) { line-height: 1.72; }
-      :is(td, th) { line-height: 1.6; }
-      ul.plain li { margin: 7px 0; }
-      ol.steps > li { margin-bottom: 12px; }
-      .content p { margin: 9.5px 0; }
-      .callout { margin: 12px 0; padding: 11px 12px; }
-      thead th, tbody td { padding: 9px 9px; }
-    }
+    /* 페이지 배치는 손대지 않는다. 위의 규칙만으로 충분하다.
+       - .doc-sec { break-inside: avoid } → 번호 섹션은 페이지 중간에서 안 끊긴다
+       - .panel + .panel { break-before: page } → 파트(설치/점검자/관리자/FAQ)마다 새 장
+       섹션을 특정 페이지에 억지로 몰아넣으면 내용이 바뀔 때마다 다시 어긋나므로,
+       흐르는 대로 두고 줄간격만 읽기 편하게 유지한다. */
   }
 </style>
 
