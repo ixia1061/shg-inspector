@@ -51,10 +51,10 @@ app/
     labels/                QR Code 관리 (검색·다중선택·일괄 인쇄, force-dynamic)
     inventory/             수량 현황 (건물×종류 교차표)
     inspections/           전체 점검현황 (이번 달 관리대장 다운로드 포함)
-    ledgers/               관리대장 보관함 (지난 달 대장을 사업장·월별로 다운로드)
     lifecycle/             내용연수 관리
     photos/                점검 사진 관리 (조회·삭제·ZIP 다운로드)
     stats/                 통계
+    ledgers/               관리대장 보관함 (지난 달 대장을 사업장·월별로 다운로드)
     users/                 사용자 관리 (관리자=자기 사업장 점검자 조회·생성·가입승인 / 시스템관리자=전체·역할변경·배정)
   (inspector)/             점검자 (모바일 레이아웃)
     scan/                  QR 스캐너 (첫 화면)
