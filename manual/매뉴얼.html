@@ -376,6 +376,22 @@
     .doc-sec:has(#in-pc) { break-before: page; }
     .doc-sec:has(#ip-check) { break-before: page; }
     .doc-sec:has(#ip-status) { break-before: page; }
+    /* 관리자: 1+2 / 3+4+5 / 6~ */
+    .doc-sec:has(#ad-part) { break-before: page; }
+    .doc-sec:has(#ad-status) { break-before: page; }
+
+    /* 위 두 묶음은 한 장에 여유가 남아, 그 섹션들만 줄간격을 한 번 더 넓힌다.
+       (전체를 넓히면 앞의 4p·9p 묶음이 다음 장으로 밀린다) */
+    :is(.doc-sec:has(#ad-roles), .doc-sec:has(#ad-menu),
+        .doc-sec:has(#ad-part), .doc-sec:has(#ad-org), .doc-sec:has(#ad-reg)) {
+      :is(p, li) { line-height: 1.72; }
+      :is(td, th) { line-height: 1.6; }
+      ul.plain li { margin: 7px 0; }
+      ol.steps > li { margin-bottom: 12px; }
+      .content p { margin: 9.5px 0; }
+      .callout { margin: 12px 0; padding: 11px 12px; }
+      thead th, tbody td { padding: 9px 9px; }
+    }
   }
 </style>
 
