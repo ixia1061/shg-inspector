@@ -461,6 +461,12 @@ export interface Database {
       };
     };
     Functions: {
+      // 내가 가입 신청을 처리할 수 있는 "코드 주인 관리자" id 목록.
+      // (코드 주인의 담당 사업장이 내 범위에 전부 포함되면 처리 가능 — 자기 코드 포함)
+      covered_admin_ids: {
+        Args: Record<string, never>;
+        Returns: string[];
+      };
       fn_extinguisher_status: {
         Args: { p_manufacture_date: string; p_useful_life_years: number | null };
         Returns: LifecycleStatus;

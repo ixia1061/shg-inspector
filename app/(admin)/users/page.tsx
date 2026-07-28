@@ -40,6 +40,12 @@ export default async function UsersPage() {
       : Promise.resolve({ data: null }),
   ]);
 
+  // 내가 처리할 수 있는 가입 신청의 "코드 주인" 목록.
+  // 코드 주인의 담당 사업장이 내 범위에 전부 포함되면 처리할 수 있다(자기 코드 포함).
+  // 다른 관리자의 user_sites는 RLS로 못 읽어 앱에서 계산할 수 없으므로 DB 함수를 쓴다.
+  const { data: coveredAdmins } = await supabase.rpc("covered_admin_ids");
+  const coveredAdminIds = new Set((coveredAdmins ?? []) as string[]);
+
   // 관리자 가입코드 — RLS로 내 것(시스템관리자는 전부)만 읽힌다.
   const { data: joinCodes } = await supabase.from("admin_join_codes").select("admin_id, code");
   const joinCodeByAdmin = new Map((joinCodes ?? []).map((c) => [c.admin_id, c.code]));
@@ -150,8 +156,10 @@ export default async function UsersPage() {
         );
       })
       .map(toItem);
-    // 내 가입코드로 접수된 신청만 본다.
-    pending = pendingProfiles.filter((p) => p.pending_admin_id === user?.id).map(toPending);
+    // 내 코드 + 내가 범위를 포괄하는 하위 관리자의 코드로 접수된 신청까지 본다.
+    pending = pendingProfiles
+      .filter((p) => p.pending_admin_id === user?.id || coveredAdminIds.has(p.pending_admin_id!))
+      .map(toPending);
   }
 
   // 사업장 버튼: 시스템관리자는 전체, 관리자는 담당 사업장만. 순서는 개인 설정을 따른다.
