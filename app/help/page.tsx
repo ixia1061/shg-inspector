@@ -166,8 +166,12 @@ function AdminHelp() {
   return (
     <>
       <p className="text-muted-foreground text-sm">
-        소화기 등록부터 점검 현황·관리대장·QR 라벨까지, 관리 기능 전체 안내입니다. 접속 주소는{" "}
-        <span className="font-medium">shg-inspector.vercel.app</span> 입니다.
+        소화기 등록부터 점검 현황·관리대장·QR 라벨까지, 관리 기능 전체 안내입니다.
+        {/* 주소가 줄 중간에서 잘리지 않도록 줄을 바꿔 통째로 보여준다 */}
+        <span className="mt-1 block">
+          접속 주소는 <span className="font-medium whitespace-nowrap">shg-inspector.vercel.app</span>{" "}
+          입니다.
+        </span>
       </p>
 
       <Card>
