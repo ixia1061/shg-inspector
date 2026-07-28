@@ -274,7 +274,7 @@ function AdminHelp() {
         <CardContent className="text-sm">
           <ul className="ml-4 flex list-disc flex-col gap-1">
             <li>목록에서 <b>관리번호·제조번호·위치</b>로 검색하고, 사업장·상태로 필터합니다.</li>
-            <li>소화기 상세에서 정보를 수정하거나 점검 이력을 확인합니다.</li>
+            <li>소화기 상세에서 정보를 수정하거나 점검 이력을 확인합니다. 이력에는 <b>불량항목·불량내용</b>과 <b>조치내용·조치일·조치자</b>가 함께 남아, 나중에 어떻게 처리했는지 확인할 수 있습니다.</li>
           </ul>
         </CardContent>
       </Card>
