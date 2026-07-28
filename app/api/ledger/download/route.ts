@@ -7,7 +7,7 @@ import { LIFECYCLE_STATUS_LABEL } from "@/lib/utils/lifecycle";
 import { formatShortLocation } from "@/lib/utils/location";
 import { isAdminRole } from "@/lib/utils/roles";
 import { sortByAssetCode } from "@/lib/utils/sort";
-import type { ExtinguisherOverview, LifecycleStatus } from "@/types/domain";
+import type { ExtinguisherOverview, Inspection, LifecycleStatus } from "@/types/domain";
 
 const THIN_BORDER = {
   top: { style: "thin" as const },
@@ -71,6 +71,26 @@ function kstDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
 }
 
+/** 오늘(KST) 기준 'YYYY-MM' */
+function currentKstMonth(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" }).slice(0, 7);
+}
+
+/** 'YYYY-MM'의 시작/다음달 시작을 KST 기준 UTC ISO로. 점검 조회 범위에 쓴다. */
+function kstMonthRange(month: string): { fromIso: string; toIso: string } {
+  const [y, m] = month.split("-").map(Number);
+  const from = new Date(`${month}-01T00:00:00+09:00`);
+  const nextMonth = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+  const to = new Date(`${nextMonth}-01T00:00:00+09:00`);
+  return { fromIso: from.toISOString(), toIso: to.toISOString() };
+}
+
+/** 'YYYY-MM' → '2026년 7월' */
+function monthLabel(month: string): string {
+  const [y, m] = month.split("-");
+  return `${y}년 ${Number(m)}월`;
+}
+
 /**
  * 관리자 전용: 지정 사업장(site 쿼리)의 소화기 관리대장을 Excel(.xlsx)로 내려준다.
  * - 표지 시트: 점검일자·점검자 수기 기입란 + 동·층별 종류/수량 보유현황표
@@ -90,10 +110,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "관리자만 사용할 수 있습니다" }, { status: 403 });
   }
 
-  const siteId = new URL(request.url).searchParams.get("site");
+  const params = new URL(request.url).searchParams;
+  const siteId = params.get("site");
   if (!siteId) {
     return NextResponse.json({ error: "사업장을 지정해야 합니다" }, { status: 400 });
   }
+
+  // month=YYYY-MM이면 그 달 기준 대장. 없거나 이번달이면 지금까지처럼 "현재 상태" 대장.
+  const monthParam = params.get("month");
+  if (monthParam && !/^\d{4}-(0[1-9]|1[0-2])$/.test(monthParam)) {
+    return NextResponse.json({ error: "월 형식이 올바르지 않습니다 (YYYY-MM)" }, { status: 400 });
+  }
+  const thisMonth = currentKstMonth();
+  const month = monthParam ?? thisMonth;
+  const isPastMonth = month < thisMonth;
 
   const { data: rowsRaw } = await supabase
     .from("v_extinguisher_overview")
@@ -101,11 +131,17 @@ export async function GET(request: Request) {
     .eq("status", "active")
     .eq("site_id", siteId);
 
-  const all = sortByAssetCode(rowsRaw ?? []) as ExtinguisherOverview[];
+  let all = sortByAssetCode(rowsRaw ?? []) as ExtinguisherOverview[];
   if (all.length === 0) {
     return NextResponse.json({ error: "해당 사업장에 소화기가 없거나 접근 권한이 없습니다" }, { status: 404 });
   }
   const siteName = all[0].site_name ?? "사업장";
+
+  // 지난달 대장: 뷰의 "가장 최근 점검"을 그 달 안의 마지막 점검으로 바꿔 끼운다.
+  // (뷰는 월 조건 없이 최신 1건만 들고 있어, 그대로 쓰면 그 이후 점검이 섞인다)
+  if (isPastMonth) {
+    all = await applyMonthSnapshot(supabase, all, month);
+  }
 
   // 최근 점검자 이름 매핑
   const inspectorIds = [...new Set(all.map((r) => r.last_inspector_id).filter(Boolean))] as string[];
@@ -145,11 +181,20 @@ export async function GET(request: Request) {
   workbook.creator = "소화기 점검 관리 시스템";
   workbook.created = new Date();
 
-  buildCoverSheet(workbook, siteName, all, combos);
-  buildLedgerSheet(workbook, safeSheetName(`${siteName} 점검대장`, "점검대장"), all, nameById);
+  buildCoverSheet(workbook, siteName, all, combos, isPastMonth ? month : null);
+  buildLedgerSheet(
+    workbook,
+    safeSheetName(`${siteName} 점검대장`, "점검대장"),
+    all,
+    nameById,
+    isPastMonth ? month : null,
+  );
 
   const buffer = await workbook.xlsx.writeBuffer();
-  const filename = `소화기관리대장_${siteName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  // 지난달 대장은 파일명에 그 달을 박아 여러 달치를 모아둬도 구분되게 한다.
+  const filename = isPastMonth
+    ? `소화기관리대장_${siteName}_${month}.xlsx`
+    : `소화기관리대장_${siteName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
 
   return new NextResponse(buffer, {
     headers: {
@@ -159,12 +204,109 @@ export async function GET(request: Request) {
   });
 }
 
+/**
+ * 지정한 달 기준으로 각 소화기의 "그 달 마지막 점검"을 뷰 행에 덮어쓴다.
+ *
+ * v_extinguisher_overview는 월과 무관하게 최신 점검 1건만 들고 있어서, 지난달 대장을
+ * 그대로 뽑으면 그 뒤에 한 점검이 섞여 나온다. 그래서 그 달 점검을 직접 조회해
+ * last_* 계열과 inspected_this_month(= 그 달에 점검했는가)를 바꿔 끼운다.
+ * 그 달에 점검이 없던 소화기는 "미점검"이 되도록 값을 전부 비운다.
+ */
+async function applyMonthSnapshot(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: ExtinguisherOverview[],
+  month: string,
+): Promise<ExtinguisherOverview[]> {
+  const { fromIso, toIso } = kstMonthRange(month);
+  const ids = rows.map((r) => r.id);
+
+  const { data: inspections } = await supabase
+    .from("inspections")
+    .select("*")
+    .in("extinguisher_id", ids)
+    .gte("inspected_at", fromIso)
+    .lt("inspected_at", toIso)
+    .order("inspected_at", { ascending: true });
+
+  // 오름차순이라 나중 것이 앞의 것을 덮어써 "그 달 마지막 점검"이 남는다.
+  const lastByExtinguisher = new Map<string, Inspection>();
+  for (const i of inspections ?? []) lastByExtinguisher.set(i.extinguisher_id, i);
+
+  // 그 점검들에 달린 조치 기록(조치내용·조치일)
+  const inspectionIds = [...lastByExtinguisher.values()].map((i) => i.id);
+  const actionByInspection = new Map<string, { action_note: string; resolved_at: string }>();
+  if (inspectionIds.length) {
+    const { data: actions } = await supabase
+      .from("inspection_actions")
+      .select("inspection_id, action_note, resolved_at")
+      .in("inspection_id", inspectionIds);
+    for (const a of actions ?? []) {
+      actionByInspection.set(a.inspection_id, {
+        action_note: a.action_note,
+        resolved_at: a.resolved_at,
+      });
+    }
+  }
+
+  return rows.map((row) => {
+    const insp = lastByExtinguisher.get(row.id);
+    if (!insp) {
+      // 그 달에 점검 없음 → 미점검 행
+      return {
+        ...row,
+        inspected_this_month: false,
+        last_inspected_at: null,
+        last_inspection_result: null,
+        last_inspector_id: null,
+        last_inspection_memo: null,
+        last_action_note: null,
+        last_action_resolved_at: null,
+        last_agent_discharge_ok: null,
+        last_agent_caking_ok: null,
+        last_gauge_ok: null,
+        last_handle_ok: null,
+        last_hose_ok: null,
+        last_hose_holder_ok: null,
+        last_etc_ok: null,
+        last_pressure_ok: null,
+        last_seal_ok: null,
+        last_appearance_ok: null,
+        last_installation_ok: null,
+      };
+    }
+    const action = actionByInspection.get(insp.id);
+    return {
+      ...row,
+      inspected_this_month: true,
+      last_inspected_at: insp.inspected_at,
+      last_inspection_result: insp.overall_result,
+      last_inspector_id: insp.inspector_id,
+      last_inspection_memo: insp.memo,
+      last_action_note: action?.action_note ?? null,
+      last_action_resolved_at: action?.resolved_at ?? null,
+      last_agent_discharge_ok: insp.agent_discharge_ok,
+      last_agent_caking_ok: insp.agent_caking_ok,
+      last_gauge_ok: insp.gauge_ok,
+      last_handle_ok: insp.handle_ok,
+      last_hose_ok: insp.hose_ok,
+      last_hose_holder_ok: insp.hose_holder_ok,
+      last_etc_ok: insp.etc_ok,
+      last_pressure_ok: insp.pressure_ok,
+      last_seal_ok: insp.seal_ok,
+      last_appearance_ok: insp.appearance_ok,
+      last_installation_ok: insp.installation_ok,
+    };
+  });
+}
+
 /** 표지: 제목 + 점검일자/점검자 수기란 + 동·층별 종류·용량/수량 보유현황표 */
 function buildCoverSheet(
   workbook: ExcelJS.Workbook,
   siteName: string,
   all: ExtinguisherOverview[],
   combos: Combo[],
+  /** 지난달 대장이면 'YYYY-MM', 현재 상태 대장이면 null */
+  month: string | null,
 ) {
   const sheet = workbook.addWorksheet("표지");
   const colCount = 2 + combos.length + 1; // 건물 + 층 + 종류·용량들 + 합계
@@ -178,7 +320,9 @@ function buildCoverSheet(
   // 제목
   sheet.mergeCells(1, 1, 1, colCount);
   const title = sheet.getCell(1, 1);
-  title.value = `소화기 점검 관리대장 (${siteName})`;
+  title.value = month
+    ? `소화기 점검 관리대장 (${siteName}) — ${monthLabel(month)}`
+    : `소화기 점검 관리대장 (${siteName})`;
   title.font = { bold: true, size: 18 };
   title.alignment = { horizontal: "center", vertical: "middle" };
   sheet.getRow(1).height = 32;
@@ -353,6 +497,8 @@ function buildLedgerSheet(
   sheetName: string,
   rows: ExtinguisherOverview[],
   nameById: Map<string, string>,
+  /** 지난달 대장이면 'YYYY-MM' — 상태 컬럼 이름을 그 달로 바꾼다 */
+  month: string | null,
 ) {
   const sheet = workbook.addWorksheet(sheetName);
   // 점검사항 6개(약제방출~호스걸이)는 내용연수상태와 최근점검일 사이에 들어간다.
@@ -373,7 +519,7 @@ function buildLedgerSheet(
     { header: "불량내용", key: "defect_note", width: 24 },
     { header: "조치내용", key: "action", width: 28 },
     { header: "점검자", key: "inspector", width: 12 },
-    { header: "이번달상태", key: "month", width: 11 },
+    { header: month ? `${monthLabel(month)} 상태` : "이번달상태", key: "month", width: 13 },
   ];
 
   /** key로 컬럼 번호를 찾는다(점검사항 추가로 인덱스가 밀리므로 하드코딩하지 않는다). */
