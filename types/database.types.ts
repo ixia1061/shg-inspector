@@ -403,6 +403,20 @@ export interface Database {
       };
       // 목록/QR/수량 페이지용 경량 뷰: 소화기마다 오늘/이번달 점검 여부를 계산하는
       // 무거운 서브쿼리(inspected_today/inspected_this_month)를 제외한 것.
+      v_ledger_months: {
+        // 관리대장 보관함(/ledgers)용 — 사업장별로 점검이 있었던 달과 그 달 점검 대수.
+        Row: {
+          site_id: string;
+          /** 'YYYY-MM' (KST 기준) */
+          month: string;
+          /** 그 달에 점검된 소화기 대수(중복 제외) */
+          inspected_count: number;
+          /** 그 달의 점검 건수(같은 소화기 재점검 포함) */
+          inspection_count: number;
+          last_inspected_at: string;
+        };
+        Relationships: [];
+      };
       v_extinguisher_list: {
         Row: {
           id: string;
