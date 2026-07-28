@@ -140,10 +140,12 @@ export function UsersClient({
           grantableSites={grantableSites}
           canManage
           canToggleActive
+          canDelete
         />
       )}
 
-      {/* 관리자도 자기 범위 점검자는 범위 변경·활성/비활성을 바로 할 수 있다. */}
+      {/* 관리자도 자기 범위 점검자는 범위 변경·활성/비활성·삭제를 바로 할 수 있다.
+          (점검 이력이 있는 계정은 서버에서 삭제를 막고 비활성을 안내한다) */}
       <UserSection
         title={`점검자 (${visibleInspectors.length})`}
         rows={visibleInspectors}
@@ -152,6 +154,7 @@ export function UsersClient({
         grantableSites={grantableSites}
         canManage={isSuper}
         canToggleActive
+        canDelete
       />
     </div>
   );
@@ -165,6 +168,7 @@ function UserSection({
   grantableSites,
   canManage,
   canToggleActive,
+  canDelete,
 }: {
   title: string;
   rows: UserListItem[];
@@ -176,6 +180,8 @@ function UserSection({
   canManage: boolean;
   /** 활성/비활성 토글 가능 여부 */
   canToggleActive: boolean;
+  /** 계정 삭제 가능 여부 */
+  canDelete: boolean;
 }) {
   return (
     <section className="flex flex-col gap-2">
@@ -209,6 +215,7 @@ function UserSection({
                 grantableSites={grantableSites}
                 canManage={canManage}
                 canToggleActive={canToggleActive}
+                canDelete={canDelete}
               />
             ))
           ) : (

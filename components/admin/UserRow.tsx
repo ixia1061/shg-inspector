@@ -38,6 +38,7 @@ export function UserRow({
   grantableSites,
   canManage,
   canToggleActive,
+  canDelete,
 }: {
   id: string;
   name: string;
@@ -57,6 +58,8 @@ export function UserRow({
   canManage: boolean;
   /** 활성/비활성 토글 가능 여부. 관리자도 자기 범위 점검자는 켜고 끌 수 있다. */
   canToggleActive: boolean;
+  /** 계정 삭제 가능 여부. 관리자도 자기 범위 점검자는 삭제할 수 있다. */
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -97,7 +100,13 @@ export function UserRow({
   }
 
   function handleDelete() {
-    if (!confirm(`"${name}" 사용자를 삭제하시겠습니까?\n삭제하면 로그인할 수 없게 됩니다.`)) return;
+    if (
+      !confirm(
+        `"${name}" 계정을 삭제하시겠습니까?\n\n되돌릴 수 없습니다. 잠시 막아두려는 것이라면 [활성] 버튼으로 비활성 처리하세요.\n(점검 이력이 있는 계정은 기록 보존을 위해 삭제되지 않습니다)`
+      )
+    ) {
+      return;
+    }
     startTransition(async () => {
       try {
         await deleteUserAction(id);
@@ -182,7 +191,7 @@ export function UserRow({
             >
               {active ? "활성" : "비활성"}
             </Button>
-            {canManage && (
+            {canDelete && (
               <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isPending}>
                 삭제
               </Button>

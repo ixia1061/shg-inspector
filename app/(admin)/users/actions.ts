@@ -362,7 +362,7 @@ async function assertInspectorInMyScope(
 }
 
 export async function deleteUserAction(userId: string) {
-  const currentUser = await assertSuperAdmin();
+  const { supabase, user: currentUser, isSuper } = await assertAdmin();
 
   if (currentUser.id === userId) {
     throw new Error("본인 계정은 삭제할 수 없습니다");
@@ -374,6 +374,14 @@ export async function deleteUserAction(userId: string) {
   const { data: target } = await admin.from("profiles").select("role").eq("id", userId).single();
   if (target?.role === "super_admin") {
     throw new Error("시스템관리자 계정은 삭제할 수 없습니다");
+  }
+
+  // 일반 관리자는 "자기 범위의 점검자"만 삭제할 수 있다(관리자 계정은 시스템관리자 몫).
+  if (!isSuper) {
+    if (target?.role !== "inspector") {
+      throw new Error("점검자 계정만 삭제할 수 있습니다");
+    }
+    await assertInspectorInMyScope(supabase, userId);
   }
 
   // 점검 이력이 있는 사용자는 감사 기록 보존을 위해 삭제 대신 비활성 처리를 유도한다.
