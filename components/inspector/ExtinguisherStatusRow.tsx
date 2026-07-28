@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { formatKstDate } from "@/lib/utils/datetime";
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
 import { formatShortLocation } from "@/lib/utils/location";
 import type { ExtinguisherOverview } from "@/types/domain";
@@ -26,7 +27,7 @@ export function ExtinguisherStatusRow({
         <LifecycleStatusBadge status={row.lifecycle_status} />
         <span className="text-muted-foreground text-xs">
           {row.last_inspected_at
-            ? new Date(row.last_inspected_at).toLocaleDateString("ko-KR")
+            ? formatKstDate(row.last_inspected_at)
             : "점검이력 없음"}
         </span>
       </div>

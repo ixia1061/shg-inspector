@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { formatKstDate } from "@/lib/utils/datetime";
 import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
@@ -21,7 +22,7 @@ const PAGE_SIZE = 50;
 /** timestamptz → KST 'YYYY-MM-DD' */
 function kstDate(iso: string | null): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" });
+  return formatKstDate(iso);
 }
 
 /**

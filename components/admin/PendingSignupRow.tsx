@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { formatKstDate } from "@/lib/utils/datetime";
 import { approveSignupAction, rejectSignupAction } from "@/app/(admin)/users/actions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -85,7 +86,7 @@ export function PendingSignupRow({
       <TableCell className="text-muted-foreground text-sm">{email ?? "-"}</TableCell>
       {showAdminColumn && <TableCell className="text-sm">{adminName}</TableCell>}
       <TableCell className="text-muted-foreground text-sm">
-        {new Date(requestedAt).toLocaleDateString("ko-KR")}
+        {formatKstDate(requestedAt)}
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">

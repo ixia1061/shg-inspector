@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { formatKstDate } from "@/lib/utils/datetime";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -223,7 +224,7 @@ export function InspectionChecklist({ extinguisher }: { extinguisher: Extinguish
         <p className="text-muted-foreground text-sm">
           최근 점검:{" "}
           {extinguisher.last_inspected_at
-            ? new Date(extinguisher.last_inspected_at).toLocaleDateString("ko-KR")
+            ? formatKstDate(extinguisher.last_inspected_at)
             : "이력 없음"}
         </p>
       </div>
