@@ -20,7 +20,7 @@ import { signupSchema, type SignupFormValues } from "@/lib/validations/auth.sche
  */
 export function SignupForm() {
   const [submitting, setSubmitting] = useState(false);
-  const [doneSiteName, setDoneSiteName] = useState<string | null>(null);
+  const [doneAdminName, setDoneAdminName] = useState<string | null>(null);
 
   const {
     register,
@@ -34,8 +34,8 @@ export function SignupForm() {
   async function onSubmit(values: SignupFormValues) {
     setSubmitting(true);
     try {
-      const { siteName } = await submitSignupAction(values);
-      setDoneSiteName(siteName);
+      const { adminName } = await submitSignupAction(values);
+      setDoneAdminName(adminName);
     } catch (err) {
       toast.error("가입 신청에 실패했습니다", {
         description: err instanceof Error ? err.message : String(err),
@@ -45,7 +45,7 @@ export function SignupForm() {
     }
   }
 
-  if (doneSiteName !== null) {
+  if (doneAdminName !== null) {
     return (
       <Card className="w-full max-w-sm">
         <CardContent className="flex flex-col items-center gap-3 py-6 text-center">
@@ -53,8 +53,8 @@ export function SignupForm() {
           <div>
             <p className="font-semibold">가입 신청이 접수되었습니다</p>
             <p className="text-muted-foreground mt-1 text-sm">
-              {doneSiteName ? `${doneSiteName} ` : ""}관리자가 승인하면 로그인할 수 있습니다.
-              승인 여부는 관리자에게 문의하세요.
+              {doneAdminName ? `${doneAdminName} 님` : "관리자"}이 승인하면 로그인할 수 있습니다.
+              점검할 사업장도 승인할 때 함께 정해집니다.
             </p>
           </div>
           <Button render={<Link href="/login" />} nativeButton={false} className="w-full">
@@ -82,7 +82,7 @@ export function SignupForm() {
                 className="font-mono tracking-widest uppercase"
                 {...register("joinCode")}
               />
-              <FieldDescription>사업장 관리자에게 받은 코드를 입력하세요.</FieldDescription>
+              <FieldDescription>담당 관리자에게 받은 코드를 입력하세요.</FieldDescription>
               <FieldError errors={errors.joinCode ? [errors.joinCode] : undefined} />
             </Field>
             <Field data-invalid={!!errors.name}>

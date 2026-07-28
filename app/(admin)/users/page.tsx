@@ -40,6 +40,11 @@ export default async function UsersPage() {
       : Promise.resolve({ data: null }),
   ]);
 
+  // 관리자 가입코드 — RLS로 내 것(시스템관리자는 전부)만 읽힌다.
+  const { data: joinCodes } = await supabase.from("admin_join_codes").select("admin_id, code");
+  const joinCodeByAdmin = new Map((joinCodes ?? []).map((c) => [c.admin_id, c.code]));
+  const myJoinCode = user ? (joinCodeByAdmin.get(user.id) ?? null) : null;
+
   // 내가 "사업장 전체"로 담당하는 곳 — 점검자에게도 사업장 한 줄로 넘길 수 있는 범위다.
   const { data: myWholeSites } = user
     ? await supabase.from("user_sites").select("site_id").eq("user_id", user.id)
@@ -104,24 +109,28 @@ export default async function UsersPage() {
   });
 
   // 승인 대기 = 자가 회원가입으로 신청했고 아직 활성화되지 않은 계정
-  const pendingProfiles = (profiles ?? []).filter((p) => !p.is_active && p.pending_site_id);
-  const activeProfiles = (profiles ?? []).filter((p) => !(!p.is_active && p.pending_site_id));
+  const pendingProfiles = (profiles ?? []).filter((p) => !p.is_active && p.pending_admin_id);
+  const activeProfiles = (profiles ?? []).filter((p) => !(!p.is_active && p.pending_admin_id));
+  const adminNameById = new Map((profiles ?? []).map((p) => [p.id, p.name]));
+  const toPending = (p: NonNullable<typeof profiles>[number]): PendingSignupItem => ({
+    id: p.id,
+    name: p.name,
+    email: p.email,
+    adminId: p.pending_admin_id!,
+    adminName: adminNameById.get(p.pending_admin_id!) ?? "?",
+    requestedAt: p.created_at,
+  });
 
   let admins: UserListItem[] = [];
   let inspectors: UserListItem[] = [];
   let pending: PendingSignupItem[] = [];
 
   if (isSuper) {
-    admins = activeProfiles.filter((p) => isAdminRole(p.role)).map(toItem);
+    admins = activeProfiles
+      .filter((p) => isAdminRole(p.role))
+      .map((p) => ({ ...toItem(p), joinCode: joinCodeByAdmin.get(p.id) ?? null }));
     inspectors = activeProfiles.filter((p) => p.role === "inspector").map(toItem);
-    pending = pendingProfiles.map((p) => ({
-      id: p.id,
-      name: p.name,
-      email: p.email,
-      siteId: p.pending_site_id!,
-      siteName: siteNameById.get(p.pending_site_id!) ?? "?",
-      requestedAt: p.created_at,
-    }));
+    pending = pendingProfiles.map(toPending);
   } else {
     // 일반 관리자는 자기 담당 사업장의 점검자만 본다. 아직 아무 데도 배정되지 않은
     // 점검자는 누구나 볼 수 있게 남긴다(아직 아무도 안 맡은 사람이라 첫 배정이 가능해야 한다).
@@ -141,16 +150,8 @@ export default async function UsersPage() {
         );
       })
       .map(toItem);
-    pending = pendingProfiles
-      .filter((p) => mySiteIds.has(p.pending_site_id!))
-      .map((p) => ({
-        id: p.id,
-        name: p.name,
-        email: p.email,
-        siteId: p.pending_site_id!,
-        siteName: siteNameById.get(p.pending_site_id!) ?? "?",
-        requestedAt: p.created_at,
-      }));
+    // 내 가입코드로 접수된 신청만 본다.
+    pending = pendingProfiles.filter((p) => p.pending_admin_id === user?.id).map(toPending);
   }
 
   // 사업장 버튼: 시스템관리자는 전체, 관리자는 담당 사업장만. 순서는 개인 설정을 따른다.
@@ -166,6 +167,8 @@ export default async function UsersPage() {
       parts={parts ?? []}
       grantableParts={grantableParts}
       myWholeSiteIds={myWholeSiteIds}
+      meId={user?.id ?? ""}
+      myJoinCode={myJoinCode}
       admins={admins}
       inspectors={inspectors}
       pending={pending}

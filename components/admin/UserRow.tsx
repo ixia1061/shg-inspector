@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { InspectorScopeDialog } from "@/components/admin/InspectorScopeDialog";
+import { JoinCodeCard } from "@/components/admin/JoinCodeCard";
 import { UserSitesDialog } from "@/components/admin/UserSitesDialog";
 import { ASSIGNABLE_ROLE_ITEMS, ROLE_LABELS } from "@/lib/utils/roles";
 import type { ManagementPart, Site, UserRole } from "@/types/domain";
@@ -40,6 +41,7 @@ export function UserRow({
   canManage,
   canToggleActive,
   canDelete,
+  joinCode,
 }: {
   id: string;
   name: string;
@@ -63,6 +65,8 @@ export function UserRow({
   canToggleActive: boolean;
   /** 계정 삭제 가능 여부. 관리자도 자기 범위 점검자는 삭제할 수 있다. */
   canDelete: boolean;
+  /** 관리자 목록에서만 넘어온다. undefined면 가입코드 열을 그리지 않는다. */
+  joinCode?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -181,6 +185,11 @@ export function UserRow({
           </div>
         )}
       </TableCell>
+      {joinCode !== undefined && (
+        <TableCell>
+          <JoinCodeCard adminId={id} code={joinCode} canIssue />
+        </TableCell>
+      )}
       <TableCell>
         {isSuperAdminUser ? (
           <span className="text-muted-foreground text-sm">활성 (보호됨)</span>

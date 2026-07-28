@@ -23,9 +23,9 @@ export interface Database {
           role: UserRole;
           // 승인 플래그. false면 로그인해도 아무 데이터에 접근할 수 없다.
           is_active: boolean;
-          // 자가 회원가입으로 신청한 사업장. 승인하면 null로 비운다.
-          // 승인 대기 = is_active === false && pending_site_id !== null
-          pending_site_id: string | null;
+          // 자가 회원가입 신청을 받은 관리자. 승인하면 null로 비운다.
+          // 승인 대기 = is_active === false && pending_admin_id !== null
+          pending_admin_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -35,7 +35,7 @@ export interface Database {
           email?: string | null;
           role?: UserRole;
           is_active?: boolean;
-          pending_site_id?: string | null;
+          pending_admin_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -59,10 +59,11 @@ export interface Database {
         Update: Partial<{ ip: string; success: boolean }>;
         Relationships: [];
       };
-      site_join_codes: {
-        // 사업장별 가입코드(사업장당 1행). 점검자가 /signup에서 이 코드로 가입 신청한다.
-        Row: { site_id: string; code: string; updated_at: string; updated_by: string | null };
-        Insert: { site_id: string; code: string; updated_at?: string; updated_by?: string | null };
+      admin_join_codes: {
+        // 관리자별 가입코드(관리자당 1행). 점검자가 /signup에서 이 코드로 신청하면
+        // 그 관리자에게 접수되고, 관리자가 자기 담당 사업장 중 골라 승인한다.
+        Row: { admin_id: string; code: string; updated_at: string; updated_by: string | null };
+        Insert: { admin_id: string; code: string; updated_at?: string; updated_by?: string | null };
         Update: Partial<{ code: string; updated_at: string; updated_by: string | null }>;
         Relationships: [];
       };

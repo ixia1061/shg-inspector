@@ -6,6 +6,7 @@ import { getAccessibleSiteIds, getWritablePartIds } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminRole } from "@/lib/utils/roles";
+import { friendlyErrorMessage } from "@/lib/utils/supabaseError";
 import type { UserRole } from "@/types/domain";
 
 async function assertSuperAdmin() {
@@ -147,31 +148,34 @@ export async function createUserAction(input: {
 }
 
 /** 가입 신청 승인 — 계정을 활성화하고 지정한 관리파트의 점검 권한을 준다. */
-export async function approveSignupAction(userId: string) {
-  const { supabase, isSuper } = await assertAdmin();
+export async function approveSignupAction(userId: string, requestedSiteIds: string[]) {
+  const { supabase, user, isSuper } = await assertAdmin();
 
   const { data: target } = await supabase
     .from("profiles")
-    .select("role, is_active, pending_site_id")
+    .select("role, is_active, pending_admin_id")
     .eq("id", userId)
     .single();
 
-  if (!target || target.role !== "inspector" || target.is_active || !target.pending_site_id) {
+  if (!target || target.role !== "inspector" || target.is_active || !target.pending_admin_id) {
     throw new Error("승인 대기 중인 가입 신청이 아닙니다");
   }
+  // 내 코드로 온 신청만 승인한다(시스템관리자는 전부).
+  if (!isSuper && target.pending_admin_id !== user.id) {
+    throw new Error("내 가입코드로 접수된 신청이 아닙니다");
+  }
+  if (requestedSiteIds.length === 0) {
+    throw new Error("점검할 사업장을 하나 이상 선택하세요");
+  }
 
-  // 승인하면 신청한 사업장 전체를 맡긴다.
-  const { siteIds, partIds } = await splitScopeForGrant(
-    supabase,
-    [target.pending_site_id],
-    isSuper
-  );
+  // 고른 사업장이 내 담당 범위인지까지 여기서 검증된다.
+  const { siteIds, partIds } = await splitScopeForGrant(supabase, requestedSiteIds, isSuper);
 
   // RLS 사용자 클라이언트로 수행해 profiles_admin_manage_inspector / user_sites·user_parts
   // 쓰기 정책이 관리자 경계를 DB에서도 강제하게 한다.
   const { error } = await supabase
     .from("profiles")
-    .update({ is_active: true, pending_site_id: null })
+    .update({ is_active: true, pending_admin_id: null })
     .eq("id", userId);
   if (error) throw new Error(error.message);
 
@@ -193,26 +197,20 @@ export async function approveSignupAction(userId: string) {
 
 /** 가입 신청 거부 — 계정을 삭제한다(같은 이메일로 다시 신청할 수 있다). */
 export async function rejectSignupAction(userId: string) {
-  const { supabase } = await assertAdmin();
+  const { supabase, user, isSuper } = await assertAdmin();
 
   const { data: target } = await supabase
     .from("profiles")
-    .select("role, is_active, pending_site_id")
+    .select("role, is_active, pending_admin_id")
     .eq("id", userId)
     .single();
 
-  if (!target || target.role !== "inspector" || target.is_active || !target.pending_site_id) {
+  if (!target || target.role !== "inspector" || target.is_active || !target.pending_admin_id) {
     throw new Error("승인 대기 중인 가입 신청이 아닙니다");
   }
-  // 신청 사업장이 내 담당 범위인지 확인(파트 검증과 같은 기준).
-  const writable = await getWritablePartIds();
-  if (writable !== null) {
-    const { data: parts } = await supabase
-      .from("management_parts")
-      .select("id")
-      .eq("site_id", target.pending_site_id);
-    const mine = (parts ?? []).some((p) => writable.has(p.id));
-    if (!mine) throw new Error("담당하지 않는 사업장의 가입 신청입니다");
+  // 내 코드로 온 신청만 거부할 수 있다(시스템관리자는 전부).
+  if (!isSuper && target.pending_admin_id !== user.id) {
+    throw new Error("내 가입코드로 접수된 신청이 아닙니다");
   }
 
   // 계정 삭제는 service_role로만 가능하다(profile은 FK cascade로 함께 삭제).
@@ -306,6 +304,38 @@ export async function updateInspectorSitesAction(inspectorId: string, siteIds: s
       .upsert(grantParts.map((part_id) => ({ user_id: inspectorId, part_id })));
     if (error) throw new Error(error.message);
   }
+
+  revalidatePath("/users");
+}
+
+/**
+ * 관리자 가입코드 발급·재발급 (시스템관리자 전용).
+ * 코드 생성은 클라이언트에서 하고(crypto.getRandomValues) 여기서는 대상 검증만 한다.
+ */
+export async function issueJoinCodeAction(adminId: string, code: string) {
+  const currentUser = await assertSuperAdmin();
+  const normalized = code.trim().toUpperCase();
+  if (!/^[A-Z0-9]{4,12}$/.test(normalized)) {
+    throw new Error("코드 형식이 올바르지 않습니다");
+  }
+
+  const admin = createAdminClient();
+  const { data: target } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", adminId)
+    .single();
+  if (!target || (target.role !== "admin" && target.role !== "super_admin")) {
+    throw new Error("관리자에게만 가입코드를 발급할 수 있습니다");
+  }
+
+  const { error } = await admin.from("admin_join_codes").upsert({
+    admin_id: adminId,
+    code: normalized,
+    updated_at: new Date().toISOString(),
+    updated_by: currentUser.id,
+  });
+  if (error) throw new Error(friendlyErrorMessage(error));
 
   revalidatePath("/users");
 }
