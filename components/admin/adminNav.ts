@@ -2,6 +2,7 @@ import {
   Boxes,
   Building2,
   ClipboardList,
+  FileSpreadsheet,
   Gauge,
   HelpCircle,
   Images,
@@ -27,6 +28,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/extinguishers", label: "소화기 관리", icon: QrCode },
   { href: "/inventory", label: "수량 현황", icon: Boxes },
   { href: "/inspections", label: "점검현황", icon: ClipboardList },
+  // 지난 달 대장은 점검현황과 분리해 여기서만 다룬다(진행 중인 달과 섞이지 않게).
+  { href: "/ledgers", label: "관리대장", icon: FileSpreadsheet },
   { href: "/lifecycle", label: "내용연수 관리", icon: ShieldAlert },
   { href: "/photos", label: "사진 관리", icon: Images },
   { href: "/stats", label: "통계", icon: Gauge },
