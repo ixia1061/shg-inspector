@@ -27,6 +27,7 @@ export function InspectorScopeDialog({
   sites,
   assignedSiteIds,
   wholeSiteIds,
+  myWholeSiteIds,
 }: {
   inspectorId: string;
   inspectorName: string;
@@ -34,8 +35,10 @@ export function InspectorScopeDialog({
   sites: Site[];
   /** 현재 점검 가능한 사업장(파트 배정 + 사업장 전체 배정) */
   assignedSiteIds: string[];
-  /** 시스템관리자가 "사업장 전체"로 준 곳 — 여기서는 해제할 수 없다 */
+  /** 점검자가 "사업장 전체"로 배정받은 곳 */
   wholeSiteIds: string[];
+  /** 내가 통째로 담당하는 사업장 — 여기 없는 전체 배정은 내가 풀 수 없다 */
+  myWholeSiteIds: string[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -76,12 +79,13 @@ export function InspectorScopeDialog({
             체크한 사업장의 소화기를 스캔·점검할 수 있습니다.
           </p>
           {sites.map((site) => {
-            const locked = wholeSiteIds.includes(site.id);
+            // 내 담당이 아닌 사업장을 시스템관리자가 통째로 줬다면 내가 풀 수 없다.
+            const locked = wholeSiteIds.includes(site.id) && !myWholeSiteIds.includes(site.id);
             return (
               <label
                 key={site.id}
                 className="flex items-center gap-2 text-sm"
-                title={locked ? "시스템관리자가 사업장 전체로 배정했습니다" : undefined}
+                title={locked ? "시스템관리자가 배정한 범위라 여기서 해제할 수 없습니다" : undefined}
               >
                 <Checkbox
                   checked={locked || selected.includes(site.id)}

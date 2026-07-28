@@ -58,6 +58,7 @@ export function UsersClient({
   sites,
   parts,
   grantableParts,
+  myWholeSiteIds,
   admins,
   inspectors,
   pending,
@@ -69,6 +70,8 @@ export function UsersClient({
   parts: ManagementPart[];
   /** 내가 부여할 수 있는 관리파트(점검자 생성·가입 승인에 사용) */
   grantableParts: ManagementPart[];
+  /** 내가 통째로 담당하는 사업장 id (범위 변경 창의 잠금 판단용) */
+  myWholeSiteIds: string[];
   admins: UserListItem[];
   inspectors: UserListItem[];
   pending: PendingSignupItem[];
@@ -138,6 +141,7 @@ export function UsersClient({
           sites={sites}
           parts={parts}
           grantableSites={grantableSites}
+          myWholeSiteIds={myWholeSiteIds}
           canManage
           canToggleActive
           canDelete
@@ -152,6 +156,7 @@ export function UsersClient({
         sites={sites}
         parts={parts}
         grantableSites={grantableSites}
+        myWholeSiteIds={myWholeSiteIds}
         canManage={isSuper}
         canToggleActive
         canDelete
@@ -166,6 +171,7 @@ function UserSection({
   sites,
   parts,
   grantableSites,
+  myWholeSiteIds,
   canManage,
   canToggleActive,
   canDelete,
@@ -176,6 +182,7 @@ function UserSection({
   parts: ManagementPart[];
   /** 범위 변경 다이얼로그에 보일 사업장(내가 부여할 수 있는 곳) */
   grantableSites: Site[];
+  myWholeSiteIds: string[];
   /** 역할 변경·배정·삭제 가능 여부(시스템관리자만) */
   canManage: boolean;
   /** 활성/비활성 토글 가능 여부 */
@@ -213,6 +220,7 @@ function UserSection({
                 assignedPartIds={u.assignedPartIds}
                 scopeSiteIds={u.siteIds}
                 grantableSites={grantableSites}
+                myWholeSiteIds={myWholeSiteIds}
                 canManage={canManage}
                 canToggleActive={canToggleActive}
                 canDelete={canDelete}

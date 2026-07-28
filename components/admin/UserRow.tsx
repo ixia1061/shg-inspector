@@ -36,6 +36,7 @@ export function UserRow({
   assignedPartIds,
   scopeSiteIds,
   grantableSites,
+  myWholeSiteIds,
   canManage,
   canToggleActive,
   canDelete,
@@ -54,6 +55,8 @@ export function UserRow({
   scopeSiteIds: string[];
   /** 내가 부여할 수 있는 사업장(범위 변경 다이얼로그에 보이는 목록) */
   grantableSites: Site[];
+  /** 내가 통째로 담당하는 사업장 id */
+  myWholeSiteIds: string[];
   /** 역할 변경·배정·삭제 가능 여부(시스템관리자만) */
   canManage: boolean;
   /** 활성/비활성 토글 가능 여부. 관리자도 자기 범위 점검자는 켜고 끌 수 있다. */
@@ -171,6 +174,7 @@ export function UserRow({
                   sites={grantableSites}
                   assignedSiteIds={scopeSiteIds}
                   wholeSiteIds={assignedSiteIds}
+                  myWholeSiteIds={myWholeSiteIds}
                 />
               )
             )}
