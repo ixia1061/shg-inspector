@@ -167,8 +167,7 @@ function AdminHelp() {
     <>
       <p className="text-muted-foreground text-sm">
         소화기 등록부터 점검 현황·관리대장·QR 라벨까지, 관리 기능 전체 안내입니다. 접속 주소는{" "}
-        <span className="font-medium">shg-inspector.vercel.app</span> 이며, 문제가 생기면 맨 아래
-        <b>문제 해결</b>을 참고하세요.
+        <span className="font-medium">shg-inspector.vercel.app</span> 입니다.
       </p>
 
       <Card>
