@@ -4,20 +4,52 @@ import { notFound } from "next/navigation";
 
 import { ExtinguisherStatusRow } from "@/components/inspector/ExtinguisherStatusRow";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { groupByFloor, shortRowLocation } from "@/lib/utils/floorGroup";
 import { formatBuildingLabel } from "@/lib/utils/location";
 import { isAdminRole } from "@/lib/utils/roles";
 import { sortByAssetCode } from "@/lib/utils/sort";
 import { createClient } from "@/lib/supabase/server";
 import type { ExtinguisherOverview } from "@/types/domain";
 
-function RowList({ list, allowDirect }: { list: ExtinguisherOverview[]; allowDirect: boolean }) {
+function RowList({
+  list,
+  all,
+  floorOrder,
+  allowDirect,
+  showProgress,
+}: {
+  list: ExtinguisherOverview[];
+  all: ExtinguisherOverview[];
+  floorOrder: Map<string, number>;
+  allowDirect: boolean;
+  /** 미점검 탭에서는 남은 대수보다 "8대 중 5대 완료"가 더 쓸모 있다. */
+  showProgress: boolean;
+}) {
   if (!list.length) {
     return <p className="text-muted-foreground py-8 text-center text-sm">해당하는 소화기가 없습니다.</p>;
   }
+
+  const groups = groupByFloor(list, all, floorOrder);
+
   return (
-    <div>
-      {list.map((row) => (
-        <ExtinguisherStatusRow key={row.id} row={row} allowDirect={allowDirect} />
+    <div className="flex flex-col gap-3">
+      {groups.map((group) => (
+        <section key={group.key}>
+          <div className="bg-muted/60 flex items-center justify-between rounded-md px-2 py-1.5">
+            <span className="text-sm font-semibold">{group.label}</span>
+            <span className="text-muted-foreground text-xs">
+              {showProgress ? `${group.total}대 중 ${group.done}대 완료` : `${group.rows.length}대`}
+            </span>
+          </div>
+          {group.rows.map((row) => (
+            <ExtinguisherStatusRow
+              key={row.id}
+              row={row}
+              allowDirect={allowDirect}
+              locationText={shortRowLocation(row)}
+            />
+          ))}
+        </section>
       ))}
     </div>
   );
@@ -63,6 +95,13 @@ export default async function BuildingStatusPage({
     .eq("id", building.site_id)
     .single();
 
+  // 층 순서는 관리자가 사업장 상세에서 정한 order_index를 따른다(뷰에는 없는 값).
+  const { data: floorRows } = await supabase
+    .from("floors")
+    .select("id, order_index")
+    .eq("building_id", buildingId);
+  const floorOrder = new Map((floorRows ?? []).map((f) => [f.id, f.order_index]));
+
   const label = formatBuildingLabel({
     site_name: site?.name ?? "",
     building_no: building.building_no,
@@ -101,7 +140,13 @@ export default async function BuildingStatusPage({
 
         <TabsContent value="pending">
           {pending.length ? (
-            <RowList list={pending} allowDirect={allowDirect} />
+            <RowList
+              list={pending}
+              all={rows}
+              floorOrder={floorOrder}
+              allowDirect={allowDirect}
+              showProgress
+            />
           ) : (
             <p className="text-muted-foreground py-8 text-center text-sm">
               이 건물의 이번달 점검이 모두 완료되었습니다. 🎉
@@ -110,12 +155,24 @@ export default async function BuildingStatusPage({
         </TabsContent>
 
         <TabsContent value="done">
-          <RowList list={done} allowDirect={allowDirect} />
+          <RowList
+            list={done}
+            all={rows}
+            floorOrder={floorOrder}
+            allowDirect={allowDirect}
+            showProgress={false}
+          />
         </TabsContent>
 
         <TabsContent value="lifecycle">
           {lifecycleAlerts.length ? (
-            <RowList list={lifecycleAlerts} allowDirect={allowDirect} />
+            <RowList
+              list={lifecycleAlerts}
+              all={rows}
+              floorOrder={floorOrder}
+              allowDirect={allowDirect}
+              showProgress={false}
+            />
           ) : (
             <p className="text-muted-foreground py-8 text-center text-sm">
               교체가 필요한 소화기가 없습니다.

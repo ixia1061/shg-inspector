@@ -13,15 +13,19 @@ import type { ExtinguisherOverview } from "@/types/domain";
 export function ExtinguisherStatusRow({
   row,
   allowDirect,
+  locationText,
 }: {
   row: ExtinguisherOverview;
   allowDirect: boolean;
+  /** 층별로 묶어 보여줄 때처럼 위치 일부가 이미 헤더에 있으면 짧게 바꿔 넘긴다. */
+  locationText?: string;
 }) {
+  const location = locationText ?? formatShortLocation(row);
   const inner = (
     <>
       <div className="min-w-0">
         <p className="font-mono text-sm font-medium">{row.asset_code}</p>
-        <p className="text-muted-foreground truncate text-xs">{formatShortLocation(row)}</p>
+        {location && <p className="text-muted-foreground truncate text-xs">{location}</p>}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <LifecycleStatusBadge status={row.lifecycle_status} />
