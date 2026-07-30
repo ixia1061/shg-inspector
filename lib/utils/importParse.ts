@@ -60,7 +60,6 @@ export interface ParseContext {
 export interface ParseResult {
   rows: ImportRow[];
   errors: ImportIssue[];
-  warnings: ImportIssue[];
 }
 
 /** 셀 값을 문자열로. 엑셀이 숫자·날짜로 읽은 칸도 사람이 적은 그대로에 가깝게 되돌린다. */
@@ -160,14 +159,12 @@ export function buildImportRows(
 ): ParseResult {
   const rows: ImportRow[] = [];
   const errors: ImportIssue[] = [];
-  const warnings: ImportIssue[] = [];
   const seenSerials = new Map<string, number>();
   const seenCodes = new Map<string, number>();
 
   for (const { rowNumber, cells } of records) {
     const text = (key: ImportColumnKey) => cellText(cells[key]);
     const fail = (column: string, message: string) => errors.push({ row: rowNumber, column, message });
-    const warn = (column: string, message: string) => warnings.push({ row: rowNumber, column, message });
     const before = errors.length;
 
     // 관리파트 — 없으면 시스템관리자가 먼저 만들어야 한다(파트 쓰기는 시스템관리자 전용).
@@ -242,15 +239,17 @@ export function buildImportRows(
       }
     }
 
-    // 제조번호 중복은 실제 데이터에도 있어(같은 날 같은 라인 생산) 막지 않고 알리기만 한다.
+    // 제조번호는 소화기마다 고유하다. 중복은 같은 소화기를 두 번 적었거나 명판을 잘못
+    // 읽은 것이므로 등록을 막는다.
     const serialNo = text("serial_no");
     if (serialNo) {
       const dup = seenSerials.get(serialNo);
-      if (dup) warn("제조번호", `${dup}행과 같은 제조번호입니다 (${serialNo})`);
-      else {
+      if (dup) {
+        fail("제조번호", `${dup}행과 제조번호가 같습니다 (${serialNo})`);
+      } else {
         seenSerials.set(serialNo, rowNumber);
         if (ctx.existingSerials.has(serialNo)) {
-          warn("제조번호", `이미 등록된 제조번호입니다 (${serialNo})`);
+          fail("제조번호", `이미 등록된 소화기의 제조번호입니다 (${serialNo})`);
         }
       }
     }
@@ -276,5 +275,5 @@ export function buildImportRows(
     });
   }
 
-  return { rows, errors, warnings };
+  return { rows, errors };
 }
