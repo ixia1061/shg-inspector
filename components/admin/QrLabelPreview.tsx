@@ -8,11 +8,11 @@ import { PrintLabelSheet } from "@/components/admin/PrintLabelSheet";
 import { Button } from "@/components/ui/button";
 
 export function QrLabelPreview({
-  url,
+  payload,
   code,
   location,
 }: {
-  url: string;
+  payload: string;
   code: string;
   location: string;
 }) {
@@ -26,7 +26,7 @@ export function QrLabelPreview({
           <p className="text-muted-foreground text-xs">실제 라벨 미리보기</p>
           <div className="inline-block rounded-md border bg-white p-1 shadow-sm">
             <LabelCard
-              url={url}
+              payload={payload}
               code={code}
               location={location}
               widthMm={labelSize.widthMm}
@@ -50,7 +50,7 @@ export function QrLabelPreview({
 
       {/* 인쇄 영역 (지정 크기 한 장) */}
       <PrintLabelSheet
-        labels={[{ url, code, location }]}
+        labels={[{ payload, code, location }]}
         widthMm={labelSize.widthMm}
         heightMm={labelSize.heightMm}
         showLocation={labelSize.showLocation}

@@ -3,7 +3,7 @@
 import { LabelCard } from "@/components/admin/LabelCard";
 
 export interface PrintLabel {
-  url: string;
+  payload: string;
   code: string;
   location: string;
 }
@@ -44,7 +44,7 @@ export function PrintLabelSheet({
         {labels.map((l, i) => (
           <div key={`${l.code}-${i}`} className="pl-label">
             <LabelCard
-              url={l.url}
+              payload={l.payload}
               code={l.code}
               location={l.location}
               widthMm={widthMm}
