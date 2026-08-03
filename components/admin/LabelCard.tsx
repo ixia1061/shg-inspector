@@ -10,14 +10,14 @@ import { useEffect, useState } from "react";
  * 배치: QR(위) → 관리번호(굵게) → 위치(작게, 최대 2줄) 를 세로 가운데 정렬한다.
  */
 export function LabelCard({
-  url,
+  payload,
   code,
   location,
   widthMm,
   heightMm,
   showLocation,
 }: {
-  url: string;
+  payload: string;
   code: string;
   location: string;
   widthMm: number;
@@ -27,7 +27,11 @@ export function LabelCard({
   const [src, setSrc] = useState("");
   useEffect(() => {
     let alive = true;
-    QRCode.toDataURL(url, { width: 400, margin: 0 })
+    // margin: 2 — 여백(quiet zone)을 PNG 안에 최소한으로 구워 넣어 라벨 CSS 레이아웃(pad/gap)과
+    // 무관하게 스펙을 충족시킨다(margin 0은 하단 여백 부족, margin 4는 모듈 피치를 다시 깎아먹음).
+    // errorCorrectionLevel: "Q" — 관리번호만 인코딩해 페이로드가 짧아진 만큼 생긴 여유를,
+    // 소화기 라벨이 노출되는 오염/긁힘 환경에 대비한 복원력으로 돌린다.
+    QRCode.toDataURL(payload, { width: 400, margin: 2, errorCorrectionLevel: "Q" })
       .then((d) => {
         if (alive) setSrc(d);
       })
@@ -35,7 +39,7 @@ export function LabelCard({
     return () => {
       alive = false;
     };
-  }, [url]);
+  }, [payload]);
 
   const pad = Math.max(heightMm * 0.06, 1.2);
   const codeMm = Math.min(heightMm / 7.5, 4.2);

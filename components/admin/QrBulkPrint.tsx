@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { buildInspectionUrl } from "@/lib/qr/encode";
+import { buildQrPayload } from "@/lib/qr/encode";
 import { formatShortLocation } from "@/lib/utils/location";
 import { formatPartLabel, partsForSite } from "@/lib/utils/part";
 import { compareAssetCode } from "@/lib/utils/sort";
@@ -204,7 +204,7 @@ export function QrBulkPrint({
             </p>
             <div className="inline-block rounded-md border bg-white p-1 shadow-sm">
               <LabelCard
-                url={buildInspectionUrl(selectedRows[0].asset_code)}
+                payload={buildQrPayload(selectedRows[0].asset_code)}
                 code={selectedRows[0].asset_code}
                 location={formatShortLocation(selectedRows[0])}
                 widthMm={labelSize.widthMm}
@@ -249,7 +249,7 @@ export function QrBulkPrint({
       {/* 인쇄 영역: 선택 라벨을 지정 크기(mm)로 한 장씩 출력 */}
       <PrintLabelSheet
         labels={selectedRows.map((e) => ({
-          url: buildInspectionUrl(e.asset_code),
+          payload: buildQrPayload(e.asset_code),
           code: e.asset_code,
           location: formatShortLocation(e),
         }))}

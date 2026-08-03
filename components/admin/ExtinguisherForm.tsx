@@ -77,6 +77,7 @@ export function ExtinguisherForm({
     handleSubmit,
     watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<ExtinguisherFormValues>({
     resolver: zodResolver(extinguisherSchema),
@@ -155,6 +156,30 @@ export function ExtinguisherForm({
   async function onSubmit(values: ExtinguisherFormValues) {
     setSubmitting(true);
     const supabase = createClient();
+
+    // 제조번호는 소화기마다 고유하다. 같은 값이 이미 있으면 같은 소화기를 두 번 등록하는
+    // 것이거나 명판을 잘못 읽은 것이므로 저장하지 않는다.
+    // (DB에 unique 제약이 없어 여기서 막는다. 조회는 RLS를 타므로 담당 범위 안에서만 걸린다.)
+    if (values.serial_no) {
+      let query = supabase
+        .from("extinguishers")
+        .select("id, asset_code")
+        .eq("serial_no", values.serial_no)
+        .limit(1);
+      if (isEdit) query = query.neq("id", extinguisher.id);
+      const { data: dup } = await query.maybeSingle();
+
+      if (dup) {
+        setSubmitting(false);
+        setError("serial_no", {
+          message: `이미 ${dup.asset_code} 소화기에 등록된 제조번호입니다`,
+        });
+        toast.error("제조번호가 중복됩니다", {
+          description: `${dup.asset_code} 소화기와 같은 제조번호입니다. 명판을 다시 확인해주세요.`,
+        });
+        return;
+      }
+    }
 
     // 입력은 연·월(YYYY-MM)만 받으므로 저장은 해당 월 1일로 고정한다.
     const manufactureDate = `${values.manufacture_date}-01`;
@@ -446,9 +471,10 @@ export function ExtinguisherForm({
           <FieldError errors={errors.manufacture_date ? [errors.manufacture_date] : undefined} />
         </Field>
 
-        <Field>
+        <Field data-invalid={!!errors.serial_no}>
           <FieldLabel htmlFor="serial_no">제조번호</FieldLabel>
           <Input id="serial_no" placeholder="소화기 명판의 제조번호" {...register("serial_no")} />
+          <FieldError errors={errors.serial_no ? [errors.serial_no] : undefined} />
         </Field>
 
         <Field data-invalid={!!errors.useful_life_years}>
