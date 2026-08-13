@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { formatShortLocation } from "@/lib/utils/location";
 import { formatPartLabel, partsForSite } from "@/lib/utils/part";
+import { normalizeSearchText } from "@/lib/utils/search";
 import { compareAssetCode } from "@/lib/utils/sort";
 import type {
   ExtinguisherListItem,
@@ -128,7 +129,8 @@ export function ExtinguisherListClient({
 
   // 클라이언트에서 즉시 필터 (서버 왕복 없음)
   const filtered = useMemo(() => {
-    const kw = search.trim().toLowerCase();
+    // 검색어와 비교 대상 모두 공백을 지운다 — 띄어쓰기를 정확히 맞추지 않아도 찾히게.
+    const kw = normalizeSearchText(search);
     return extinguishers
       .filter((e) => {
         if (siteId !== "all" && e.site_id !== siteId) return false;
@@ -136,10 +138,11 @@ export function ExtinguisherListClient({
         if (status !== "all" && e.lifecycle_status !== (status as LifecycleStatus)) return false;
         if (
           kw &&
-          !e.asset_code.toLowerCase().includes(kw) &&
-          !(e.serial_no ?? "").toLowerCase().includes(kw) &&
-          // 위치도 한글로 검색 (건물명/층/설치위치, 차량은 번호판/차종/부서)
-          !formatShortLocation(e).toLowerCase().includes(kw)
+          !normalizeSearchText(e.asset_code).includes(kw) &&
+          !normalizeSearchText(e.serial_no).includes(kw) &&
+          // 위치도 한글로 검색 (건물명/층/설치위치, 차량은 번호판/차종/부서).
+          // 구분자 ">"는 화면 표시용이라 검색 대상에서 뺀다 — `1동 1층`처럼 이어서 칠 수 있게.
+          !normalizeSearchText(formatShortLocation(e).replace(/>/g, "")).includes(kw)
         )
           return false;
         return true;
