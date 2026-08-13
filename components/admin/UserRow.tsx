@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { AffiliationDialog } from "@/components/admin/AffiliationDialog";
 import { InspectorScopeDialog } from "@/components/admin/InspectorScopeDialog";
 import { JoinCodeCard } from "@/components/admin/JoinCodeCard";
 import { ResetPasswordButton } from "@/components/admin/ResetPasswordButton";
@@ -29,6 +30,7 @@ export function UserRow({
   id,
   name,
   email,
+  affiliation,
   role,
   isActive,
   scopeLabels,
@@ -47,6 +49,8 @@ export function UserRow({
   id: string;
   name: string;
   email: string | null;
+  /** 소속(부서·업체). 권한과 무관한 참고 정보라 관리자가 자유롭게 고칠 수 있다. */
+  affiliation: string | null;
   role: UserRole;
   isActive: boolean;
   scopeLabels: string[];
@@ -131,6 +135,15 @@ export function UserRow({
   return (
     <TableRow>
       <TableCell className="font-medium">{name}</TableCell>
+      <TableCell className="text-sm">
+        <div className="flex items-center gap-1">
+          <span className={affiliation ? "" : "text-muted-foreground"}>{affiliation ?? "-"}</span>
+          {/* 시스템관리자 계정은 다른 항목과 마찬가지로 잠근다 */}
+          {!isSuperAdminUser && (canManage || role === "inspector") && (
+            <AffiliationDialog userId={id} userName={name} affiliation={affiliation} />
+          )}
+        </div>
+      </TableCell>
       <TableCell className="text-muted-foreground text-sm">{email ?? "-"}</TableCell>
       <TableCell>
         {locked ? (

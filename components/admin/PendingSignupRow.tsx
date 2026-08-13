@@ -28,6 +28,7 @@ export function PendingSignupRow({
   id,
   name,
   email,
+  affiliation,
   adminName,
   requestedAt,
   sites,
@@ -36,6 +37,8 @@ export function PendingSignupRow({
   id: string;
   name: string;
   email: string | null;
+  /** 신청자가 스스로 적은 소속 — 어느 팀인지 보고 점검 범위를 고른다(권한 근거는 아니다) */
+  affiliation: string | null;
   /** 이 신청을 받은 관리자(= 코드 주인) */
   adminName: string;
   requestedAt: string;
@@ -83,6 +86,7 @@ export function PendingSignupRow({
   return (
     <TableRow>
       <TableCell className="font-medium">{name}</TableCell>
+      <TableCell className="text-sm">{affiliation ?? "-"}</TableCell>
       <TableCell className="text-muted-foreground text-sm">{email ?? "-"}</TableCell>
       {showAdminColumn && <TableCell className="text-sm">{adminName}</TableCell>}
       <TableCell className="text-muted-foreground text-sm">
@@ -97,7 +101,11 @@ export function PendingSignupRow({
                 <DialogTitle>{name} 님 가입 승인</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-3">
-                <p className="text-muted-foreground text-sm">{email ?? "-"}</p>
+                <div className="text-muted-foreground text-sm">
+                  <p>{email ?? "-"}</p>
+                  {/* 신청자가 적은 값이라 그대로 믿지 말고 참고만 한다 */}
+                  <p>소속: {affiliation ?? "-"} (신청자 입력)</p>
+                </div>
                 <div className="flex flex-col gap-2">
                   <p className="text-sm font-medium">점검할 사업장</p>
                   <p className="text-muted-foreground text-xs">

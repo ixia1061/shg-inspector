@@ -18,6 +18,9 @@ export interface Database {
           id: string;
           name: string;
           phone: string | null;
+          // 소속(부서·업체). 가입 신청자가 직접 적고 관리자가 고칠 수 있다.
+          // 권한과 무관한 참고 정보 — 점검 범위는 관리자가 고른 사업장에서만 나온다.
+          affiliation: string | null;
           // 가입 트리거가 auth.users의 이메일을 복사해 둔다(승인 화면에서 신청자 식별용).
           email: string | null;
           role: UserRole;
@@ -32,6 +35,7 @@ export interface Database {
           id: string;
           name: string;
           phone?: string | null;
+          affiliation?: string | null;
           email?: string | null;
           role?: UserRole;
           is_active?: boolean;

@@ -21,6 +21,8 @@ export interface UserListItem {
   id: string;
   name: string;
   email: string | null;
+  /** 소속(부서·업체) — 가입 신청자가 적고 관리자가 고칠 수 있는 참고 정보 */
+  affiliation: string | null;
   role: UserRole;
   isActive: boolean;
   scopeLabels: string[];
@@ -45,6 +47,8 @@ export interface PendingSignupItem {
   id: string;
   name: string;
   email: string | null;
+  /** 신청자가 적은 소속 — 어느 팀 사람인지 보고 점검 범위를 정한다 */
+  affiliation: string | null;
   /** 이 신청을 받은 관리자(= 가입코드 주인) */
   adminId: string;
   adminName: string;
@@ -127,6 +131,7 @@ export function UsersClient({
             <TableHeader>
               <TableRow>
                 <TableHead>이름</TableHead>
+                <TableHead>소속</TableHead>
                 <TableHead>이메일</TableHead>
                 {isSuper && <TableHead>가입코드 주인</TableHead>}
                 <TableHead>신청일</TableHead>
@@ -140,6 +145,7 @@ export function UsersClient({
                   id={p.id}
                   name={p.name}
                   email={p.email}
+                  affiliation={p.affiliation}
                   adminName={p.adminName}
                   requestedAt={p.requestedAt}
                   sites={grantableSites}
@@ -220,6 +226,7 @@ function UserSection({
         <TableHeader>
           <TableRow>
             <TableHead>이름</TableHead>
+            <TableHead>소속</TableHead>
             <TableHead>이메일</TableHead>
             <TableHead>역할</TableHead>
             <TableHead>담당 범위</TableHead>
@@ -235,6 +242,7 @@ function UserSection({
                 id={u.id}
                 name={u.name}
                 email={u.email}
+                affiliation={u.affiliation}
                 role={u.role}
                 isActive={u.isActive}
                 scopeLabels={u.scopeLabels}
@@ -253,7 +261,7 @@ function UserSection({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={showJoinCode ? 6 : 5} className="text-muted-foreground text-center">
+              <TableCell colSpan={showJoinCode ? 7 : 6} className="text-muted-foreground text-center">
                 해당하는 사용자가 없습니다.
               </TableCell>
             </TableRow>

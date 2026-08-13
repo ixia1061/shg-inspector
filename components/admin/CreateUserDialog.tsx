@@ -67,6 +67,7 @@ export function CreateUserDialog({
       email: "",
       password: "",
       name: "",
+      affiliation: "",
       role: "inspector",
       siteIds: [],
     },
@@ -110,6 +111,15 @@ export function CreateUserDialog({
               <FieldLabel htmlFor="name">이름</FieldLabel>
               <Input id="name" {...register("name")} />
               <FieldError errors={errors.name ? [errors.name] : undefined} />
+            </Field>
+            <Field data-invalid={!!errors.affiliation}>
+              <FieldLabel htmlFor="affiliation">소속 (선택)</FieldLabel>
+              <Input
+                id="affiliation"
+                placeholder="예: 남부공항서비스 기계팀"
+                {...register("affiliation")}
+              />
+              <FieldError errors={errors.affiliation ? [errors.affiliation] : undefined} />
             </Field>
             <Field data-invalid={!!errors.email}>
               <FieldLabel htmlFor="email">이메일</FieldLabel>

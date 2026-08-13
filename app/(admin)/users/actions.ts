@@ -96,6 +96,8 @@ export async function createUserAction(input: {
   email: string;
   password: string;
   name: string;
+  /** 소속(부서·업체). 선택 입력 — 나중에 사용자 관리에서 고칠 수 있다. */
+  affiliation?: string;
   role: UserRole;
   /** 담당 사업장(사업장 단위). 관리자는 자기 담당 사업장만 넘길 수 있다. */
   siteIds: string[];
@@ -128,7 +130,12 @@ export async function createUserAction(input: {
   // 만든다(자가 회원가입의 권한 상승 방지). 권한이 확인된 이 경로에서만 실제 값으로 올린다.
   const { error: profileError } = await admin
     .from("profiles")
-    .update({ role: input.role, name: input.name, is_active: true })
+    .update({
+      role: input.role,
+      name: input.name,
+      affiliation: input.affiliation?.trim() || null,
+      is_active: true,
+    })
     .eq("id", newUserId);
 
   // profile 갱신이 실패하면 로그인은 되는데 아무것도 못 하는 계정이 남으므로 되돌린다.
@@ -315,6 +322,45 @@ export async function updateInspectorSitesAction(inspectorId: string, siteIds: s
     const { error } = await supabase
       .from("user_parts")
       .upsert(grantParts.map((part_id) => ({ user_id: inspectorId, part_id })));
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath("/users");
+}
+
+/**
+ * 소속(부서·업체) 수정.
+ *
+ * 가입할 때 신청자가 직접 적은 값이라 오타가 있거나 부서가 바뀔 수 있어 관리자가 고친다.
+ * 권한과 무관한 표시용 값이지만, 대상은 다른 사용자 관리 기능과 같은 경계를 따른다 —
+ * 일반 관리자는 **자기 범위의 점검자만**(RLS 사용자 클라이언트로 수행해
+ * profiles_admin_manage_inspector 정책이 DB에서도 강제), 시스템관리자는 관리자 계정까지.
+ */
+export async function updateAffiliationAction(userId: string, affiliation: string) {
+  const { supabase, isSuper } = await assertAdmin();
+
+  const value = affiliation.trim();
+  if (value.length > 50) {
+    throw new Error("소속은 50자 이내로 입력하세요");
+  }
+  const next = value || null;
+
+  if (isSuper) {
+    const admin = createAdminClient();
+    const { error } = await admin.from("profiles").update({ affiliation: next }).eq("id", userId);
+    if (error) throw new Error(error.message);
+  } else {
+    const { data: target } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .single();
+    if (target?.role !== "inspector") {
+      throw new Error("점검자 계정의 소속만 수정할 수 있습니다");
+    }
+    await assertInspectorInMyScope(supabase, userId);
+
+    const { error } = await supabase.from("profiles").update({ affiliation: next }).eq("id", userId);
     if (error) throw new Error(error.message);
   }
 
