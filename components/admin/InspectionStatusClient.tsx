@@ -124,6 +124,11 @@ export function InspectionStatusClient({
           <UninspectedList rows={notMonth} />
         </TabsContent>
         <TabsContent value="action">
+          {/* 다른 탭과 달리 이번달로 자르지 않는다 — 미조치가 달이 바뀌며 사라지면 안 된다. */}
+          <p className="text-muted-foreground mb-2 text-sm">
+            조치를 마칠 때까지 남습니다(지난달에 난 이상도 포함). 이번달에 아직 점검하지 않은
+            소화기라면 <b>이번달 미점검</b> 목록에도 함께 나옵니다.
+          </p>
           <ActionRequiredList rows={actionNeeded} />
         </TabsContent>
         <TabsContent value="resolved">

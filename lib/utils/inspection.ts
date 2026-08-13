@@ -111,13 +111,15 @@ export function defectItemsTextOfInspection(row: Record<string, unknown>): strin
   return failed.join(", ");
 }
 
-/** 이번달 점검됐지만 이상 + 미조치 상태(관리자 조치 필요). */
+/**
+ * 최근 점검이 이상인데 아직 조치되지 않은 상태(관리자 조치 필요).
+ *
+ * **달로 자르지 않는다.** 2026-08-13 이전에는 `inspected_this_month`로 gate해서, 지난달에
+ * 이상으로 남은 소화기가 새 달이 되면 조치 필요 목록에서 조용히 사라졌다(그 소화기를 다시
+ * 점검해야 재등장). 조치는 달이 바뀌어도 없어지는 일이 아니므로 끝날 때까지 남긴다.
+ */
 export function isActionNeeded(e: ExtinguisherOverview): boolean {
-  return (
-    e.inspected_this_month &&
-    e.last_inspection_result === "abnormal" &&
-    !e.last_action_resolved_at
-  );
+  return e.last_inspection_result === "abnormal" && !e.last_action_resolved_at;
 }
 
 /**
@@ -138,7 +140,10 @@ export function isNormalDone(e: ExtinguisherOverview): boolean {
   return e.inspected_this_month && e.last_inspection_result === "normal";
 }
 
-/** 이번달 점검완료(정상 또는 이상이지만 조치완료) — 점검률 집계 기준. */
+/**
+ * 이번달 점검완료(정상 또는 이상이지만 조치완료) — 점검률 집계 기준.
+ * `inspected_this_month`를 여기서 확인하므로 isActionNeeded에서 달 조건을 뺀 것과 무관하다.
+ */
 export function isMonthDone(e: ExtinguisherOverview): boolean {
   return e.inspected_this_month && !isActionNeeded(e);
 }

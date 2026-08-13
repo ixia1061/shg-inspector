@@ -1,16 +1,28 @@
 import { isActionNeeded, isMonthDone } from "@/lib/utils/inspection";
-import type { DashboardSummary, ExtinguisherOverview, InspectionRateRow } from "@/types/domain";
+import type { ExtinguisherOverview, InspectionRateRow } from "@/types/domain";
 
 /**
- * 대시보드 요약 집계. DB의 fn_dashboard_summary()와 같은 기준으로 계산한다.
- * (사업장 전환을 서버 왕복 없이 처리하려고 뷰 데이터를 클라이언트에서 집계한다.)
- * - 점검완료 = 이번달 점검됨 AND 조치필요 아님
- * - recent_abnormal만 점검 기록 기반이라 별도로 넘겨받는다.
+ * 대시보드 카드에 쓰는 요약값.
+ * DB의 `fn_dashboard_summary()`(= types/domain의 DashboardSummary)와 달리 소화기 뷰 한 벌로
+ * 클라이언트에서 계산한다(사업장 전환에 서버 왕복이 없다). RPC에 있던 `recent_abnormal`
+ * (최근 30일 이상점검 건수)은 2026-08-13에 뺐다 — 조치완료된 것까지 세는 숫자라 "지금 할 일"과
+ * 어긋났고, 이상점검 이력은 `/abnormal` 화면에서 전부 본다.
  */
-export function summarizeExtinguishers(
-  rows: ExtinguisherOverview[],
-  recentAbnormal: number
-): DashboardSummary {
+export interface DashboardSummaryView {
+  total_extinguishers: number;
+  inspected_this_month: number;
+  not_inspected_this_month: number;
+  action_required: number;
+  due_soon: number;
+  expired: number;
+}
+
+/**
+ * 대시보드 요약 집계.
+ * - 점검완료 = 이번달 점검됨 AND 조치필요 아님
+ * - 조치필요 = 최근 점검이 이상 + 미조치 (**달로 자르지 않는다** — 지난달 것도 남는다)
+ */
+export function summarizeExtinguishers(rows: ExtinguisherOverview[]): DashboardSummaryView {
   let inspected = 0;
   let actionRequired = 0;
   let dueSoon = 0;
@@ -30,7 +42,6 @@ export function summarizeExtinguishers(
     action_required: actionRequired,
     due_soon: dueSoon,
     expired,
-    recent_abnormal: recentAbnormal,
   };
 }
 
