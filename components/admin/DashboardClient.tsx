@@ -21,12 +21,9 @@ import type { ExtinguisherOverview, Site } from "@/types/domain";
 export function DashboardClient({
   extinguishers,
   sites,
-  recentAbnormalSiteIds,
 }: {
   extinguishers: ExtinguisherOverview[];
   sites: Site[];
-  /** 최근 30일 이상 점검의 사업장 id 목록(점검 1건당 1개) — 사업장별 카운트에 사용 */
-  recentAbnormalSiteIds: string[];
 }) {
   const [siteId, setSiteId] = useState(sites[0]?.id ?? ALL_SITES);
 
@@ -35,18 +32,7 @@ export function DashboardClient({
     [extinguishers, siteId]
   );
 
-  const recentAbnormal = useMemo(
-    () =>
-      siteId === ALL_SITES
-        ? recentAbnormalSiteIds.length
-        : recentAbnormalSiteIds.filter((id) => id === siteId).length,
-    [recentAbnormalSiteIds, siteId]
-  );
-
-  const summary = useMemo(
-    () => summarizeExtinguishers(rows, recentAbnormal),
-    [rows, recentAbnormal]
-  );
+  const summary = useMemo(() => summarizeExtinguishers(rows), [rows]);
 
   const rateRows = useMemo(
     () => buildingInspectionRates(rows, { withSiteName: siteId === ALL_SITES }),
