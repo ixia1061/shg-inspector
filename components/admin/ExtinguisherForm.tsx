@@ -10,6 +10,15 @@ import { ExtinguisherTypeFormDialog } from "@/components/admin/ExtinguisherTypeF
 import { MonthInput } from "@/components/shared/MonthInput";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -72,16 +81,9 @@ export function ExtinguisherForm({
   // 폼이 열린 상태에서 종류를 새로 추가하면 server props가 갱신되기 전에도 바로 목록에 반영한다.
   const [localTypes, setLocalTypes] = useState(types);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    setError,
-    formState: { errors },
-  } = useForm<ExtinguisherFormValues>({
-    resolver: zodResolver(extinguisherSchema),
-    defaultValues: {
+  // 수정 확인 창에서 "바뀐 항목"을 뽑으려면 처음 값을 그대로 들고 있어야 한다.
+  const initialValues: ExtinguisherFormValues = useMemo(
+    () => ({
       location_type: extinguisher?.location_type ?? "BUILDING",
       part_id: extinguisher?.part_id ?? "",
       floor_id: extinguisher?.floor_id ?? undefined,
@@ -96,8 +98,24 @@ export function ExtinguisherForm({
       capacity: extinguisher?.capacity ?? "",
       install_note: extinguisher?.install_note ?? "",
       serial_no: extinguisher?.serial_no ?? "",
-    },
+    }),
+    [extinguisher]
+  );
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    setError,
+    formState: { errors },
+  } = useForm<ExtinguisherFormValues>({
+    resolver: zodResolver(extinguisherSchema),
+    defaultValues: initialValues,
   });
+
+  // 수정 저장 확인 창 — 확인을 누를 때까지 들고 있을 입력값
+  const [pending, setPending] = useState<ExtinguisherFormValues | null>(null);
 
   const locationType = watch("location_type");
   const noUsefulLife = watch("useful_life_years") === null;
@@ -153,7 +171,72 @@ export function ExtinguisherForm({
     [localTypes]
   );
 
-  async function onSubmit(values: ExtinguisherFormValues) {
+  /** 확인 창에 "바뀐 항목"을 보여주려고 값 하나하나를 사람이 읽는 문장으로 바꾼다. */
+  function locationText(v: ExtinguisherFormValues) {
+    if (v.location_type === "VEHICLE") {
+      const vehicle = vehicles.find((x) => x.id === v.vehicle_id);
+      if (!vehicle) return "-";
+      const building = buildings.find((b) => b.id === vehicle.building_id);
+      return `${building ? `${building.building_no}동 ` : ""}차량 ${vehicle.vehicle_no}호${
+        vehicle.plate_no ? ` [${vehicle.plate_no}]` : ""
+      }`;
+    }
+    const floor = floors.find((f) => f.id === v.floor_id);
+    if (!floor) return "-";
+    const building = buildings.find((b) => b.id === floor.building_id);
+    return `${building ? `${building.building_no}동 ` : ""}${floor.name}`;
+  }
+
+  const DIFF_FIELDS: { label: string; text: (v: ExtinguisherFormValues) => string }[] = [
+    { label: "위치 유형", text: (v) => (v.location_type === "BUILDING" ? "건물" : "차량") },
+    {
+      label: "관리파트",
+      text: (v) => {
+        const part = parts.find((p) => p.id === v.part_id);
+        return part ? `${part.name} (${part.code})` : "-";
+      },
+    },
+    { label: "위치", text: locationText },
+    { label: "설치 위치", text: (v) => v.install_note || "-" },
+    {
+      label: "관리번호 끝자리",
+      text: (v) => (v.extinguisher_no != null ? String(v.extinguisher_no) : "자동 부여"),
+    },
+    {
+      label: "소화기 종류",
+      text: (v) => localTypes.find((t) => t.id === v.extinguisher_type_id)?.name ?? "-",
+    },
+    { label: "용량", text: (v) => v.capacity || "-" },
+    { label: "제조년월", text: (v) => v.manufacture_date || "-" },
+    { label: "제조번호", text: (v) => v.serial_no || "-" },
+    {
+      label: "내용연수",
+      text: (v) => (v.useful_life_years == null ? "없음" : `${v.useful_life_years}년`),
+    },
+  ];
+
+  const changes = pending
+    ? DIFF_FIELDS.map((f) => ({
+        label: f.label,
+        before: f.text(initialValues),
+        after: f.text(pending),
+      })).filter((c) => c.before !== c.after)
+    : [];
+  // 관리번호는 파트·위치·끝자리로 조합되므로, 이 중 하나라도 바뀌면 번호가 새로 매겨진다.
+  const assetCodeAffected = changes.some((c) =>
+    ["관리파트", "위치", "위치 유형", "관리번호 끝자리"].includes(c.label)
+  );
+
+  /** 수정은 실수로 덮어쓰기 쉬우므로 저장 전에 한 번 더 확인받는다(신규 등록은 바로 저장). */
+  function onSubmit(values: ExtinguisherFormValues) {
+    if (isEdit) {
+      setPending(values);
+      return;
+    }
+    return save(values);
+  }
+
+  async function save(values: ExtinguisherFormValues) {
     setSubmitting(true);
     const supabase = createClient();
 
@@ -517,6 +600,62 @@ export function ExtinguisherForm({
       <Button type="submit" disabled={submitting}>
         {submitting ? "저장 중..." : isEdit ? "수정 저장" : "등록"}
       </Button>
+
+      {/* 수정 저장 확인 — 잘못 입력한 채로 바로 반영되는 것을 막는다 */}
+      <Dialog open={!!pending} onOpenChange={(next) => !next && setPending(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>변경하시겠습니까?</DialogTitle>
+            <DialogDescription>
+              {isEdit && (
+                <>
+                  <span className="font-mono">{extinguisher.asset_code}</span> 소화기의 정보를 아래와
+                  같이 수정합니다.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {changes.length ? (
+            <ul className="flex flex-col gap-2 text-sm">
+              {changes.map((c) => (
+                <li key={c.label} className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-muted-foreground w-24 shrink-0">{c.label}</span>
+                  <span className="text-muted-foreground line-through">{c.before}</span>
+                  <span aria-hidden>→</span>
+                  <span className="font-medium">{c.after}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-sm">변경된 항목이 없습니다.</p>
+          )}
+
+          {assetCodeAffected && (
+            <p className="text-destructive text-sm">
+              관리번호가 새로 매겨집니다. 이미 부착한 QR 라벨과 번호가 달라지므로 라벨을 다시
+              출력해야 합니다. (이전 번호는 이력으로 남아 옛 QR도 계속 인식됩니다.)
+            </p>
+          )}
+
+          <DialogFooter className="mt-4">
+            <DialogClose render={<Button type="button" variant="outline" />}>
+              다시 확인
+            </DialogClose>
+            <Button
+              type="button"
+              disabled={!changes.length}
+              onClick={() => {
+                const values = pending;
+                setPending(null);
+                if (values) save(values);
+              }}
+            >
+              변경 저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }
