@@ -20,6 +20,7 @@ import {
 import { buildQrPayload } from "@/lib/qr/encode";
 import { formatShortLocation } from "@/lib/utils/location";
 import { formatPartLabel, partsForSite } from "@/lib/utils/part";
+import { normalizeSearchText } from "@/lib/utils/search";
 import { compareAssetCode } from "@/lib/utils/sort";
 import type {
   ExtinguisherListItem,
@@ -79,13 +80,21 @@ export function QrBulkPrint({
   }
 
   const filtered = useMemo(() => {
-    const kw = search.trim().toLowerCase();
+    // 소화기 관리와 같은 규칙 — 검색어·비교 대상 양쪽의 공백을 지우고,
+    // 위치는 표시용 구분자 ">"도 뺀다(`1동 1층`처럼 이어서 칠 수 있게).
+    const kw = normalizeSearchText(search);
     return extinguishers
       .filter((e) => {
         if (siteId !== "all" && e.site_id !== siteId) return false;
         if (partId !== "all" && e.part_id !== partId) return false;
         if (status !== "all" && e.lifecycle_status !== (status as LifecycleStatus)) return false;
-        if (kw && !e.asset_code.toLowerCase().includes(kw)) return false;
+        if (
+          kw &&
+          !normalizeSearchText(e.asset_code).includes(kw) &&
+          !normalizeSearchText(e.serial_no).includes(kw) &&
+          !normalizeSearchText(formatShortLocation(e).replace(/>/g, "")).includes(kw)
+        )
+          return false;
         return true;
       })
       .sort((a, b) => compareAssetCode(a.asset_code, b.asset_code));
@@ -120,9 +129,9 @@ export function QrBulkPrint({
       <div className="flex flex-col gap-3 print:hidden">
         <div className="flex flex-wrap items-center gap-2">
           <Input
-            placeholder="소화기 관리번호 검색"
+            placeholder="관리번호·제조번호·위치 검색"
             value={search}
-            className="w-48"
+            className="w-56"
             onChange={(e) => setSearch(e.target.value)}
           />
           <Select items={siteItems} value={siteId} onValueChange={(v) => changeSite(v ?? "all")}>
