@@ -116,7 +116,7 @@ export function CreateUserDialog({
               <FieldLabel htmlFor="affiliation">소속 (선택)</FieldLabel>
               <Input
                 id="affiliation"
-                placeholder="예: 남부공항서비스 기계팀"
+                placeholder="예: 한국공항공사"
                 {...register("affiliation")}
               />
               <FieldError errors={errors.affiliation ? [errors.affiliation] : undefined} />

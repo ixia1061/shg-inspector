@@ -76,7 +76,7 @@ export function AffiliationDialog({
           <Input
             id="affiliation-input"
             value={value}
-            placeholder="예: 남부공항서비스 기계팀"
+            placeholder="예: 한국공항공사"
             maxLength={50}
             onChange={(e) => setValue(e.target.value)}
           />

@@ -94,7 +94,7 @@ export function SignupForm() {
               <FieldLabel htmlFor="affiliation">소속</FieldLabel>
               <Input
                 id="affiliation"
-                placeholder="예: 남부공항서비스 기계팀"
+                placeholder="예: 한국공항공사"
                 autoComplete="organization"
                 {...register("affiliation")}
               />
