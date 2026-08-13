@@ -2,7 +2,13 @@ import { LifecycleClient } from "@/components/admin/LifecycleClient";
 import { createClient } from "@/lib/supabase/server";
 import { sortByLifecycleUrgency, sortSitesByPreference } from "@/lib/utils/sort";
 
-export default async function LifecyclePage() {
+export default async function LifecyclePage({
+  searchParams,
+}: {
+  // 대시보드 교체예정·만료 카드에서 사업장을 지정해 들어온다.
+  searchParams: Promise<{ site?: string }>;
+}) {
+  const sp = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -37,7 +43,7 @@ export default async function LifecyclePage() {
         </p>
       </div>
 
-      <LifecycleClient extinguishers={sorted} sites={orderedSites} />
+      <LifecycleClient extinguishers={sorted} sites={orderedSites} initialSiteId={sp.site} />
     </div>
   );
 }

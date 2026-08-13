@@ -2,7 +2,13 @@ import { InspectionStatusClient } from "@/components/admin/InspectionStatusClien
 import { createClient } from "@/lib/supabase/server";
 import { sortSitesByPreference } from "@/lib/utils/sort";
 
-export default async function InspectionsPage() {
+export default async function InspectionsPage({
+  searchParams,
+}: {
+  // 대시보드 카드에서 사업장·탭을 지정해 들어온다.
+  searchParams: Promise<{ site?: string; tab?: string }>;
+}) {
+  const sp = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -25,7 +31,12 @@ export default async function InspectionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold">점검현황</h1>
-      <InspectionStatusClient extinguishers={rows ?? []} sites={orderedSites} />
+      <InspectionStatusClient
+        extinguishers={rows ?? []}
+        sites={orderedSites}
+        initialSiteId={sp.site}
+        initialTab={sp.tab}
+      />
     </div>
   );
 }

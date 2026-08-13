@@ -23,12 +23,19 @@ export function AbnormalClient({
   extinguishers,
   history,
   sites,
+  initialSiteId,
 }: {
   extinguishers: ExtinguisherOverview[];
   history: AbnormalInspectionItem[];
   sites: Site[];
+  /** 대시보드 카드에서 넘어온 사업장("all"이면 전체). 담당 범위 밖이면 첫 사업장으로 연다. */
+  initialSiteId?: string;
 }) {
-  const [siteId, setSiteId] = useState(sites[0]?.id ?? ALL_SITES);
+  const [siteId, setSiteId] = useState(
+    initialSiteId === ALL_SITES || sites.some((s) => s.id === initialSiteId)
+      ? initialSiteId!
+      : (sites[0]?.id ?? ALL_SITES)
+  );
 
   const unresolved = useMemo(() => {
     const rows = extinguishers.filter(

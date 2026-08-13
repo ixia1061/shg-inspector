@@ -13,11 +13,16 @@ import type { ExtinguisherOverview, Site } from "@/types/domain";
 export function LifecycleClient({
   extinguishers,
   sites,
+  initialSiteId,
 }: {
   extinguishers: ExtinguisherOverview[];
   sites: Site[];
+  /** 대시보드 카드에서 넘어온 사업장. 담당 범위 밖이거나 "전체"면 무시하고 첫 사업장을 쓴다. */
+  initialSiteId?: string;
 }) {
-  const [siteId, setSiteId] = useState(sites[0]?.id ?? "");
+  const [siteId, setSiteId] = useState(
+    sites.some((s) => s.id === initialSiteId) ? initialSiteId! : (sites[0]?.id ?? "")
+  );
 
   const rows = useMemo(
     () => extinguishers.filter((e) => e.site_id === siteId),

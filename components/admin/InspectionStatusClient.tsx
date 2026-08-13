@@ -18,14 +18,25 @@ import type { ExtinguisherOverview, InspectionRateRow, Site } from "@/types/doma
  * 점검현황 전체를 사업장 선택으로 구동한다. 사업장 버튼을 누르면
  * 건물별 점검률·이번달 미점검·점검완료 목록·관리대장 다운로드가 모두 그 사업장으로 한정된다.
  */
+const TABS = ["month", "action", "resolved", "done"];
+
 export function InspectionStatusClient({
   extinguishers,
   sites,
+  initialSiteId,
+  initialTab,
 }: {
   extinguishers: ExtinguisherOverview[];
   sites: Site[];
+  /** 대시보드 카드에서 넘어온 사업장. 담당 범위 밖이거나 "전체"면 무시하고 첫 사업장을 쓴다. */
+  initialSiteId?: string;
+  /** 대시보드 카드에서 넘어온 탭 */
+  initialTab?: string;
 }) {
-  const [siteId, setSiteId] = useState(sites[0]?.id ?? "");
+  const [siteId, setSiteId] = useState(
+    sites.some((s) => s.id === initialSiteId) ? initialSiteId! : (sites[0]?.id ?? "")
+  );
+  const defaultTab = initialTab && TABS.includes(initialTab) ? initialTab : "month";
 
   const siteRows = useMemo(
     () => extinguishers.filter((e) => e.site_id === siteId),
@@ -113,7 +124,7 @@ export function InspectionStatusClient({
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="month">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="month">이번달 미점검 ({notMonth.length})</TabsTrigger>
           <TabsTrigger value="action">조치필요 ({actionNeeded.length})</TabsTrigger>
