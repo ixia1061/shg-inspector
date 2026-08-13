@@ -27,6 +27,11 @@ export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 export const signupSchema = z.object({
   joinCode: z.string().min(1, "가입코드를 입력하세요"),
   name: z.string().min(1, "이름을 입력하세요"),
+  // 관리자가 승인할 때 "어느 팀 사람인지" 보고 점검 범위를 정한다. 권한과는 무관한 참고 정보.
+  affiliation: z
+    .string()
+    .min(1, "소속을 입력하세요")
+    .max(50, "소속은 50자 이내로 입력하세요"),
   email: z.string().min(1, "이메일을 입력하세요").email("올바른 이메일 형식이 아닙니다"),
   password: z.string().min(8, "비밀번호는 8자 이상이어야 합니다"),
 });

@@ -39,7 +39,7 @@ export async function submitSignupAction(input: unknown): Promise<{ adminName: s
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "입력값을 확인하세요");
   }
-  const { joinCode, name, email, password } = parsed.data;
+  const { joinCode, name, affiliation, email, password } = parsed.data;
 
   const admin = createAdminClient();
   const ip = await clientIp();
@@ -104,7 +104,7 @@ export async function submitSignupAction(input: unknown): Promise<{ adminName: s
   // 트리거가 만든 profile에 신청 정보를 채운다(role/is_active는 트리거가 정한 안전한 값 유지).
   const { error: profileError } = await admin
     .from("profiles")
-    .update({ name, pending_admin_id: targetAdmin.id })
+    .update({ name, affiliation: affiliation.trim(), pending_admin_id: targetAdmin.id })
     .eq("id", data.user.id);
 
   // 신청 대상 관리자가 안 붙으면 어느 화면에도 안 보여 영영 승인받지 못하므로 되돌린다.

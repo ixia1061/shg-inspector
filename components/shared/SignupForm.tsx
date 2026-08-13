@@ -28,7 +28,7 @@ export function SignupForm() {
     formState: { errors },
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { joinCode: "", name: "", email: "", password: "" },
+    defaultValues: { joinCode: "", name: "", affiliation: "", email: "", password: "" },
   });
 
   async function onSubmit(values: SignupFormValues) {
@@ -89,6 +89,19 @@ export function SignupForm() {
               <FieldLabel htmlFor="name">이름</FieldLabel>
               <Input id="name" autoComplete="name" {...register("name")} />
               <FieldError errors={errors.name ? [errors.name] : undefined} />
+            </Field>
+            <Field data-invalid={!!errors.affiliation}>
+              <FieldLabel htmlFor="affiliation">소속</FieldLabel>
+              <Input
+                id="affiliation"
+                placeholder="예: 한국공항공사"
+                autoComplete="organization"
+                {...register("affiliation")}
+              />
+              <FieldDescription>
+                관리자가 점검할 구역을 정할 때 참고합니다. 소속 회사·부서를 적어주세요.
+              </FieldDescription>
+              <FieldError errors={errors.affiliation ? [errors.affiliation] : undefined} />
             </Field>
             <Field data-invalid={!!errors.email}>
               <FieldLabel htmlFor="email">이메일</FieldLabel>
