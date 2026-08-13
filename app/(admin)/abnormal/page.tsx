@@ -12,7 +12,13 @@ import { sortSitesByPreference } from "@/lib/utils/sort";
  * 위쪽에 **조치 안 된 이상**을 달과 무관하게 모아 두고(지난달 것이 사라지지 않게),
  * 아래에 이상점검 이력을 월 헤더와 함께 최신순으로 보여준다.
  */
-export default async function AbnormalPage() {
+export default async function AbnormalPage({
+  searchParams,
+}: {
+  // 대시보드 조치 필요 카드에서 사업장을 지정해 들어온다("all"이면 전체).
+  searchParams: Promise<{ site?: string }>;
+}) {
+  const sp = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -81,7 +87,12 @@ export default async function AbnormalPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold">이상점검</h1>
-      <AbnormalClient extinguishers={extinguishers} history={history} sites={orderedSites} />
+      <AbnormalClient
+        extinguishers={extinguishers}
+        history={history}
+        sites={orderedSites}
+        initialSiteId={sp.site}
+      />
     </div>
   );
 }

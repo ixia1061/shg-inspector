@@ -61,7 +61,7 @@ export function DashboardClient({
       />
       <p className="text-muted-foreground -mt-3 text-xs">사업장 버튼의 숫자는 이번달 미점검 수입니다.</p>
 
-      <DashboardCards summary={summary} />
+      <DashboardCards summary={summary} siteId={siteId} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
