@@ -14,6 +14,25 @@ import { toast } from "sonner";
  * 강제 리로드를 하지 않는 이유: 현장에서 점검 체크리스트를 입력하는 도중
  * 예고 없이 새로고침되면 작성 중이던 내용이 사라질 수 있어서다.
  */
+// 이 탭에서 안내를 닫았는지 기록 — 탭/세션을 새로 열면 초기화된다(sessionStorage).
+const DISMISS_KEY = "sw-update-dismissed";
+
+function hasDismissedUpdatePrompt(): boolean {
+  try {
+    return sessionStorage.getItem(DISMISS_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markUpdatePromptDismissed(): void {
+  try {
+    sessionStorage.setItem(DISMISS_KEY, "1");
+  } catch {
+    // 프라이빗 모드 등으로 저장 실패해도 앱 동작에는 영향 없음
+  }
+}
+
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator) || process.env.NODE_ENV !== "production") {
@@ -33,6 +52,8 @@ export function ServiceWorkerRegister() {
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
     const promptUpdate = (waiting: ServiceWorker) => {
+      if (hasDismissedUpdatePrompt()) return;
+
       toast("새 버전이 있습니다", {
         id: "sw-update", // 중복 안내 방지
         description: "새로고침하면 최신 화면으로 업데이트됩니다.",
@@ -42,6 +63,12 @@ export function ServiceWorkerRegister() {
           onClick: () => {
             userTriggeredUpdate = true;
             waiting.postMessage({ type: "SKIP_WAITING" });
+          },
+        },
+        cancel: {
+          label: "나중에",
+          onClick: () => {
+            markUpdatePromptDismissed();
           },
         },
       });
