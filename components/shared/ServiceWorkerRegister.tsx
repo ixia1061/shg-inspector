@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 
 /**
@@ -13,7 +14,14 @@ import { toast } from "sonner";
  *
  * 강제 리로드를 하지 않는 이유: 현장에서 점검 체크리스트를 입력하는 도중
  * 예고 없이 새로고침되면 작성 중이던 내용이 사라질 수 있어서다.
+ *
+ * 단, **로그인 화면**은 입력 중인 데이터가 없는 안전한 시점이므로 안내 없이
+ * 바로 적용한다 — 오랜만에 재접속했을 때 대기 중이던 업데이트를 놓치지
+ * 않으면서도, 로그인 후 앱을 쓰는 도중에는 예전처럼 안내 후 사용자가
+ * 새로고침을 눌러야만 적용된다.
  */
+const LOGIN_PATHNAME = "/login";
+
 // 이 탭에서 안내를 닫았는지 기록 — 탭/세션을 새로 열면 초기화된다(sessionStorage).
 const DISMISS_KEY = "sw-update-dismissed";
 
@@ -34,6 +42,12 @@ function markUpdatePromptDismissed(): void {
 }
 
 export function ServiceWorkerRegister() {
+  const pathname = usePathname();
+  // 루트 레이아웃은 라우트가 바뀌어도 재마운트되지 않아 effect가 한 번만 도니,
+  // promptUpdate 시점의 최신 경로를 읽기 위해 ref로 동기화해 둔다.
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+
   useEffect(() => {
     if (!("serviceWorker" in navigator) || process.env.NODE_ENV !== "production") {
       return;
@@ -52,6 +66,13 @@ export function ServiceWorkerRegister() {
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
     const promptUpdate = (waiting: ServiceWorker) => {
+      // 로그인 화면 = 입력 중인 데이터가 없는 안전한 시점 → 묻지 않고 바로 적용.
+      if (pathnameRef.current === LOGIN_PATHNAME) {
+        userTriggeredUpdate = true;
+        waiting.postMessage({ type: "SKIP_WAITING" });
+        return;
+      }
+
       if (hasDismissedUpdatePrompt()) return;
 
       toast("새 버전이 있습니다", {
