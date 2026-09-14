@@ -180,7 +180,7 @@ export default async function ExtinguisherDetailPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>점검 이력</CardTitle>
+            <CardTitle>점검 이력 {historyItems.length > 0 && `(총 ${historyItems.length}건)`}</CardTitle>
           </CardHeader>
           <CardContent>
             <InspectionHistoryTimeline items={historyItems} />

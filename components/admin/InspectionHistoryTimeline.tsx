@@ -1,6 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
+"use client";
+
+import { useState } from "react";
+
 import { formatKstDate } from "@/lib/utils/datetime";
 import { Badge } from "@/components/ui/badge";
+import { Pagination } from "@/components/ui/pagination";
+
+const PAGE_SIZE = 10;
 
 interface InspectionHistoryRow {
   id: string;
@@ -18,76 +25,87 @@ interface InspectionHistoryRow {
 }
 
 export function InspectionHistoryTimeline({ items }: { items: InspectionHistoryRow[] }) {
+  const [page, setPage] = useState(0);
+
   if (items.length === 0) {
     return <p className="text-muted-foreground text-sm">점검 이력이 없습니다.</p>;
   }
 
+  // 이력이 계속 쌓이면 카드가 한없이 길어지므로 최신순으로 페이지를 나눠 보여준다.
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount - 1);
+  const pageItems = items.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+
   return (
-    <ol className="flex flex-col gap-4">
-      {items.map((item) => {
-        const abnormal = item.overall_result === "abnormal";
-        return (
-          <li key={item.id} className="flex flex-col gap-1 border-b pb-3 last:border-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium">
-                {formatKstDate(item.inspected_at)}
-              </span>
-              <Badge variant={abnormal ? "destructive" : "secondary"}>
-                {abnormal ? "이상" : "정상"}
-              </Badge>
-              {/* 이상 점검은 조치까지 마쳐야 그 달 점검완료로 잡힌다. 상태를 함께 보여준다. */}
-              {abnormal &&
-                (item.action ? (
-                  <Badge variant="secondary">조치완료</Badge>
-                ) : (
-                  <Badge variant="outline">조치필요</Badge>
-                ))}
-            </div>
-            <p className="text-muted-foreground text-sm">
-              점검자: {item.inspector_name}
-              {item.photo_urls.length > 0 ? ` · 사진 ${item.photo_urls.length}장` : ""}
-            </p>
-
-            {item.defect_items && (
-              <p className="text-sm">
-                <span className="text-muted-foreground">불량항목</span> {item.defect_items}
+    <div className="flex flex-col gap-4">
+      <ol className="flex flex-col gap-4">
+        {pageItems.map((item) => {
+          const abnormal = item.overall_result === "abnormal";
+          return (
+            <li key={item.id} className="flex flex-col gap-1 border-b pb-3 last:border-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium">
+                  {formatKstDate(item.inspected_at)}
+                </span>
+                <Badge variant={abnormal ? "destructive" : "secondary"}>
+                  {abnormal ? "이상" : "정상"}
+                </Badge>
+                {/* 이상 점검은 조치까지 마쳐야 그 달 점검완료로 잡힌다. 상태를 함께 보여준다. */}
+                {abnormal &&
+                  (item.action ? (
+                    <Badge variant="secondary">조치완료</Badge>
+                  ) : (
+                    <Badge variant="outline">조치필요</Badge>
+                  ))}
+              </div>
+              <p className="text-muted-foreground text-sm">
+                점검자: {item.inspector_name}
+                {item.photo_urls.length > 0 ? ` · 사진 ${item.photo_urls.length}장` : ""}
               </p>
-            )}
-            {item.memo && (
-              <p className="text-sm">
-                <span className="text-muted-foreground">불량내용</span> {item.memo}
-              </p>
-            )}
 
-            {/* 조치 내역 — 나중에 "어떻게 처리했는지" 확인하는 근거가 된다 */}
-            {item.action && (
-              <div className="border-primary/40 mt-1 border-l-2 pl-3">
+              {item.defect_items && (
                 <p className="text-sm">
-                  <span className="text-muted-foreground">조치내용</span> {item.action.note}
+                  <span className="text-muted-foreground">불량항목</span> {item.defect_items}
                 </p>
-                <p className="text-muted-foreground text-xs">
-                  {formatKstDate(item.action.resolved_at)} ·{" "}
-                  {item.action.resolved_by_name}
+              )}
+              {item.memo && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">불량내용</span> {item.memo}
                 </p>
-              </div>
-            )}
+              )}
 
-            {item.photo_urls.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-2">
-                {item.photo_urls.map((url) => (
-                  <a key={url} href={url} target="_blank" rel="noreferrer" title="원본 보기">
-                    <img
-                      src={url}
-                      alt="점검 사진"
-                      className="size-20 rounded-md border object-cover"
-                    />
-                  </a>
-                ))}
-              </div>
-            )}
-          </li>
-        );
-      })}
-    </ol>
+              {/* 조치 내역 — 나중에 "어떻게 처리했는지" 확인하는 근거가 된다 */}
+              {item.action && (
+                <div className="border-primary/40 mt-1 border-l-2 pl-3">
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">조치내용</span> {item.action.note}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {formatKstDate(item.action.resolved_at)} ·{" "}
+                    {item.action.resolved_by_name}
+                  </p>
+                </div>
+              )}
+
+              {item.photo_urls.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {item.photo_urls.map((url) => (
+                    <a key={url} href={url} target="_blank" rel="noreferrer" title="원본 보기">
+                      <img
+                        src={url}
+                        alt="점검 사진"
+                        className="size-20 rounded-md border object-cover"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+
+      <Pagination page={current} pageCount={pageCount} onPageChange={setPage} />
+    </div>
   );
 }
