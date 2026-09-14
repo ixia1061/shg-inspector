@@ -1,11 +1,16 @@
 "use client";
 
 import { FileSpreadsheet } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { LedgerDownloadButton, monthLabel } from "@/components/admin/LedgerDownloadButton";
 import { SiteFilterButtons } from "@/components/admin/SiteFilterButtons";
+import { Pagination } from "@/components/ui/pagination";
 import type { Site } from "@/types/domain";
+
+// 사업장당 한 달에 1행씩만 늘어나 증가는 느리지만(연 12행), 몇 년 쌓이면 마찬가지로
+// 계속 길어지므로 1년 단위(12개월)로 페이지를 나눈다.
+const PAGE_SIZE = 12;
 
 export interface LedgerMonth {
   siteId: string;
@@ -42,6 +47,14 @@ export function LedgerArchive({
     [months, siteId]
   );
 
+  const [page, setPage] = useState(0);
+  // 사업장을 바꾸면 그 사업장의 첫 페이지(최신 달)부터 다시 보여준다.
+  useEffect(() => setPage(0), [siteId]);
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount - 1);
+  const pageRows = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+
   if (sites.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">
@@ -62,7 +75,7 @@ export function LedgerArchive({
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {rows.map((row) => {
+          {pageRows.map((row) => {
             const rate =
               row.totalCount > 0 ? Math.round((row.inspectedCount / row.totalCount) * 100) : 0;
             return (
@@ -95,6 +108,8 @@ export function LedgerArchive({
           })}
         </ul>
       )}
+
+      <Pagination page={current} pageCount={pageCount} onPageChange={setPage} />
     </div>
   );
 }
