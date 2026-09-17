@@ -60,11 +60,16 @@ export default async function ExtinguisherDetailPage({
     : (parts ?? []);
 
   // 점검사항 컬럼까지 가져와 이력에 "어디가 불량이었는지"를 함께 보여준다.
+  // 화면은 10건씩 나눠 보여주지만(InspectionHistoryTimeline) 조회 자체는 이 상한을 넘지
+  // 않는다 — 반복 테스트 점검 등으로 이력이 비정상적으로 쌓인 소화기가 상세 페이지를
+  // 느리게 만들지 않도록 하는 안전장치(정상적인 월 1회 점검 주기라면 몇 년이 지나도
+  // 이 상한에 도달하지 않는다).
   const { data: inspections } = await supabase
     .from("inspections")
     .select("*")
     .eq("extinguisher_id", id)
-    .order("inspected_at", { ascending: false });
+    .order("inspected_at", { ascending: false })
+    .limit(300);
 
   const inspectionIds = (inspections ?? []).map((i) => i.id);
 

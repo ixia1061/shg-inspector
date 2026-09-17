@@ -15,12 +15,20 @@ import { toast } from "sonner";
  * 강제 리로드를 하지 않는 이유: 현장에서 점검 체크리스트를 입력하는 도중
  * 예고 없이 새로고침되면 작성 중이던 내용이 사라질 수 있어서다.
  *
- * 단, **로그인 화면**은 입력 중인 데이터가 없는 안전한 시점이므로 안내 없이
- * 바로 적용한다 — 오랜만에 재접속했을 때 대기 중이던 업데이트를 놓치지
+ * 단, **로그인 화면**은 대부분 입력 중인 데이터가 없는 안전한 시점이므로 안내
+ * 없이 바로 적용한다 — 오랜만에 재접속했을 때 대기 중이던 업데이트를 놓치지
  * 않으면서도, 로그인 후 앱을 쓰는 도중에는 예전처럼 안내 후 사용자가
- * 새로고침을 눌러야만 적용된다.
+ * 새로고침을 눌러야만 적용된다. 단, 이메일·비밀번호를 입력하던 도중이면
+ * 그 값이 사라지므로 이 경우엔 예외로 기존 안내 방식(토스트)으로 되돌아간다.
  */
 const LOGIN_PATHNAME = "/login";
+
+/** 로그인 폼에 입력 중인 값이 있는지 — 있으면 즉시 리로드하지 않는다. */
+function hasUnsavedLoginInput(): boolean {
+  const email = document.getElementById("email") as HTMLInputElement | null;
+  const password = document.getElementById("password") as HTMLInputElement | null;
+  return !!(email?.value || password?.value);
+}
 
 // 이 탭에서 안내를 닫았는지 기록 — 탭/세션을 새로 열면 초기화된다(sessionStorage).
 const DISMISS_KEY = "sw-update-dismissed";
@@ -38,6 +46,20 @@ function markUpdatePromptDismissed(): void {
     sessionStorage.setItem(DISMISS_KEY, "1");
   } catch {
     // 프라이빗 모드 등으로 저장 실패해도 앱 동작에는 영향 없음
+  }
+}
+
+/**
+ * 이전에 닫은 안내를 초기화한다. `updatefound`는 브라우저가 현재 설치/대기 중인
+ * 서비스워커와 바이트가 다른 새 버전을 감지했을 때만 발생하므로, 이 시점은
+ * 항상 "이전에 닫았던 것과는 다른, 진짜 새 배포"다 — dismiss 플래그가 버전을
+ * 구분하지 않고 그대로 남아있으면 이 새 배포까지 조용히 묻혀버리므로 초기화한다.
+ */
+function clearDismissedUpdatePrompt(): void {
+  try {
+    sessionStorage.removeItem(DISMISS_KEY);
+  } catch {
+    // 무시
   }
 }
 
@@ -67,7 +89,8 @@ export function ServiceWorkerRegister() {
 
     const promptUpdate = (waiting: ServiceWorker) => {
       // 로그인 화면 = 입력 중인 데이터가 없는 안전한 시점 → 묻지 않고 바로 적용.
-      if (pathnameRef.current === LOGIN_PATHNAME) {
+      // (단, 입력 중이던 이메일·비밀번호가 있으면 예외 — 아래로 내려가 토스트 안내)
+      if (pathnameRef.current === LOGIN_PATHNAME && !hasUnsavedLoginInput()) {
         userTriggeredUpdate = true;
         waiting.postMessage({ type: "SKIP_WAITING" });
         return;
@@ -107,12 +130,22 @@ export function ServiceWorkerRegister() {
           promptUpdate(reg.waiting);
         }
 
+        // 페이지를 새로 열 때마다(로그인 포함) 곧바로 한 번 갱신 여부를 확인한다.
+        // 브라우저 자체적으로도 내비게이션마다 확인하지만 타이밍이 느슨할 수 있어,
+        // 탭이 다시 보일 때만 확인하던 기존 visibilitychange 체크보다 앞서
+        // 명시적으로 확인해 "배포했는데도 한참 반영 안 됨" 상태를 줄인다.
+        reg.update().catch(() => {});
+
         reg.addEventListener("updatefound", () => {
           const installing = reg.installing;
           if (!installing) return;
           installing.addEventListener("statechange", () => {
             // 새 SW 설치 완료 + 기존 컨트롤러 존재 = "업데이트 대기" 상태
             if (installing.state === "installed" && navigator.serviceWorker.controller) {
+              // updatefound는 지금 대기 중인 것과 바이트가 다른 새 버전을 감지했을
+              // 때만 발생 — 즉 이전에 닫았던 업데이트와는 무조건 다른 새 배포이므로,
+              // 예전 dismiss 플래그가 이번 안내까지 가리지 않도록 먼저 초기화한다.
+              clearDismissedUpdatePrompt();
               promptUpdate(installing);
             }
           });

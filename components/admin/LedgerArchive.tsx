@@ -1,11 +1,12 @@
 "use client";
 
 import { FileSpreadsheet } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { LedgerDownloadButton, monthLabel } from "@/components/admin/LedgerDownloadButton";
 import { SiteFilterButtons } from "@/components/admin/SiteFilterButtons";
 import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/hooks/usePagination";
 import type { Site } from "@/types/domain";
 
 // 사업장당 한 달에 1행씩만 늘어나 증가는 느리지만(연 12행), 몇 년 쌓이면 마찬가지로
@@ -47,13 +48,8 @@ export function LedgerArchive({
     [months, siteId]
   );
 
-  const [page, setPage] = useState(0);
-  // 사업장을 바꾸면 그 사업장의 첫 페이지(최신 달)부터 다시 보여준다.
-  useEffect(() => setPage(0), [siteId]);
-
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const current = Math.min(page, pageCount - 1);
-  const pageRows = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+  // 사업장을 바꾸면 rows 참조가 바뀌어(위 useMemo) 그 사업장의 첫 페이지(최신 달)로 자동 복귀한다.
+  const { page: current, setPage, pageCount, pageRows } = usePagination(rows, PAGE_SIZE, rows);
 
   if (sites.length === 0) {
     return (

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
 import { LifecycleStatusBadge } from "@/components/shared/StatusBadge";
 import { Pagination } from "@/components/ui/pagination";
@@ -13,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePagination } from "@/hooks/usePagination";
 import { formatShortLocation } from "@/lib/utils/location";
 import type { ExtinguisherOverview } from "@/types/domain";
 
@@ -20,12 +20,8 @@ const PAGE_SIZE = 50;
 
 /** 내용연수 관리 목록 — 페이지당 50개(상태 → 관리번호 순 정렬은 서버에서 이미 처리). */
 export function LifecycleList({ rows }: { rows: ExtinguisherOverview[] }) {
-  const [page, setPage] = useState(0);
-
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  // 사업장을 바꾸면 목록이 짧아질 수 있으므로 범위를 벗어난 페이지는 마지막 페이지로 보정한다.
-  const current = Math.min(page, pageCount - 1);
-  const pageRows = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+  // 사업장을 바꾸면 rows 참조가 바뀌어(호출부 useMemo) 1페이지로 자동 복귀한다.
+  const { page: current, setPage, pageCount, pageRows } = usePagination(rows, PAGE_SIZE, rows);
 
   return (
     <div className="flex flex-col gap-3">

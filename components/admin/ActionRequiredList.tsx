@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
 import { ResolveActionDialog } from "@/components/admin/ResolveActionDialog";
 import { Pagination } from "@/components/ui/pagination";
@@ -13,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePagination } from "@/hooks/usePagination";
 import { defectItemsText } from "@/lib/utils/inspection";
 import { formatShortLocation } from "@/lib/utils/location";
 import type { ExtinguisherOverview } from "@/types/domain";
@@ -27,11 +27,9 @@ export function ActionRequiredList({
   rows: ExtinguisherOverview[];
   emptyMessage?: string;
 }) {
-  const [page, setPage] = useState(0);
-
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const current = Math.min(page, pageCount - 1);
-  const pageRows = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+  // rows는 호출부에서 사업장 등 필터가 바뀔 때만 참조가 바뀌도록 useMemo로 감싸져 있어,
+  // 그 배열 자체를 resetKey로 쓰면 필터가 바뀔 때 1페이지로 자동 복귀한다.
+  const { page: current, setPage, pageCount, pageRows } = usePagination(rows, PAGE_SIZE, rows);
 
   return (
     <div className="flex flex-col gap-3">

@@ -50,7 +50,9 @@ foreach ($dir in $dirs) {
             $lines  = @(Get-Content $f | Where-Object { $_ -notmatch '^(IconFile|IconIndex)=' })
             $lines += "IconFile=$icon"
             $lines += 'IconIndex=0'
-            Set-Content -Path $f -Value $lines -Encoding ASCII
+            # ASCII로 쓰면 건드리지 않는 다른 줄에 비ASCII 문자가 있을 때 '?'로 깨진다.
+            # Get-Content의 기본 읽기 인코딩(Default=시스템 ANSI 코드페이지)과 맞춰 왕복 손실을 없앤다.
+            Set-Content -Path $f -Value $lines -Encoding Default
             Write-Host "[url] $($_.Name)"
             $done++
         }

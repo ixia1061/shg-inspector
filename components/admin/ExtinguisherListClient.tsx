@@ -258,6 +258,9 @@ export function ExtinguisherListClient({
                 </TableCell>
                 <TableCell>
                   <LifecycleStatusBadge status={e.lifecycle_status} />
+                  <div className="text-muted-foreground mt-0.5 text-xs">
+                    제조 {e.manufacture_date.slice(0, 7)}
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {e.last_inspected_at
