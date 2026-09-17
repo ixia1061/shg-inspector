@@ -130,6 +130,12 @@ export function ServiceWorkerRegister() {
           promptUpdate(reg.waiting);
         }
 
+        // 페이지를 새로 열 때마다(로그인 포함) 곧바로 한 번 갱신 여부를 확인한다.
+        // 브라우저 자체적으로도 내비게이션마다 확인하지만 타이밍이 느슨할 수 있어,
+        // 탭이 다시 보일 때만 확인하던 기존 visibilitychange 체크보다 앞서
+        // 명시적으로 확인해 "배포했는데도 한참 반영 안 됨" 상태를 줄인다.
+        reg.update().catch(() => {});
+
         reg.addEventListener("updatefound", () => {
           const installing = reg.installing;
           if (!installing) return;
