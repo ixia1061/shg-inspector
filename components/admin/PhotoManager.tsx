@@ -12,6 +12,7 @@ import { deletePhotosAction } from "@/app/actions/photoActions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/hooks/usePagination";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 50;
@@ -28,7 +29,6 @@ export function PhotoManager({ photos }: { photos: ManagedPhoto[] }) {
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
-  const [page, setPage] = useState(0);
 
   /** 선택(또는 전체) 사진을 ZIP으로 내려받는다. ZIP 내부는 관리번호별 폴더로 정리된다. */
   async function handleDownload(ids: string[]) {
@@ -68,10 +68,15 @@ export function PhotoManager({ photos }: { photos: ManagedPhoto[] }) {
   }, new Map());
 
   // 관리번호(소화기) 그룹 단위로 페이지네이션한다.
+  // groupEntries는 매 렌더 새로 계산되므로(체크박스 토글 등) resetKey로 쓰면 안 되고,
+  // 대신 삭제 후 router.refresh()로만 바뀌는 photos 프로퍼티를 resetKey로 쓴다.
   const groupEntries = [...groups.entries()];
-  const pageCount = Math.max(1, Math.ceil(groupEntries.length / PAGE_SIZE));
-  const current = Math.min(page, pageCount - 1);
-  const pageGroups = groupEntries.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+  const {
+    page: current,
+    setPage,
+    pageCount,
+    pageRows: pageGroups,
+  } = usePagination(groupEntries, PAGE_SIZE, photos);
 
   function toggle(id: string) {
     setSelected((prev) => {

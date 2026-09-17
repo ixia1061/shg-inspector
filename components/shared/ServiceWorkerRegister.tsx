@@ -15,12 +15,20 @@ import { toast } from "sonner";
  * 강제 리로드를 하지 않는 이유: 현장에서 점검 체크리스트를 입력하는 도중
  * 예고 없이 새로고침되면 작성 중이던 내용이 사라질 수 있어서다.
  *
- * 단, **로그인 화면**은 입력 중인 데이터가 없는 안전한 시점이므로 안내 없이
- * 바로 적용한다 — 오랜만에 재접속했을 때 대기 중이던 업데이트를 놓치지
+ * 단, **로그인 화면**은 대부분 입력 중인 데이터가 없는 안전한 시점이므로 안내
+ * 없이 바로 적용한다 — 오랜만에 재접속했을 때 대기 중이던 업데이트를 놓치지
  * 않으면서도, 로그인 후 앱을 쓰는 도중에는 예전처럼 안내 후 사용자가
- * 새로고침을 눌러야만 적용된다.
+ * 새로고침을 눌러야만 적용된다. 단, 이메일·비밀번호를 입력하던 도중이면
+ * 그 값이 사라지므로 이 경우엔 예외로 기존 안내 방식(토스트)으로 되돌아간다.
  */
 const LOGIN_PATHNAME = "/login";
+
+/** 로그인 폼에 입력 중인 값이 있는지 — 있으면 즉시 리로드하지 않는다. */
+function hasUnsavedLoginInput(): boolean {
+  const email = document.getElementById("email") as HTMLInputElement | null;
+  const password = document.getElementById("password") as HTMLInputElement | null;
+  return !!(email?.value || password?.value);
+}
 
 // 이 탭에서 안내를 닫았는지 기록 — 탭/세션을 새로 열면 초기화된다(sessionStorage).
 const DISMISS_KEY = "sw-update-dismissed";
@@ -67,7 +75,8 @@ export function ServiceWorkerRegister() {
 
     const promptUpdate = (waiting: ServiceWorker) => {
       // 로그인 화면 = 입력 중인 데이터가 없는 안전한 시점 → 묻지 않고 바로 적용.
-      if (pathnameRef.current === LOGIN_PATHNAME) {
+      // (단, 입력 중이던 이메일·비밀번호가 있으면 예외 — 아래로 내려가 토스트 안내)
+      if (pathnameRef.current === LOGIN_PATHNAME && !hasUnsavedLoginInput()) {
         userTriggeredUpdate = true;
         waiting.postMessage({ type: "SKIP_WAITING" });
         return;

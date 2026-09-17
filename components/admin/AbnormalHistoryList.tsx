@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
 import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/hooks/usePagination";
 import { formatKstDate } from "@/lib/utils/datetime";
 
 const PAGE_SIZE = 50;
@@ -31,11 +31,7 @@ export interface AbnormalInspectionItem {
 
 /** 월 헤더를 붙여 이상점검 이력을 보여준다. 탭으로 나누면 지난달 건을 놓치기 쉬워 한 줄로 잇는다. */
 export function AbnormalHistoryList({ rows }: { rows: AbnormalInspectionItem[] }) {
-  const [page, setPage] = useState(0);
-
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const current = Math.min(page, pageCount - 1);
-  const pageRows = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+  const { page: current, setPage, pageCount, pageRows } = usePagination(rows, PAGE_SIZE, rows);
 
   if (!rows.length) {
     return <p className="text-muted-foreground py-8 text-center text-sm">이상으로 기록된 점검이 없습니다.</p>;

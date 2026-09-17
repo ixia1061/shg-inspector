@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -12,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePagination } from "@/hooks/usePagination";
 import { formatLocationPath } from "@/lib/utils/location";
 import type { ExtinguisherOverview } from "@/types/domain";
 
@@ -25,11 +25,7 @@ export function UninspectedList({
   rows: ExtinguisherOverview[];
   emptyMessage?: string;
 }) {
-  const [page, setPage] = useState(0);
-
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const current = Math.min(page, pageCount - 1);
-  const pageRows = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+  const { page: current, setPage, pageCount, pageRows } = usePagination(rows, PAGE_SIZE, rows);
 
   return (
     <div className="flex flex-col gap-3">

@@ -1,11 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
-
 import { formatKstDate } from "@/lib/utils/datetime";
 import { Badge } from "@/components/ui/badge";
 import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/hooks/usePagination";
 
 const PAGE_SIZE = 10;
 
@@ -25,16 +24,18 @@ interface InspectionHistoryRow {
 }
 
 export function InspectionHistoryTimeline({ items }: { items: InspectionHistoryRow[] }) {
-  const [page, setPage] = useState(0);
+  // items는 서버(상세 페이지)가 새로 내려줄 때만 참조가 바뀐다 — 관리자가 직접
+  // 점검(AdminInspectDialog)해 이력 맨 앞에 새 점검이 추가되는 경우(router.refresh())가
+  // 그 예. 참조가 바뀌면 1페이지로 되돌려 밀린 목록이 엉뚱하게 보이지 않게 한다.
+  const { page: current, setPage, pageCount, pageRows: pageItems } = usePagination(
+    items,
+    PAGE_SIZE,
+    items
+  );
 
   if (items.length === 0) {
     return <p className="text-muted-foreground text-sm">점검 이력이 없습니다.</p>;
   }
-
-  // 이력이 계속 쌓이면 카드가 한없이 길어지므로 최신순으로 페이지를 나눠 보여준다.
-  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-  const current = Math.min(page, pageCount - 1);
-  const pageItems = items.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-4">
