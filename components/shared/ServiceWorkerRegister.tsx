@@ -49,6 +49,20 @@ function markUpdatePromptDismissed(): void {
   }
 }
 
+/**
+ * 이전에 닫은 안내를 초기화한다. `updatefound`는 브라우저가 현재 설치/대기 중인
+ * 서비스워커와 바이트가 다른 새 버전을 감지했을 때만 발생하므로, 이 시점은
+ * 항상 "이전에 닫았던 것과는 다른, 진짜 새 배포"다 — dismiss 플래그가 버전을
+ * 구분하지 않고 그대로 남아있으면 이 새 배포까지 조용히 묻혀버리므로 초기화한다.
+ */
+function clearDismissedUpdatePrompt(): void {
+  try {
+    sessionStorage.removeItem(DISMISS_KEY);
+  } catch {
+    // 무시
+  }
+}
+
 export function ServiceWorkerRegister() {
   const pathname = usePathname();
   // 루트 레이아웃은 라우트가 바뀌어도 재마운트되지 않아 effect가 한 번만 도니,
@@ -122,6 +136,10 @@ export function ServiceWorkerRegister() {
           installing.addEventListener("statechange", () => {
             // 새 SW 설치 완료 + 기존 컨트롤러 존재 = "업데이트 대기" 상태
             if (installing.state === "installed" && navigator.serviceWorker.controller) {
+              // updatefound는 지금 대기 중인 것과 바이트가 다른 새 버전을 감지했을
+              // 때만 발생 — 즉 이전에 닫았던 업데이트와는 무조건 다른 새 배포이므로,
+              // 예전 dismiss 플래그가 이번 안내까지 가리지 않도록 먼저 초기화한다.
+              clearDismissedUpdatePrompt();
               promptUpdate(installing);
             }
           });
