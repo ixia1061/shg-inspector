@@ -137,11 +137,12 @@ export async function GET(request: Request) {
   }
   const siteName = all[0].site_name ?? "사업장";
 
-  // 지난달 대장: 뷰의 "가장 최근 점검"을 그 달 안의 마지막 점검으로 바꿔 끼운다.
-  // (뷰는 월 조건 없이 최신 1건만 들고 있어, 그대로 쓰면 그 이후 점검이 섞인다)
-  if (isPastMonth) {
-    all = await applyMonthSnapshot(supabase, all, month);
-  }
+  // 뷰(v_extinguisher_overview)는 월과 무관하게 "가장 최근 점검 1건"만 들고 있어서,
+  // 그대로 쓰면 이번달에 아직 점검 안 한 소화기가 지난달 점검사항 O/X·점검결과를
+  // 그대로 보여줘 "이번달 대장인데 지난달 기록이 남아있다"는 혼동을 준다.
+  // 진행 중인 이번달도 지난달과 동일하게 그 달 안의 점검만 다시 채워 넣는다
+  // (이번달 미점검분은 O/X·점검결과 등이 전부 빈칸이 된다).
+  all = await applyMonthSnapshot(supabase, all, month);
 
   // 최근 점검자 이름 매핑
   const inspectorIds = [...new Set(all.map((r) => r.last_inspector_id).filter(Boolean))] as string[];
