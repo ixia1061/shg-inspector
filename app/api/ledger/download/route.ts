@@ -232,6 +232,8 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="ledger.xlsx"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      // 매번 최신 DB 상태로 새로 만드는 보고서라 브라우저 HTTP 캐시에도 남으면 안 된다.
+      "Cache-Control": "no-store",
     },
   });
 }
