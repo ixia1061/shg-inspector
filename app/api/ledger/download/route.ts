@@ -92,8 +92,22 @@ function monthLabel(month: string): string {
 }
 
 /**
+ * 그 달 실제 점검일 목록('YYYY-MM-DD', KST)으로 표지에 쓸 기간 표기를 만든다.
+ * 점검이 없으면 빈 문자열(수기 기입란처럼 빈 칸으로 남는다).
+ * 월 조회 범위로 걸러진 날짜들이라 같은 연·월 안에서만 벌어진다.
+ */
+function dateRangeLabel(dates: string[]): string {
+  if (dates.length === 0) return "";
+  const sorted = [...dates].sort();
+  const [minY, minM, minD] = sorted[0].split("-").map(Number);
+  const [, , maxD] = sorted[sorted.length - 1].split("-").map(Number);
+  if (sorted[0] === sorted[sorted.length - 1]) return `${minY}년 ${minM}월 ${minD}일`;
+  return `${minY}년 ${minM}월 ${minD}일 ~ ${maxD}일`;
+}
+
+/**
  * 관리자 전용: 지정 사업장(site 쿼리)의 소화기 관리대장을 Excel(.xlsx)로 내려준다.
- * - 표지 시트: 점검일자·점검자 수기 기입란 + 동·층별 종류/수량 보유현황표
+ * - 표지 시트: 그 달 실제 점검일자 범위·점검자 + 동·층별 종류/수량 보유현황표
  * - 점검대장 시트: 소화기 1대당 1행 (위치는 사업장명 제외)
  * RLS로 담당 사업장만 조회되므로 접근 불가 사업장은 빈 결과가 된다.
  */
@@ -142,10 +156,16 @@ export async function GET(request: Request) {
   // 그대로 보여줘 "이번달 대장인데 지난달 기록이 남아있다"는 혼동을 준다.
   // 진행 중인 이번달도 지난달과 동일하게 그 달 안의 점검만 다시 채워 넣는다
   // (이번달 미점검분은 O/X·점검결과 등이 전부 빈칸이 된다).
-  all = await applyMonthSnapshot(supabase, all, month);
+  const snapshot = await applyMonthSnapshot(supabase, all, month);
+  all = snapshot.rows;
 
-  // 최근 점검자 이름 매핑
-  const inspectorIds = [...new Set(all.map((r) => r.last_inspector_id).filter(Boolean))] as string[];
+  // 최근 점검자 이름 매핑 — 표지의 실제 점검일자 범위·점검자 목록에 쓰이는 이름도 포함
+  const inspectorIds = [
+    ...new Set([
+      ...all.map((r) => r.last_inspector_id).filter(Boolean),
+      ...snapshot.inspectorIds,
+    ]),
+  ] as string[];
   const nameById = new Map<string, string>();
   if (inspectorIds.length) {
     const { data: profiles } = await supabase
@@ -154,6 +174,14 @@ export async function GET(request: Request) {
       .in("id", inspectorIds);
     for (const p of profiles ?? []) nameById.set(p.id, p.name ?? "");
   }
+
+  // 표지의 "점검일자"·"점검자" — 손으로 적던 빈칸 대신 그 달 실제 점검 기록으로 채운다.
+  const inspectionDateRange = dateRangeLabel(snapshot.inspectionDates);
+  const inspectionInspectors = snapshot.inspectorFirstDate
+    .map(([id, firstDate]) => ({ name: nameById.get(id) ?? "", firstDate }))
+    .filter((i) => i.name)
+    .sort((a, b) => a.firstDate.localeCompare(b.firstDate) || a.name.localeCompare(b.name, "ko"))
+    .map((i) => i.name);
 
   // 종류+용량 조합 목록(분말 우선, 종류 가나다순, 용량 오름차순)
   const comboMap = new Map<string, Combo>();
@@ -182,7 +210,10 @@ export async function GET(request: Request) {
   workbook.creator = "소화기 점검 관리 시스템";
   workbook.created = new Date();
 
-  buildCoverSheet(workbook, siteName, all, combos, isPastMonth ? month : null);
+  buildCoverSheet(workbook, siteName, all, combos, isPastMonth ? month : null, {
+    dateRange: inspectionDateRange,
+    inspectors: inspectionInspectors,
+  });
   buildLedgerSheet(
     workbook,
     safeSheetName(`${siteName} 점검대장`, "점검대장"),
@@ -217,7 +248,15 @@ async function applyMonthSnapshot(
   supabase: Awaited<ReturnType<typeof createClient>>,
   rows: ExtinguisherOverview[],
   month: string,
-): Promise<ExtinguisherOverview[]> {
+): Promise<{
+  rows: ExtinguisherOverview[];
+  /** 그 달의 실제 점검일('YYYY-MM-DD', KST) — 소화기별로 중복 제거하기 전, 표지 기간 표기용 */
+  inspectionDates: string[];
+  /** 그 달 실제 점검자 id 목록(표지 점검자 이름 조회용) */
+  inspectorIds: string[];
+  /** 점검자 id → 그 달 첫 점검일('YYYY-MM-DD') — 표지에 점검자를 등장 순서로 나열할 때 씀 */
+  inspectorFirstDate: [string, string][];
+}> {
   const { fromIso, toIso } = kstMonthRange(month);
   const ids = rows.map((r) => r.id);
 
@@ -228,6 +267,16 @@ async function applyMonthSnapshot(
     .gte("inspected_at", fromIso)
     .lt("inspected_at", toIso)
     .order("inspected_at", { ascending: true });
+
+  // 표지 "점검일자"·"점검자"는 소화기별 최신 1건이 아니라 그 달의 모든 점검 기준이다
+  // (마지막 점검만 보면 재점검으로 덮인 앞선 날짜·점검자가 빠질 수 있다).
+  const inspectionDates = (inspections ?? []).map((i) => kstDate(i.inspected_at));
+  const inspectorFirstDateMap = new Map<string, string>();
+  for (const i of inspections ?? []) {
+    const d = kstDate(i.inspected_at);
+    const prev = inspectorFirstDateMap.get(i.inspector_id);
+    if (!prev || d < prev) inspectorFirstDateMap.set(i.inspector_id, d);
+  }
 
   // 오름차순이라 나중 것이 앞의 것을 덮어써 "그 달 마지막 점검"이 남는다.
   const lastByExtinguisher = new Map<string, Inspection>();
@@ -249,7 +298,7 @@ async function applyMonthSnapshot(
     }
   }
 
-  return rows.map((row) => {
+  const snapshotRows = rows.map((row) => {
     const insp = lastByExtinguisher.get(row.id);
     if (!insp) {
       // 그 달에 점검 없음 → 미점검 행
@@ -298,9 +347,16 @@ async function applyMonthSnapshot(
       last_installation_ok: insp.installation_ok,
     };
   });
+
+  return {
+    rows: snapshotRows,
+    inspectionDates,
+    inspectorIds: [...inspectorFirstDateMap.keys()],
+    inspectorFirstDate: [...inspectorFirstDateMap.entries()],
+  };
 }
 
-/** 표지: 제목 + 점검일자/점검자 수기란 + 동·층별 종류·용량/수량 보유현황표 */
+/** 표지: 제목 + 실제 점검일자 범위/점검자 + 동·층별 종류·용량/수량 보유현황표 */
 function buildCoverSheet(
   workbook: ExcelJS.Workbook,
   siteName: string,
@@ -308,6 +364,8 @@ function buildCoverSheet(
   combos: Combo[],
   /** 지난달 대장이면 'YYYY-MM', 현재 상태 대장이면 null */
   month: string | null,
+  /** 그 달 실제 점검 기록 — 없으면(아직 점검 없는 달) 빈 칸으로 남는다 */
+  inspectionSummary: { dateRange: string; inspectors: string[] },
 ) {
   const sheet = workbook.addWorksheet("표지");
   const colCount = 2 + combos.length + 1; // 건물 + 층 + 종류·용량들 + 합계
@@ -328,7 +386,9 @@ function buildCoverSheet(
   title.alignment = { horizontal: "center", vertical: "middle" };
   sheet.getRow(1).height = 32;
 
-  // 점검일자 / 점검자 수기란
+  // 점검일자(그 달 첫 점검일 ~ 마지막 점검일) / 점검자(그 달 실제 점검자, 등장 순)
+  // — 아직 그 달 점검이 없으면 빈 문자열이라 예전처럼 빈 칸으로 남는다.
+  const summaryValues = [inspectionSummary.dateRange, inspectionSummary.inspectors.join(", ")];
   for (const [i, label] of ["점검일자", "점검자"].entries()) {
     const rowIdx = 3 + i;
     const labelCell = sheet.getCell(rowIdx, 1);
@@ -337,7 +397,10 @@ function buildCoverSheet(
     labelCell.alignment = { horizontal: "center", vertical: "middle" };
     labelCell.border = THIN_BORDER;
     sheet.mergeCells(rowIdx, 2, rowIdx, colCount);
-    sheet.getCell(rowIdx, 2).border = THIN_BORDER;
+    const valueCell = sheet.getCell(rowIdx, 2);
+    valueCell.value = summaryValues[i];
+    valueCell.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+    valueCell.border = THIN_BORDER;
     sheet.getRow(rowIdx).height = 24;
   }
 
