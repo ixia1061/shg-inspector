@@ -1,0 +1,36 @@
+name: develop를 main에 자동 병합
+
+# develop에 푸시될 때마다 main으로 자동 병합·푸시한다(운영 자동 배포).
+# 이 파일이 생기기 전까지는 develop -> main 병합을 사람이 직접 해야 했고,
+# 깜빡하면 develop의 수정사항이 운영(main, Vercel Production)에는 전혀
+# 반영되지 않은 채로 프리뷰에서만 "고쳤다"고 착각하는 사고가 났다.
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  merge-to-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: main 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: git 사용자 설정
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: develop 병합
+        run: |
+          git fetch origin develop
+          git merge origin/develop --no-edit
+
+      - name: main 푸시
+        run: git push origin main
